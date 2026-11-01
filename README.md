@@ -61,6 +61,12 @@ Not3 is distributed as an APK on [**GitHub Releases**](https://github.com/Pedroj
 | Laser pointer and magnifier | For presenting or writing in detail |
 | Images | Insert from the device, move and resize |
 
+### 🔤 Handwriting OCR
+- **Thai handwriting recognition**: select handwritten Thai with the lasso and convert it to editable text entirely on-device.
+- Also supports **English and Japanese**, with line-aware recognition and alternative candidate ranking.
+- A bundled Thai lexicon improves candidate selection, while corrections edited by the user are learned locally for future recognition.
+- Whole-page handwriting can be indexed for search. Language models are downloaded only after confirmation (~20 MB each) and work offline afterward.
+
 ### 📄 Templates
 | Template | Behavior |
 |---|---|
@@ -72,7 +78,7 @@ Not3 is distributed as an APK on [**GitHub Releases**](https://github.com/Pedroj
 ### 📚 Organization
 - **Library** with notebooks, covers, favorites, recents and grid/list view.
 - **Tags** and **smart folders**.
-- **Search** across all notes, including **recognized handwriting** (ML Kit, on-device; English, Japanese and Thai). The first use of a language downloads its model (~20 MB) after asking you.
+- **Search** across all notes, including on-device recognized handwriting.
 - **Page bookmarks**, go to page and keyboard shortcuts.
 - **Trash** with restore and automatic purge after 30 days.
 - **Reminders** linked to notebooks and **writing stats** (totals and streaks).
