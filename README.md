@@ -228,7 +228,8 @@ Not3 is free software: you can redistribute it and/or modify it under the terms 
 **GNU General Public License v3.0 or later** (GPL-3.0-or-later), published by the Free
 Software Foundation. See the [`LICENSE`](LICENSE) file.
 
-Copyright © 2026 Pedro ([@Pedroj-64](https://github.com/Pedroj-64)) and Not3 contributors.
+Copyright © 2026 [PyrhoMits](https://github.com/PyrhoMits) and Not3 contributors.
+Not3 is a fork of Inklus, originally created by Pedro ([@Pedroj-64](https://github.com/Pedroj-64)).
 
 Every source file carries the header `// SPDX-License-Identifier: GPL-3.0-or-later`.
 Any modified version that is distributed must also be released under GPL-3.0 with its source code.
