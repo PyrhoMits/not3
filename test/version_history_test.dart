@@ -2,10 +2,10 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/models/note.dart';
-import 'package:inklus/models/stroke.dart';
-import 'package:inklus/services/storage_service.dart';
-import 'package:inklus/services/version_history_service.dart';
+import 'package:not3/models/note.dart';
+import 'package:not3/models/stroke.dart';
+import 'package:not3/services/storage_service.dart';
+import 'package:not3/services/version_history_service.dart';
 
 void main() {
   late Directory tmp;

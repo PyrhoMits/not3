@@ -4,12 +4,12 @@ import 'dart:io';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/constants.dart';
-import 'package:inklus/logic/canvas_controller.dart';
-import 'package:inklus/models/stroke.dart';
-import 'package:inklus/services/image_service.dart';
-import 'package:inklus/services/storage_service.dart';
-import 'package:inklus/ui/canvas/drawing_canvas.dart';
+import 'package:not3/constants.dart';
+import 'package:not3/logic/canvas_controller.dart';
+import 'package:not3/models/stroke.dart';
+import 'package:not3/services/image_service.dart';
+import 'package:not3/services/storage_service.dart';
+import 'package:not3/ui/canvas/drawing_canvas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Entrada real (eventos de puntero) sobre el lienzo: lápiz, palma y dedo.

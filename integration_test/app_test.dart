@@ -10,10 +10,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:inklus/app.dart';
-import 'package:inklus/services/app_paths.dart';
-import 'package:inklus/services/storage_service.dart';
-import 'package:inklus/ui/canvas/drawing_canvas.dart';
+import 'package:not3/app.dart';
+import 'package:not3/services/app_paths.dart';
+import 'package:not3/services/storage_service.dart';
+import 'package:not3/ui/canvas/drawing_canvas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -33,8 +33,11 @@ void main() {
   });
 
   /// Espera a que aparezca [finder] (animaciones, E/S real).
-  Future<void> waitFor(WidgetTester tester, Finder finder,
-      {Duration timeout = const Duration(seconds: 15)}) async {
+  Future<void> waitFor(
+    WidgetTester tester,
+    Finder finder, {
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
     final end = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(end)) {
       await tester.pump(const Duration(milliseconds: 100));
@@ -55,8 +58,9 @@ void main() {
     throw TestFailure('No apareció: $finder\nEn pantalla: $visible');
   }
 
-  testWidgets('bienvenida → crear cuaderno → escribir con lápiz → se guarda',
-      (tester) async {
+  testWidgets('bienvenida → crear cuaderno → escribir con lápiz → se guarda', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1280, 720); // como en CI
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -81,14 +85,17 @@ void main() {
     await tester.tap(create.last);
 
     // 3. Se abre la lista de notas; abrir la primera.
-    await waitFor(tester, find.text('Sin título'));
-    await tester.tap(find.text('Sin título'));
+    await waitFor(tester, find.text('Untitled'));
+    await tester.tap(find.text('Untitled'));
     await waitFor(tester, find.byType(DrawingCanvas));
     await tester.pumpAndSettle(const Duration(milliseconds: 300));
 
     // 4. Escribir un trazo con el lápiz en el centro del lienzo.
     final center = tester.getCenter(find.byType(DrawingCanvas));
-    final pen = await tester.startGesture(center, kind: PointerDeviceKind.stylus);
+    final pen = await tester.startGesture(
+      center,
+      kind: PointerDeviceKind.stylus,
+    );
     for (var i = 1; i <= 20; i++) {
       await pen.moveTo(center + Offset(i * 6.0, (i % 5) * 4.0));
       await tester.pump(const Duration(milliseconds: 8));

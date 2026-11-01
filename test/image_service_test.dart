@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/services/image_service.dart';
+import 'package:not3/services/image_service.dart';
 
 void main() {
   group('ImageService.fitWithin', () {

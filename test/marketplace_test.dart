@@ -5,9 +5,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:inklus/services/marketplace/marketplace_models.dart';
-import 'package:inklus/services/marketplace/marketplace_service.dart';
-import 'package:inklus/services/storage_service.dart';
+import 'package:not3/services/marketplace/marketplace_models.dart';
+import 'package:not3/services/marketplace/marketplace_service.dart';
+import 'package:not3/services/storage_service.dart';
 
 void main() {
   late Directory tmp;

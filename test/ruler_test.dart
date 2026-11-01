@@ -2,8 +2,8 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/constants.dart';
-import 'package:inklus/logic/ruler.dart';
+import 'package:not3/constants.dart';
+import 'package:not3/logic/ruler.dart';
 
 void main() {
   const r = RulerGeometry(

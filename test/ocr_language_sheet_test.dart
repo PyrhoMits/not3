@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/l10n/l10n.dart';
-import 'package:inklus/ui/widgets/ocr_language_sheet.dart';
+import 'package:not3/l10n/l10n.dart';
+import 'package:not3/ui/widgets/ocr_language_sheet.dart';
 
 void main() {
   Widget app({required Widget home}) => MaterialApp(

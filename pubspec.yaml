@@ -1,4 +1,4 @@
-name: inklus
+name: not3
 description: "Not3 — free, offline-first handwriting app for stylus tablets: pressure ink, palm rejection, infinite canvas, lasso, PDF annotation and optional Drive backup."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.

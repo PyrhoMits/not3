@@ -1,0 +1,20 @@
+FROM ghcr.io/cirruslabs/flutter:stable
+
+USER root
+
+ARG HOST_UID=1000
+ARG HOST_GID=1000
+
+# Install every Android component Gradle requested during a clean debug build.
+# This prevents later builds from trying to modify the root-owned Android SDK.
+RUN /opt/android-sdk-linux/cmdline-tools/latest/bin/sdkmanager \
+    "ndk;28.2.13676358" \
+    "platforms;android-34" \
+    "platforms;android-35" \
+    "cmake;3.22.1"
+
+# Flutter updates its engine cache and bootstraps packages/flutter_tools at
+# runtime. Give the runtime host UID ownership of the SDK and trust its Git
+# checkout. The mounted project is not touched during the image build.
+RUN chown -R "${HOST_UID}:${HOST_GID}" /sdks/flutter \
+    && git config --system --add safe.directory /sdks/flutter

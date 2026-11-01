@@ -48,4 +48,4 @@ Not3 does not collect personal data, so it is suitable for any age. Google sign-
 
 ## Changes and contact
 
-If this policy changes, this document will be updated (its history is in the repository). For any questions, open an *issue* at <https://github.com/Pedroj-64/inklus/issues>.
+If this policy changes, this document will be updated (its history is in the repository). For any questions, open an *issue* at <https://github.com/PyrhoMits/not3/issues>.

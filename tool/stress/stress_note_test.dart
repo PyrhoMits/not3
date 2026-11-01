@@ -14,13 +14,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/models/image_item.dart';
-import 'package:inklus/models/note.dart';
-import 'package:inklus/models/notebook.dart';
-import 'package:inklus/models/page.dart';
-import 'package:inklus/models/stroke.dart';
-import 'package:inklus/models/template.dart';
-import 'package:inklus/services/inklus_format.dart';
+import 'package:not3/models/image_item.dart';
+import 'package:not3/models/note.dart';
+import 'package:not3/models/notebook.dart';
+import 'package:not3/models/page.dart';
+import 'package:not3/models/stroke.dart';
+import 'package:not3/models/template.dart';
+import 'package:not3/services/inklus_format.dart';
 
 const _strokesPerPage = 1700;
 const _photos = 10;

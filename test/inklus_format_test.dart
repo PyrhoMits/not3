@@ -3,14 +3,14 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/models/document.dart';
-import 'package:inklus/models/image_item.dart';
-import 'package:inklus/models/page.dart';
-import 'package:inklus/models/stroke.dart';
-import 'package:inklus/models/template.dart';
-import 'package:inklus/models/note.dart';
-import 'package:inklus/services/backup_crypto.dart';
-import 'package:inklus/services/inklus_format.dart';
+import 'package:not3/models/document.dart';
+import 'package:not3/models/image_item.dart';
+import 'package:not3/models/page.dart';
+import 'package:not3/models/stroke.dart';
+import 'package:not3/models/template.dart';
+import 'package:not3/models/note.dart';
+import 'package:not3/services/backup_crypto.dart';
+import 'package:not3/services/inklus_format.dart';
 
 void main() {
   late Directory tempDir;

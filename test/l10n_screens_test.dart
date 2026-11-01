@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/l10n/l10n.dart';
-import 'package:inklus/ui/create_notebook_screen.dart';
-import 'package:inklus/ui/marketplace_screen.dart';
+import 'package:not3/l10n/l10n.dart';
+import 'package:not3/ui/create_notebook_screen.dart';
+import 'package:not3/ui/marketplace_screen.dart';
 
 void main() {
   Widget app(Locale locale, Widget home) => MaterialApp(

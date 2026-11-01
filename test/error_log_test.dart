@@ -2,7 +2,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/services/error_log.dart';
+import 'package:not3/services/error_log.dart';
 
 void main() {
   late Directory tmp;

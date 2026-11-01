@@ -10,7 +10,17 @@ import '../../l10n/l10n.dart';
 ///
 /// Se guardan por `name` en el índice: **no renombrar** los existentes
 /// (`simple`…`lines`, `custom`); los nuevos se añaden al final.
-enum CoverStyle { simple, circle, waves, dots, lines, custom, classic, geometric, aurora }
+enum CoverStyle {
+  simple,
+  circle,
+  waves,
+  dots,
+  lines,
+  custom,
+  classic,
+  geometric,
+  aurora,
+}
 
 /// Estilos que se dibujan con [NotebookCoverPainter] (todos menos `custom`).
 const List<CoverStyle> kPaintedCoverStyles = [
@@ -96,11 +106,10 @@ class NotebookCoverPainter extends CustomPainter {
     canvas.drawRect(
       Rect.fromLTWH(0, 0, spine, size.height),
       Paint()
-        ..shader = ui.Gradient.linear(
-          Offset.zero,
-          Offset(spine, 0),
-          [Colors.black.withAlpha(70), Colors.black.withAlpha(15)],
-        ),
+        ..shader = ui.Gradient.linear(Offset.zero, Offset(spine, 0), [
+          Colors.black.withAlpha(70),
+          Colors.black.withAlpha(15),
+        ]),
     );
     canvas.drawLine(
       Offset(spine, 0),
@@ -183,17 +192,27 @@ class NotebookCoverPainter extends CustomPainter {
 
   /// Manchas de color difuminadas (tonos vecinos del color base).
   void _paintAurora(Canvas canvas, Size size) {
-    final blur = Paint()..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.16);
+    final blur = Paint()
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.16);
     void blob(Offset c, double r, Color col) {
       canvas.drawCircle(c, r, blur..color = col);
     }
 
-    blob(Offset(size.width * 0.25, size.height * 0.30), size.width * 0.36,
-        _shiftHue(color, 40).withAlpha(170));
-    blob(Offset(size.width * 0.80, size.height * 0.55), size.width * 0.40,
-        _shiftHue(color, -45).withAlpha(150));
-    blob(Offset(size.width * 0.40, size.height * 0.88), size.width * 0.45,
-        _lighten(color, 0.18).withAlpha(140));
+    blob(
+      Offset(size.width * 0.25, size.height * 0.30),
+      size.width * 0.36,
+      _shiftHue(color, 40).withAlpha(170),
+    );
+    blob(
+      Offset(size.width * 0.80, size.height * 0.55),
+      size.width * 0.40,
+      _shiftHue(color, -45).withAlpha(150),
+    );
+    blob(
+      Offset(size.width * 0.40, size.height * 0.88),
+      size.width * 0.45,
+      _lighten(color, 0.18).withAlpha(140),
+    );
   }
 
   /// Triángulos y círculos planos superpuestos.
@@ -218,13 +237,18 @@ class NotebookCoverPainter extends CustomPainter {
       light,
     );
     canvas.drawCircle(Offset(w * 0.68, h * 0.24), w * 0.17, light);
-    canvas.drawCircle(Offset(w * 0.68, h * 0.24), w * 0.17,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = max(1, w * 0.008)
-          ..color = Colors.white.withAlpha(90));
-    canvas.drawRect(Rect.fromLTWH(w * 0.14, h * 0.12, w * 0.18, w * 0.018),
-        Paint()..color = Colors.white.withAlpha(120));
+    canvas.drawCircle(
+      Offset(w * 0.68, h * 0.24),
+      w * 0.17,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1, w * 0.008)
+        ..color = Colors.white.withAlpha(90),
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(w * 0.14, h * 0.12, w * 0.18, w * 0.018),
+      Paint()..color = Colors.white.withAlpha(120),
+    );
   }
 
   /// Anillos concéntricos desde un "sol" arriba.
@@ -241,11 +265,10 @@ class NotebookCoverPainter extends CustomPainter {
       c,
       size.width * 0.13,
       Paint()
-        ..shader = ui.Gradient.radial(
-          c,
-          size.width * 0.13,
-          [Colors.white.withAlpha(150), Colors.white.withAlpha(60)],
-        ),
+        ..shader = ui.Gradient.radial(c, size.width * 0.13, [
+          Colors.white.withAlpha(150),
+          Colors.white.withAlpha(60),
+        ]),
     );
   }
 
@@ -262,7 +285,13 @@ class NotebookCoverPainter extends CustomPainter {
       path
         ..lineTo(size.width, size.height)
         ..close();
-      canvas.drawPath(path, Paint()..color = (i.isEven ? Colors.white : Colors.black).withAlpha(i.isEven ? 22 : 30));
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = (i.isEven ? Colors.white : Colors.black).withAlpha(
+            i.isEven ? 22 : 30,
+          ),
+      );
     }
   }
 
@@ -272,7 +301,10 @@ class NotebookCoverPainter extends CustomPainter {
     final paint = Paint()..color = Colors.white.withAlpha(70);
     for (var y = step; y < size.height; y += step) {
       for (var x = step; x < size.width; x += step) {
-        final t = ((x / size.width) * 0.5 + (y / size.height) * 0.5).clamp(0.0, 1.0);
+        final t = ((x / size.width) * 0.5 + (y / size.height) * 0.5).clamp(
+          0.0,
+          1.0,
+        );
         canvas.drawCircle(Offset(x, y), step * (0.05 + 0.2 * t), paint);
       }
     }
@@ -301,12 +333,16 @@ class NotebookCoverPainter extends CustomPainter {
 
   static Color _darken(Color c, double amount) {
     final hsl = HSLColor.fromColor(c);
-    return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
+    return hsl
+        .withLightness((hsl.lightness - amount).clamp(0.0, 1.0))
+        .toColor();
   }
 
   static Color _lighten(Color c, double amount) {
     final hsl = HSLColor.fromColor(c);
-    return hsl.withLightness((hsl.lightness + amount).clamp(0.0, 1.0)).toColor();
+    return hsl
+        .withLightness((hsl.lightness + amount).clamp(0.0, 1.0))
+        .toColor();
   }
 
   static Color _shiftHue(Color c, double degrees) {
@@ -324,38 +360,39 @@ class NotebookCoverPainter extends CustomPainter {
 
 /// Nombre traducido de un color de portada (`kCoverColors`); `null` = sin color.
 String coverColorName(AppLocalizations l10n, int? value) => switch (value) {
-      null => l10n.colorNone,
-      0xFF3B82F6 => l10n.colorBlue,
-      0xFF4CAF50 => l10n.colorGreen,
-      0xFFE53935 => l10n.colorRed,
-      0xFFFF9800 => l10n.colorOrange,
-      0xFF9C27B0 => l10n.colorPurple,
-      0xFFEC407A => l10n.colorPink,
-      0xFF26C6DA => l10n.colorTurquoise,
-      0xFF78909C => l10n.colorGray,
-      _ => l10n.smartOther,
-    };
+  null => l10n.colorNone,
+  0xFF3B82F6 => l10n.colorBlue,
+  0xFF4CAF50 => l10n.colorGreen,
+  0xFFE53935 => l10n.colorRed,
+  0xFFFF9800 => l10n.colorOrange,
+  0xFF9C27B0 => l10n.colorPurple,
+  0xFFEC407A => l10n.colorPink,
+  0xFF26C6DA => l10n.colorTurquoise,
+  0xFF78909C => l10n.colorGray,
+  _ => l10n.smartOther,
+};
 
 /// Nombre traducido de cada estilo de portada.
 String coverStyleName(AppLocalizations l10n, CoverStyle s) => switch (s) {
-      CoverStyle.simple => l10n.coverSimple,
-      CoverStyle.classic => l10n.coverClassic,
-      CoverStyle.aurora => l10n.coverAurora,
-      CoverStyle.waves => l10n.coverWaves,
-      CoverStyle.geometric => l10n.coverGeometric,
-      CoverStyle.circle => l10n.coverSun,
-      CoverStyle.dots => l10n.coverDots,
-      CoverStyle.lines => l10n.coverLines,
-      CoverStyle.custom => l10n.createYourImage,
-    };
+  CoverStyle.simple => l10n.coverSimple,
+  CoverStyle.classic => l10n.coverClassic,
+  CoverStyle.aurora => l10n.coverAurora,
+  CoverStyle.waves => l10n.coverWaves,
+  CoverStyle.geometric => l10n.coverGeometric,
+  CoverStyle.circle => l10n.coverSun,
+  CoverStyle.dots => l10n.coverDots,
+  CoverStyle.lines => l10n.coverLines,
+  CoverStyle.custom => l10n.createYourImage,
+};
 
-/// Títulos por defecto que la app guarda en español (`Sin título`, `Mi
-/// cuaderno`): al mostrarlos se traducen; los títulos del usuario no se tocan.
+/// Localizes current and legacy default titles without changing custom titles.
 String displayTitle(AppLocalizations l10n, String title) => switch (title) {
-      'Sin título' => l10n.untitled,
-      'Mi cuaderno' => l10n.defaultNotebookTitle,
-      _ => title,
-    };
+  'Sin título' => l10n.untitled,
+  'Untitled' => l10n.untitled,
+  'Mi cuaderno' => l10n.defaultNotebookTitle,
+  'My notebook' => l10n.defaultNotebookTitle,
+  _ => title,
+};
 
 /// Icono representativo de cada estilo.
 const Map<CoverStyle, IconData> coverStyleIcons = {

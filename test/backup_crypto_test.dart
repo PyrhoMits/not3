@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/services/backup_crypto.dart';
+import 'package:not3/services/backup_crypto.dart';
 
 void main() {
   group('BackupCrypto', () {

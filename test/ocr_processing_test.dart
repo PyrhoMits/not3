@@ -2,11 +2,11 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/models/stroke.dart';
-import 'package:inklus/services/ocr_correction_store.dart';
-import 'package:inklus/services/ocr_lexicon.dart';
-import 'package:inklus/services/ocr_lines.dart';
-import 'package:inklus/services/ocr_service.dart';
+import 'package:not3/models/stroke.dart';
+import 'package:not3/services/ocr_correction_store.dart';
+import 'package:not3/services/ocr_lexicon.dart';
+import 'package:not3/services/ocr_lines.dart';
+import 'package:not3/services/ocr_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

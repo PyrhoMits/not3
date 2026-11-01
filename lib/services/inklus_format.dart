@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 
 import '../models/document.dart';
+import '../models/default_titles.dart';
 import '../models/image_item.dart';
 import '../models/note.dart';
 import '../models/notebook.dart';
@@ -79,7 +80,8 @@ class Not3Format {
       'title': notebook.title,
       'color': notebook.colorValue,
       'coverStyle': notebook.coverStyle,
-      if (notebook.coverImagePath != null) 'coverImagePath': notebook.coverImagePath,
+      if (notebook.coverImagePath != null)
+        'coverImagePath': notebook.coverImagePath,
       if (notebook.tags.isNotEmpty) 'tags': notebook.tags,
       'noteIds': notebook.notes.map((n) => n.id).toList(),
     };
@@ -159,14 +161,12 @@ class Not3Format {
       throw const AppError(AppErrorCode.notNot3V2);
     }
 
-    final nbJson = jsonDecode(utf8.decode(notebookBytes)) as Map<String, dynamic>;
+    final nbJson =
+        jsonDecode(utf8.decode(notebookBytes)) as Map<String, dynamic>;
 
     // Crear directorio de extracción.
     final docId = nbJson['id'] as String;
-    final dir = extractTo ??
-        Directory(
-          (await AppPaths.restored(docId)).path,
-        );
+    final dir = extractTo ?? Directory((await AppPaths.restored(docId)).path);
     await dir.create(recursive: true);
 
     // Extraer imágenes.
@@ -185,14 +185,15 @@ class Not3Format {
     for (final noteId in noteIds) {
       final noteBytes = noteEntries[noteId];
       if (noteBytes == null) continue;
-      final noteJson = jsonDecode(utf8.decode(noteBytes)) as Map<String, dynamic>;
+      final noteJson =
+          jsonDecode(utf8.decode(noteBytes)) as Map<String, dynamic>;
       final note = _rebuildNote(noteJson, extractedImages);
       notes.add(note);
     }
 
     return Notebook(
       id: docId,
-      title: nbJson['title'] as String? ?? 'Sin título',
+      title: normalizeNotebookTitle(nbJson['title'] as String?),
       colorValue: (nbJson['color'] as num?)?.toInt(),
       coverStyle: nbJson['coverStyle'] as String? ?? 'simple',
       coverImagePath: nbJson['coverImagePath'] as String?,
@@ -284,10 +285,7 @@ class Not3Format {
     final doc = Document.fromJson(
       jsonDecode(utf8.decode(docBytes)) as Map<String, dynamic>,
     );
-    final dir = extractTo ??
-        Directory(
-          (await AppPaths.restored(doc.id)).path,
-        );
+    final dir = extractTo ?? Directory((await AppPaths.restored(doc.id)).path);
     await dir.create(recursive: true);
 
     final pages = <Page>[];
@@ -295,7 +293,9 @@ class Not3Format {
       final images = <ImageItem>[];
       for (final item in page.images) {
         images.add(
-          item.copyWith(localPath: await _materialize(item.localPath, dir, entries)),
+          item.copyWith(
+            localPath: await _materialize(item.localPath, dir, entries),
+          ),
         );
       }
       var template = page.template;
@@ -422,7 +422,8 @@ class Not3Format {
       var template = PageTemplate.fromJson(
         pageJson['template'] as Map<String, dynamic>,
       );
-      if (template.imagePath != null && template.imagePath!.startsWith(scheme)) {
+      if (template.imagePath != null &&
+          template.imagePath!.startsWith(scheme)) {
         final key = template.imagePath!.substring(scheme.length);
         final localPath = extractedImages[key];
         if (localPath != null) {
@@ -449,11 +450,13 @@ class Not3Format {
 
     return Note(
       id: json['id'] as String,
-      title: json['title'] as String? ?? 'Sin título',
+      title: normalizeNoteTitle(json['title'] as String?),
       createdAt:
-          DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
       updatedAt:
-          DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.now(),
+          DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.now(),
       pages: pages,
     );
   }

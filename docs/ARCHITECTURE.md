@@ -15,7 +15,7 @@ flutter gen-l10n           # after editing lib/l10n/*.arb (pub get/build do it t
 flutter run -d linux       # desktop development
 flutter run                # connected Android tablet
 flutter build apk --debug  # APK → build/app/outputs/flutter-apk/
-dart run flutter_launcher_icons   # regenerate icons from assets/icon/
+tool/sync_android_icons.fish      # install pre-sized Android launcher icons
 ```
 
 ## Architecture (lib/)

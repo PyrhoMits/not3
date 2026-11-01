@@ -2,7 +2,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/constants.dart';
+import 'package:not3/constants.dart';
 
 void main() {
   test('kAppVersion coincide con pubspec.yaml', () {

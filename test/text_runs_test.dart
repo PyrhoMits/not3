@@ -4,13 +4,13 @@ import 'dart:io';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/l10n/l10n.dart';
-import 'package:inklus/logic/canvas_controller.dart';
-import 'package:inklus/models/stroke.dart';
-import 'package:inklus/models/text_item.dart';
-import 'package:inklus/services/image_service.dart';
-import 'package:inklus/services/storage_service.dart';
-import 'package:inklus/ui/canvas/drawing_canvas.dart';
+import 'package:not3/l10n/l10n.dart';
+import 'package:not3/logic/canvas_controller.dart';
+import 'package:not3/models/stroke.dart';
+import 'package:not3/models/text_item.dart';
+import 'package:not3/services/image_service.dart';
+import 'package:not3/services/storage_service.dart';
+import 'package:not3/ui/canvas/drawing_canvas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

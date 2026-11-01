@@ -3,10 +3,10 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/models/page.dart';
-import 'package:inklus/models/stroke.dart';
-import 'package:inklus/models/template.dart';
-import 'package:inklus/services/export_service.dart';
+import 'package:not3/models/page.dart';
+import 'package:not3/models/stroke.dart';
+import 'package:not3/models/template.dart';
+import 'package:not3/services/export_service.dart';
 
 /// Regresión: la exportación debe incluir contenido en coordenadas negativas
 /// (la hoja está centrada en el origen del mundo).

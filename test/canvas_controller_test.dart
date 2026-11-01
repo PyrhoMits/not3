@@ -4,16 +4,16 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/constants.dart';
-import 'package:inklus/logic/canvas_controller.dart';
-import 'package:inklus/logic/undo_stack.dart';
-import 'package:inklus/models/page.dart';
-import 'package:inklus/models/text_item.dart';
-import 'package:inklus/models/image_item.dart';
-import 'package:inklus/models/template.dart';
+import 'package:not3/constants.dart';
+import 'package:not3/logic/canvas_controller.dart';
+import 'package:not3/logic/undo_stack.dart';
+import 'package:not3/models/page.dart';
+import 'package:not3/models/text_item.dart';
+import 'package:not3/models/image_item.dart';
+import 'package:not3/models/template.dart';
 import 'package:flutter/painting.dart' show Color, Rect, Size;
-import 'package:inklus/models/stroke.dart';
-import 'package:inklus/services/storage_service.dart';
+import 'package:not3/models/stroke.dart';
+import 'package:not3/services/storage_service.dart';
 
 /// Tests de regresión del controlador del lienzo (bugs de la auditoría).
 void main() {

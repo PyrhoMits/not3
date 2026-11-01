@@ -23,9 +23,9 @@ const Locale kAppLocale = Locale('en');
 
 /// Repositorio del proyecto y política de privacidad (enlazada desde
 /// Configuración y necesaria para la pantalla de consentimiento de Google).
-const String kSourceCodeUrl = 'https://github.com/Pedroj-64/inklus';
+const String kSourceCodeUrl = 'https://github.com/PyrhoMits/not3';
 const String kPrivacyPolicyUrl =
-    'https://github.com/Pedroj-64/inklus/blob/main/docs/privacy.md';
+    'https://github.com/PyrhoMits/not3/blob/main/docs/privacy.md';
 
 // ---------------------------------------------------------------------------
 // Tema / Colores de acento

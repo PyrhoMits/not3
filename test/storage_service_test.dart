@@ -5,11 +5,11 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/models/document.dart';
-import 'package:inklus/models/image_item.dart';
-import 'package:inklus/models/stroke.dart';
-import 'package:inklus/services/file_utils.dart';
-import 'package:inklus/services/storage_service.dart';
+import 'package:not3/models/document.dart';
+import 'package:not3/models/image_item.dart';
+import 'package:not3/models/stroke.dart';
+import 'package:not3/services/file_utils.dart';
+import 'package:not3/services/storage_service.dart';
 
 void main() {
   late Directory tempDir;

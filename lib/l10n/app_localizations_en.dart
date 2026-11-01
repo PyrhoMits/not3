@@ -262,7 +262,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String driveSignInHelpBody(Object details) {
-    return 'If you just closed the account picker, nothing is wrong. If you chose an account and it did not connect, the app\'s signing key (SHA-1) is almost always not registered in Google Cloud for com.inklus.inklus.\n\nTechnical detail:\n$details';
+    return 'If you just closed the account picker, nothing is wrong. If you chose an account and it did not connect, the app\'s signing key (SHA-1) is almost always not registered in Google Cloud for io.github.pyrhomits.not3.\n\nTechnical detail:\n$details';
   }
 
   @override
@@ -1998,7 +1998,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String driveConfigBody(String details) {
-    return 'Google configuration error (clientConfigurationError).\\n\\nLikely cause: this app\'s signing SHA-1 is not registered in Google Cloud Console for the package com.inklus.inklus.\\n\\nFix:\\n1. Go to Google Cloud Console → APIs & Services → Credentials\\n2. Create or edit the Android OAuth client ID with package com.inklus.inklus and your signing SHA-1\\n3. Enable Google Sign-In on the consent screen\\n\\nOriginal error: $details';
+    return 'Google configuration error (clientConfigurationError).\\n\\nLikely cause: this app\'s signing SHA-1 is not registered in Google Cloud Console for the package io.github.pyrhomits.not3.\\n\\nFix:\\n1. Go to Google Cloud Console → APIs & Services → Credentials\\n2. Create or edit the Android OAuth client ID with package io.github.pyrhomits.not3 and your signing SHA-1\\n3. Enable Google Sign-In on the consent screen\\n\\nOriginal error: $details';
   }
 
   @override

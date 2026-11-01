@@ -2,10 +2,10 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/models/document.dart';
-import 'package:inklus/services/import_service.dart';
-import 'package:inklus/services/inklus_format.dart';
-import 'package:inklus/services/storage_service.dart';
+import 'package:not3/models/document.dart';
+import 'package:not3/services/import_service.dart';
+import 'package:not3/services/inklus_format.dart';
+import 'package:not3/services/storage_service.dart';
 
 void main() {
   group('ImportService.kindFor', () {

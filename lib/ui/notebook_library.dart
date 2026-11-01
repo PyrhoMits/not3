@@ -269,7 +269,7 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
     final name = await _promptText(
       titulo: context.l10n.libRenameTitle,
       hint: context.l10n.createName,
-      prefilled: meta.title,
+      prefilled: displayTitle(context.l10n, meta.title),
     );
     if (name == null) return;
     await _storage.renameNotebook(meta.id, name);
@@ -534,12 +534,13 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
         ? const Center(child: CircularProgressIndicator())
         : _MaxWidth(
             child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _buildHeader(metas.length)),
-              ..._buildContentSlivers(),
-              const SliverToBoxAdapter(child: SizedBox(height: 96)),
-            ],
-          ));
+              slivers: [
+                SliverToBoxAdapter(child: _buildHeader(metas.length)),
+                ..._buildContentSlivers(),
+                const SliverToBoxAdapter(child: SizedBox(height: 96)),
+              ],
+            ),
+          );
     return Scaffold(
       appBar: wide
           ? null
@@ -1285,10 +1286,10 @@ class _MaxWidth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: Sizes.contentMaxWidth),
-          child: child,
-        ),
-      );
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: Sizes.contentMaxWidth),
+      child: child,
+    ),
+  );
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/logic/palm_rejection.dart';
+import 'package:not3/logic/palm_rejection.dart';
 
 void main() {
   late DateTime now;

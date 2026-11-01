@@ -3,10 +3,10 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/logic/canvas_controller.dart';
-import 'package:inklus/logic/pen_presets.dart';
-import 'package:inklus/models/stroke.dart';
-import 'package:inklus/services/storage_service.dart';
+import 'package:not3/logic/canvas_controller.dart';
+import 'package:not3/logic/pen_presets.dart';
+import 'package:not3/models/stroke.dart';
+import 'package:not3/services/storage_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

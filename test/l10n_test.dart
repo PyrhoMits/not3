@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/app.dart' show resolveAppLocale;
-import 'package:inklus/l10n/app_localizations.dart';
+import 'package:not3/app.dart' show resolveAppLocale;
+import 'package:not3/l10n/app_localizations.dart';
 
 void main() {
   group('system locale', () {

@@ -2,11 +2,11 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/models/stroke.dart';
-import 'package:inklus/logic/canvas_controller.dart';
-import 'package:inklus/models/note.dart';
-import 'package:inklus/services/error_log.dart';
-import 'package:inklus/services/storage_service.dart';
+import 'package:not3/models/stroke.dart';
+import 'package:not3/logic/canvas_controller.dart';
+import 'package:not3/models/note.dart';
+import 'package:not3/services/error_log.dart';
+import 'package:not3/services/storage_service.dart';
 
 /// Almacenamiento cuyo guardado falla mientras [failing] sea true.
 class _FlakyStorage extends StorageService {

@@ -22,7 +22,7 @@ if (hasReleaseKey) {
 }
 
 android {
-    namespace = "com.inklus.inklus"
+    namespace = "io.github.pyrhomits.not3"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -32,9 +32,9 @@ android {
     }
 
     defaultConfig {
-        // No cambiar: el cliente OAuth de Google Sign-In está ligado a este
-        // paquete (+ SHA-1 de la firma).
-        applicationId = "com.inklus.inklus"
+        // Google Sign-In requires an Android OAuth client registered for this
+        // package together with the signing certificate's SHA-1 fingerprint.
+        applicationId = "io.github.pyrhomits.not3"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

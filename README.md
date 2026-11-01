@@ -29,7 +29,7 @@ Handwriting app for **stylus** tablets, in the spirit of GoodNotes or Samsung No
 
 ## 📲 Install (Android)
 
-Not3 is distributed as an APK on [**GitHub Releases**](https://github.com/Pedroj-64/inklus/releases) (it is not on Google Play).
+Not3 is distributed as an APK on [**GitHub Releases**](https://github.com/PyrhoMits/not3/releases) (it is not on Google Play).
 
 1. From the latest release, download the APK for your tablet. Most current tablets use **`app-arm64-v8a-release.apk`**; if it won't install, try `app-armeabi-v7a-release.apk`.
 2. Open it. Android will ask you to allow **installing apps from unknown sources** for your browser or file manager: grant it for this installation only.
@@ -189,7 +189,7 @@ GitHub Actions CI runs analysis, tests and integration tests on every PR, and pu
 
 ### Icon and README animations
 
-The icon source is `assets/icon/*.svg` (→ `dart run flutter_launcher_icons`). The animated icon and the *How it works* SVGs are generated, dependency-free, with:
+The Android launcher icons are pre-sized in `docs/assets/android/`. Install them without cropping or rescaling with `tool/sync_android_icons.fish`. The animated icon and the *How it works* SVGs are generated, dependency-free, with:
 
 ```bash
 python3 tool/docs_assets/generate.py   # → docs/assets/ (icon.svg, icon-animated.svg, icon.png, anim/*.svg)

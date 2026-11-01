@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'page.dart';
 import 'id.dart';
+import 'default_titles.dart';
 
 /// Cuaderno completo: metadatos + lista de páginas.
 ///
@@ -27,43 +28,39 @@ class Document {
     required this.pages,
     this.colorValue,
     List<String>? tags,
-  })  : tags = tags ?? [];
+  }) : tags = tags ?? [];
 
   factory Document.newBlank({String? id, String? title}) => Document(
-        id: id ?? newId('doc'),
-        title: title ?? 'Mi cuaderno',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        pages: [Page.blank()],
-        colorValue: null,
-        tags: [],
-      );
+    id: id ?? newId('doc'),
+    title: normalizeNotebookTitle(title),
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+    pages: [Page.blank()],
+    colorValue: null,
+    tags: [],
+  );
 
   factory Document.fromJson(Map<String, dynamic> json) => Document(
-        id: json['id'] as String,
-        title: json['title'] as String? ?? 'Mi cuaderno',
-        createdAt:
-            DateTime.tryParse(json['createdAt'] as String? ?? '') ??
-                DateTime.now(),
-        updatedAt:
-            DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
-                DateTime.now(),
-        pages: (json['pages'] as List? ?? [])
-            .map((p) => Page.fromJson(p as Map<String, dynamic>))
-            .toList(),
-        colorValue: (json['color'] as num?)?.toInt(),
-        tags: (json['tags'] as List? ?? [])
-            .map((t) => t as String)
-            .toList(),
-      );
+    id: json['id'] as String,
+    title: normalizeNotebookTitle(json['title'] as String?),
+    createdAt:
+        DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+    updatedAt:
+        DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.now(),
+    pages: (json['pages'] as List? ?? [])
+        .map((p) => Page.fromJson(p as Map<String, dynamic>))
+        .toList(),
+    colorValue: (json['color'] as num?)?.toInt(),
+    tags: (json['tags'] as List? ?? []).map((t) => t as String).toList(),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-        'pages': pages.map((p) => p.toJson()).toList(),
-        if (colorValue != null) 'color': colorValue,
-        if (tags.isNotEmpty) 'tags': tags,
-      };
+    'id': id,
+    'title': title,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'pages': pages.map((p) => p.toJson()).toList(),
+    if (colorValue != null) 'color': colorValue,
+    if (tags.isNotEmpty) 'tags': tags,
+  };
 }

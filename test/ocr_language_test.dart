@@ -2,7 +2,7 @@
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:inklus/services/ocr_language.dart';
+import 'package:not3/services/ocr_language.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

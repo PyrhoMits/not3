@@ -91,10 +91,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
   Future<void> _openNote(Note note) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => HomeScreen(
-          note: note,
-          notebookId: _notebook.id,
-        ),
+        builder: (_) => HomeScreen(note: note, notebookId: _notebook.id),
       ),
     );
     await _reload();
@@ -104,7 +101,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
     final name = await _promptText(
       titulo: context.l10n.noteRenameTitle,
       hint: context.l10n.createName,
-      prefilled: note.title,
+      prefilled: displayTitle(context.l10n, note.title),
     );
     if (name == null) return;
     await _storage.renameNote(_notebook.id, note.id, name);
@@ -143,7 +140,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
     final name = await _promptText(
       titulo: context.l10n.libRenameTitle,
       hint: context.l10n.createName,
-      prefilled: _notebook.title,
+      prefilled: displayTitle(context.l10n, _notebook.title),
     );
     if (name == null) return;
     await _storage.renameNotebook(_notebook.id, name);
@@ -190,7 +187,9 @@ class _NoteListScreenState extends State<NoteListScreen> {
                 const SizedBox(height: 20),
                 Text(
                   context.l10n.createTemplate,
-                  style: context.text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: context.text.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: Spacing.sm),
                 _CompactTemplateGrid(
@@ -335,7 +334,9 @@ class _NoteListScreenState extends State<NoteListScreen> {
                               child: SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             );
                           },
@@ -359,22 +360,27 @@ class _NoteListScreenState extends State<NoteListScreen> {
                             ),
                             const Divider(),
                             MenuItemButton(
-                              leadingIcon: Icon(Icons.delete_outline,
-                                  color: context.inklus.danger),
+                              leadingIcon: Icon(
+                                Icons.delete_outline,
+                                color: context.inklus.danger,
+                              ),
                               onPressed: () => _deleteNote(note),
-                              child: Text(context.l10n.libDelete,
-                                  style: TextStyle(color: context.inklus.danger)),
+                              child: Text(
+                                context.l10n.libDelete,
+                                style: TextStyle(color: context.inklus.danger),
+                              ),
                             ),
                           ],
                           builder: (context, menu, _) => IconButton(
                             tooltip: context.l10n.noteOptions,
                             style: IconButton.styleFrom(
-                              backgroundColor:
-                                  context.colors.surface.withValues(alpha: 0.85),
+                              backgroundColor: context.colors.surface
+                                  .withValues(alpha: 0.85),
                               foregroundColor: context.colors.onSurface,
                             ),
                             icon: const Icon(Icons.more_vert),
-                            onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+                            onPressed: () =>
+                                menu.isOpen ? menu.close() : menu.open(),
                           ),
                         ),
                       ),
@@ -384,7 +390,11 @@ class _NoteListScreenState extends State<NoteListScreen> {
                 // Info de la nota
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
-                      Spacing.md, Spacing.sm, Spacing.sm, Spacing.md),
+                    Spacing.md,
+                    Spacing.sm,
+                    Spacing.sm,
+                    Spacing.md,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -401,7 +411,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
                             Text(
                               context.l10n.notePageCount(pageCount, timeAgo),
                               style: context.text.bodySmall?.copyWith(
-                                  color: context.colors.onSurfaceVariant),
+                                color: context.colors.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),
@@ -419,7 +430,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
 }
 
 // --- Helpers ---
-
 
 /// Resultado del diálogo de creación de nota.
 class _CreateNoteResult {
@@ -439,7 +449,11 @@ class _CompactTemplateGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final templates = <(TemplateType, IconData, String)>[
       (TemplateType.blank, Icons.landscape, context.l10n.noteTplInfinite),
-      (TemplateType.ruled, Icons.format_list_bulleted, context.l10n.createTplRuled),
+      (
+        TemplateType.ruled,
+        Icons.format_list_bulleted,
+        context.l10n.createTplRuled,
+      ),
       (TemplateType.grid, Icons.grid_on, context.l10n.createTplGrid),
       (TemplateType.dots, Icons.grain, context.l10n.createTplDots),
       (TemplateType.sheet, Icons.description, context.l10n.noteTplSheet),
@@ -486,10 +500,14 @@ class _CompactTemplateGrid extends StatelessWidget {
                 Text(
                   label,
                   textAlign: TextAlign.center,
-                  style: context.text.labelSmall?.copyWith(fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal, color: isSelected
+                  style: context.text.labelSmall?.copyWith(
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                    color: isSelected
                         ? context.colors.primary
-                        : context.colors.onSurface),
+                        : context.colors.onSurface,
+                  ),
                 ),
               ],
             ),

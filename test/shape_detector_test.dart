@@ -2,8 +2,8 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inklus/logic/shape_detector.dart';
-import 'package:inklus/models/stroke.dart';
+import 'package:not3/logic/shape_detector.dart';
+import 'package:not3/models/stroke.dart';
 
 /// Recorre un polígono a mano alzada (con un pequeño temblor).
 List<StrokePoint> polygon(List<Offset> vertices, {int perSide = 20}) {
