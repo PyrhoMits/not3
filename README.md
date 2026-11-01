@@ -6,7 +6,7 @@
 
 <p align="center"><b>Handwriting for stylus tablets. Free, offline-first, open source.</b></p>
 
-🌐 **English** · [Español](README.es.md)
+🌐 **English**
 
 Handwriting app for **stylus** tablets, in the spirit of GoodNotes or Samsung Notes, built with **Flutter**. Real pressure sensitivity, palm rejection, notebooks with templates, lasso, handwriting recognition, PDF import and optional Google Drive backup.
 
@@ -72,7 +72,7 @@ Inklus is distributed as an APK on [**GitHub Releases**](https://github.com/Pedr
 ### 📚 Organization
 - **Library** with notebooks, covers, favorites, recents and grid/list view.
 - **Tags** and **smart folders**.
-- **Search** across all notes, including **recognized handwriting** (ML Kit, on-device).
+- **Search** across all notes, including **recognized handwriting** (ML Kit, on-device; English, Japanese and Thai). The first use of a language downloads its model (~20 MB) after asking you.
 - **Page bookmarks**, go to page and keyboard shortcuts.
 - **Trash** with restore and automatic purge after 30 days.
 - **Reminders** linked to notebooks and **writing stats** (totals and streaks).
@@ -145,6 +145,7 @@ lib/
 │   ├── drive_sync_service.dart    # Google Drive backup
 │   ├── backup_crypto.dart         # AES-256-GCM + PBKDF2
 │   ├── ocr_service.dart           # Handwriting recognition (ML Kit)
+│   ├── ocr_language.dart          # OCR languages + last choice
 │   ├── search_service.dart · version_history_service.dart
 │   ├── reminder_service.dart · writing_stats_service.dart
 │   └── marketplace/               # Pack catalog

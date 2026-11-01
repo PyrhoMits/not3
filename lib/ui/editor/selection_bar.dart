@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import '../../logic/canvas_controller.dart';
 import '../../logic/pen_presets.dart';
 import '../../models/stroke.dart';
+import '../../services/ocr_language.dart';
 import '../../services/ocr_service.dart';
 import '../theme/inklus_colors.dart';
 import '../theme/tokens.dart';
 import '../widgets/controller_selector.dart';
 import '../widgets/dialogs.dart';
+import '../widgets/ocr_language_sheet.dart';
 import 'anchored_popover.dart';
 import 'tool_popovers.dart';
 import '../../l10n/l10n.dart';
@@ -153,9 +155,27 @@ class SelectionBar extends StatelessWidget {
   Future<void> _convertToText(BuildContext context) async {
     final l10n = context.l10n;
     try {
-      final result = await OcrService.recognizeStrokes(
-        canvas.selectedStrokes,
-        sheetSize: canvas.sheetSize,
+      final current = await OcrLanguageStore.load();
+      final downloaded = await OcrService.downloadedModelCodes();
+      if (!context.mounted) return;
+      final selection = await showOcrLanguageSheet(
+        context,
+        currentCode: current.code,
+        downloadedCodes: downloaded,
+      );
+      if (selection == null || !context.mounted) return;
+
+      final language = selection.language;
+      await OcrLanguageStore.save(language);
+      if (!context.mounted) return;
+
+      final result = await runWithLoading(
+        context,
+        () => OcrService.recognizeStrokes(
+          canvas.selectedStrokes,
+          sheetSize: canvas.sheetSize,
+          languageCode: language.code,
+        ),
       );
       if (!context.mounted) return;
       if (result.isEmpty) {
@@ -171,7 +191,11 @@ class SelectionBar extends StatelessWidget {
         multiline: true,
       );
       if (text != null) canvas.convertSelectionToText(text);
+    } on OcrModelUnavailableError catch (e) {
+      if (!context.mounted) return;
+      onMessage(l10n.ocrLanguageDownloadFailed(e.language.label));
     } catch (e) {
+      if (!context.mounted) return;
       onMessage(l10n.selRecognizeFailed('$e'));
     }
   }

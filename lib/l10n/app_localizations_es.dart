@@ -1321,6 +1321,26 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ocrCopied => 'Texto copiado al portapapeles';
 
   @override
+  String get ocrLanguageTitle => 'Idioma de reconocimiento';
+
+  @override
+  String get ocrLanguageDownload => 'Descargar (~20 MB)';
+
+  @override
+  String ocrLanguageDownloadTitle(String language) {
+    return '¿Descargar el modelo de $language?';
+  }
+
+  @override
+  String get ocrLanguageDownloadMessage =>
+      'Se descargarán unos 20 MB desde Google por Wi-Fi. Después funcionará sin conexión.';
+
+  @override
+  String ocrLanguageDownloadFailed(String language) {
+    return 'No se pudo descargar el modelo de $language. Conéctate a Wi-Fi e inténtalo de nuevo.';
+  }
+
+  @override
   String get edGoogleAccount => 'Cuenta Google';
 
   @override

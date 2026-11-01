@@ -1,36 +1,36 @@
-# 🚀 Publicar una versión
+# 🚀 Publishing a release
 
-Distribución sin Google Play: **GitHub Releases** (APK/AAB firmados por la CI en tags `v*`) e idealmente IzzyOnDroid. Licencia GPL-3.0-or-later.
+Distribution without Google Play: **GitHub Releases** (APK/AAB signed by CI on `v*` tags) and ideally IzzyOnDroid. GPL-3.0-or-later license.
 
-## Antes de etiquetar
+## Before tagging
 
 1. `flutter analyze` (0 issues), `flutter test`, `flutter test integration_test -d linux`.
-2. Prueba en tablet con el guion de [`testing.md`](testing.md).
-3. Sube la versión en **`pubspec.yaml`** (`version: X.Y.Z+N`, `N` siempre creciente) y en **`lib/constants.dart`** (`kAppVersion`). `test/app_version_test.dart` comprueba que coincidan.
-4. Añade la sección `## [X.Y.Z] — AAAA-MM-DD` a `CHANGELOG.md`, **en español y en inglés** (sección `### English`): el workflow copia esa sección completa a las notas de la release.
-5. Actualiza `ROADMAP.md` si cambia el estado del proyecto.
+2. Test on a tablet with the script in [`testing.md`](testing.md).
+3. Bump the version in **`pubspec.yaml`** (`version: X.Y.Z+N`, `N` always increasing) and in **`lib/constants.dart`** (`kAppVersion`). `test/app_version_test.dart` checks that they match.
+4. Add the `## [X.Y.Z] — YYYY-MM-DD` section to `CHANGELOG.md`, **in Spanish and in English** (`### English` section): the workflow copies that whole section into the release notes.
+5. Update `ROADMAP.md` if the project status changes.
 
-## Etiquetar
+## Tagging
 
 ```bash
 git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-La CI (`.github/workflows/ci.yml`, job `release`) comprueba que el tag coincida con `pubspec.yaml`, firma el APK/AAB y crea la release con las notas del CHANGELOG.
+CI (`.github/workflows/ci.yml`, `release` job) checks that the tag matches `pubspec.yaml`, signs the APK/AAB and creates the release with the CHANGELOG notes.
 
-## Firma (una sola vez, manual)
+## Signing (once, manually)
 
-- Genera un keystore **y guárdalo a buen recaudo**: si cambia la clave, los usuarios deben desinstalar para actualizar.
-- Secretos del repositorio (Settings → Secrets → Actions): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
-- Para builds locales firmados usa `android/key.properties` (**nunca versionado**) con las mismas cuatro claves; sin él, release firma con la clave de debug.
-- Para huellas SHA-1 (registro de Google Sign-In) usa `keytool -list`; son públicas, las contraseñas no.
-- **Nunca** subas `key.properties`, `*.jks` ni `client_secret*.json`; la CI ejecuta gitleaks.
+- Generate a keystore **and keep it safe**: if the key changes, users must uninstall to update.
+- Repository secrets (Settings → Secrets → Actions): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+- For signed local builds use `android/key.properties` (**never checked in**) with the same four keys; without it, release builds are signed with the debug key.
+- For SHA-1 fingerprints (Google Sign-In registration) use `keytool -list`; they're public, the passwords aren't.
+- **Never** upload `key.properties`, `*.jks` or `client_secret*.json`; CI runs gitleaks.
 
 ## Google Sign-In / Drive
 
-Las SHA-1 de debug y de release deben estar registradas en Google Cloud (cliente OAuth Android). Para uso público, publica la pantalla de consentimiento (*Publish app*) con la URL de [`privacy.md`](privacy.md); si no, 100 usuarios de prueba y tokens de 7 días.
+The debug and release SHA-1s must be registered in Google Cloud (Android OAuth client). For public use, publish the consent screen (*Publish app*) with the [`privacy.md`](privacy.md) URL; otherwise you get 100 test users and 7-day tokens.
 
-## Después
+## After
 
-Descarga el APK de la release y compruébalo en un dispositivo limpio (instalación, abrir cuaderno, escribir, exportar).
+Download the release APK and check it on a clean device (install, open a notebook, write, export).

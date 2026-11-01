@@ -1,39 +1,39 @@
-# 🎨 Sistema de diseño de Inklus
+# 🎨 Inklus Design System
 
-Objetivo: que cada pantalla se sienta del mismo producto, al nivel de GoodNotes/Notability. Código en `lib/ui/theme/` y `lib/ui/widgets/`.
+Goal: every screen should feel like the same product, at the level of GoodNotes/Notability. Code lives in `lib/ui/theme/` and `lib/ui/widgets/`.
 
-## Piezas
+## Pieces
 
-| Qué | Dónde |
+| What | Where |
 |---|---|
-| `ThemeData` claro/oscuro (Material 3, esquema `fidelity`) | `ui/theme/app_theme.dart` |
-| Colores propios (`context.inklus`, `context.colors`, `context.text`, `context.isDark`) | `ui/theme/inklus_colors.dart` |
-| Medidas: `Spacing`, `Radii`, `Motion`, `Sizes`, `Breakpoints` | `ui/theme/tokens.dart` |
-| Pantallas secundarias: `InklusPage`, `PageHeader`, `SectionCard`, `SettingsTile`, `EmptyState`, `SheetHeader` | `ui/widgets/page_scaffold.dart` |
-| Diálogos: `showConfirmDialog`, `showTextPrompt`, `runWithLoading` | `ui/widgets/dialogs.dart` |
+| Light/dark `ThemeData` (Material 3, `fidelity` scheme) | `ui/theme/app_theme.dart` |
+| Custom colors (`context.inklus`, `context.colors`, `context.text`, `context.isDark`) | `ui/theme/inklus_colors.dart` |
+| Measurements: `Spacing`, `Radii`, `Motion`, `Sizes`, `Breakpoints` | `ui/theme/tokens.dart` |
+| Secondary screens: `InklusPage`, `PageHeader`, `SectionCard`, `SettingsTile`, `EmptyState`, `SheetHeader` | `ui/widgets/page_scaffold.dart` |
+| Dialogs: `showConfirmDialog`, `showTextPrompt`, `runWithLoading` | `ui/widgets/dialogs.dart` |
 
-## Reglas
+## Rules
 
-1. **Colores** solo desde `context.colors` (`ColorScheme`) o `context.inklus`. Nada de `Colors.white` / `Color(0x…)` en widgets. Excepción: colores que son **contenido** (portadas `kCoverColors`, etiquetas, líneas de plantilla, selector de color, lienzo).
-2. **Medidas** solo de `Spacing`, `Radii`, `Sizes`, `Motion`. Objetivo táctil **≥ 48 dp**.
-3. **Texto** con los roles de `context.text` (escala ajustada a tablet). Nada por debajo de **12 pt**; respeta `textScaler` del sistema.
-4. **Pantallas secundarias** con `InklusPage` + `SectionCard`/`SettingsTile`/`EmptyState`. Hojas inferiores con `SheetHeader` (el asa la pone el tema). Confirmaciones con `showConfirmDialog`.
-5. **Opciones de herramienta** en popovers anclados (`showAnchoredPopover`), no en barras fijas.
-6. **Rebuilds**: widgets que dependen del controlador usan `ControllerSelector` con el valor mínimo que muestran (el controlador notifica en cada punto del trazo).
-7. **Texto visible** siempre por l10n (`context.l10n`); ver [`TRANSLATING.md`](TRANSLATING.md). Los textos largos (alemán) no deben desbordar: celdas flexibles, `Flexible`/`maxLines` + elipsis.
-8. **Accesibilidad**: `Semantics`/`tooltip` en iconos sin texto, swatches, portadas y miniaturas; contraste suficiente en claro y oscuro.
+1. **Colors** only from `context.colors` (`ColorScheme`) or `context.inklus`. No `Colors.white` / `Color(0x…)` in widgets. Exception: colors that are **content** (covers `kCoverColors`, tags, template lines, color picker, canvas).
+2. **Measurements** only from `Spacing`, `Radii`, `Sizes`, `Motion`. Touch target **≥ 48 dp**.
+3. **Text** with the roles from `context.text` (tablet-adjusted scale). Nothing below **12 pt**; respect the system `textScaler`.
+4. **Secondary screens** with `InklusPage` + `SectionCard`/`SettingsTile`/`EmptyState`. Bottom sheets with `SheetHeader` (the handle is added by the theme). Confirmations with `showConfirmDialog`.
+5. **Tool options** in anchored popovers (`showAnchoredPopover`), not in fixed bars.
+6. **Rebuilds**: widgets that depend on the controller use `ControllerSelector` with the minimum value they display (the controller notifies on every stroke point).
+7. **Visible text** always through l10n (`context.l10n`); see [`TRANSLATING.md`](TRANSLATING.md). Long texts (German) must not overflow: flexible cells, `Flexible`/`maxLines` + ellipsis.
+8. **Accessibility**: `Semantics`/`tooltip` on icons without text, swatches, covers and thumbnails; enough contrast in light and dark.
 
-## Checklist «premium» para un PR de UI
+## "Premium" checklist for a UI PR
 
-- [ ] Tokens en lugar de literales; sin texto < 12 pt ni objetivos < 48 dp
-- [ ] Claro y oscuro revisados
-- [ ] Idioma largo (de) sin desbordes; escala de texto 1.3 sin romper
-- [ ] Estados vacío, carga y error presentes
-- [ ] Feedback de pulsación y transiciones con `Motion` (sin animaciones bruscas)
-- [ ] Capturas con `flutter test tool/screenshots/screenshots_test.dart`
+- [ ] Tokens instead of literals; no text < 12 pt or targets < 48 dp
+- [ ] Light and dark reviewed
+- [ ] Long language (de) without overflow; text scale 1.3 without breaking
+- [ ] Empty, loading and error states present
+- [ ] Press feedback and transitions with `Motion` (no abrupt animations)
+- [ ] Screenshots with `flutter test tool/screenshots/screenshots_test.dart`
 
-## Marca e icono
+## Brand and icon
 
-- **Icono**: plumilla blanca escribiendo un trazo dorado sobre degradado azul (`#5B8CFF → #2A4FD6`, tinta `#FFD66B → #FF9F43`). Fuente vectorial en `assets/icon/` (`icon_full.svg`, `icon_foreground.svg`, `icon_background.svg`); los PNG de `flutter_launcher_icons` salen de ahí con `rsvg-convert`.
-- **README**: `docs/assets/icon-animated.svg` (la plumilla escribe el trazo en bucle) y `docs/assets/anim/*.{en,es}.svg` (presión, rechazo de palma, figuras, lazo). Son SVG/SMIL escritos a mano y **generados** por `tool/docs_assets/generate.py` (sin dependencias; edita el script, no los SVG).
-- Una animación nueva = una función `scene_*` en el script, con fondo propio (se ve igual en tema claro y oscuro) y textos es/en en `TXT`.
+- **Icon**: a white nib writing a golden stroke over a blue gradient (`#5B8CFF → #2A4FD6`, ink `#FFD66B → #FF9F43`). Vector source in `assets/icon/` (`icon_full.svg`, `icon_foreground.svg`, `icon_background.svg`); the `flutter_launcher_icons` PNGs come from there with `rsvg-convert`.
+- **README**: `docs/assets/icon-animated.svg` (the nib writes the stroke in a loop) and `docs/assets/anim/*.{en,es}.svg` (pressure, palm rejection, shapes, lasso). They are hand-written SVG/SMIL and **generated** by `tool/docs_assets/generate.py` (no dependencies; edit the script, not the SVGs).
+- A new animation = a `scene_*` function in the script, with its own background (it looks the same in light and dark theme) and en/es texts in `TXT`.

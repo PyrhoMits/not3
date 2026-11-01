@@ -1,80 +1,80 @@
-# Inklus — Plan de rework (base, comunidad y UI premium)
+# Inklus — Rework plan (foundation, community and premium UI)
 
-> Estado (2026-10-15): **Fases A–D ejecutadas**; queda la *Ronda 2* y lo marcado «pendiente» abajo. Auditoría del 2026-10-14. Documento de traspaso: quien retome el trabajo puede empezar aquí. Contexto técnico en `ROADMAP.md`; arquitectura en `docs/ARCHITECTURE.md` (Fase A la crea a partir de la guía técnica actual).
+> Status (2026-10-15): **Phases A–D executed**; *Round 2* and the items marked "pending" below remain. Audit from 2026-10-14. Handover document: whoever picks the work back up can start here. Technical context in `ROADMAP.md`; architecture in `docs/ARCHITECTURE.md` (Phase A creates it from the current technical guide).
 
-## Objetivo
-Dejar Inklus listo para colaboradores y hacer que biblioteca, portadas y barra del editor se sientan como un producto premium (nivel GoodNotes/Notability), manteniendo: gratis, offline-first, GPL-3.0-or-later, multilingüe.
+## Goal
+Get Inklus ready for contributors and make the library, covers and editor bar feel like a premium product (GoodNotes/Notability level), while keeping it: free, offline-first, GPL-3.0-or-later, multilingual.
 
-## Reglas del proyecto (aplican a toda ejecución)
-- Todo a nombre del mantenedor (Pedro, `Pedroj-64`) con su identidad de git/gh. Sin trailers ni menciones de herramientas de generación de código en commits, PR, docs o código.
-- No hacer commit/push/PR sin petición explícita del mantenedor.
-- Nunca versionar secretos (`key.properties`, `*.jks`, `client_secret*.json`).
-- Idiomas objetivo: es, en, pt-BR, fr, de. Texto nuevo siempre por ARB (`context.l10n`).
-- Historial de git: no reescribir (decisión tomada).
+## Project rules (apply to every run)
+- Everything under the maintainer's name (Pedro, `Pedroj-64`) with their git/gh identity. No trailers or mentions of code-generation tools in commits, PRs, docs or code.
+- Don't commit/push/PR without an explicit request from the maintainer.
+- Never check in secrets (`key.properties`, `*.jks`, `client_secret*.json`).
+- Target languages: es, en, pt-BR, fr, de. New text always through ARB (`context.l10n`).
+- Git history: don't rewrite (decided).
 
-> **Pendiente de las fases A–D:** `Hero` tarjeta→editor (no se hizo: el editor es un lienzo pesado, no tiene un elemento destino equivalente); revisión nativa de pt/fr/de; READMEs pt/fr/de (se deja es/en); títulos por defecto guardados en datos ('Sin título'); una pasada de `dart format` (el repo no está formateado y hacerlo ensuciaría el historial).
+> **Pending from phases A–D:** `Hero` card→editor (not done: the editor is a heavy canvas, it has no equivalent destination element); native pt/fr/de review; pt/fr/de READMEs (es/en left); default titles stored in data ('Untitled'); a `dart format` pass (the repo isn't formatted and doing it would dirty the history).
 
-## Fase A — Limpieza y gobernanza (sin tocar código de la app)
-1. **Limpiar el árbol**: `ROADMAP.md` (líneas 3 y 5, "para la IA" → "para colaboradores"); `.gitignore` (bloque de asistentes, L154-187: dejar reglas neutras; lo local va al ignore global del desarrollador); borrar `.github/modernize/`; `AGENTS.md` sale del repo y su contenido pasa a `docs/ARCHITECTURE.md` redactado como guía para contribuidores.
-2. **Archivos de comunidad** (es/en donde sea público):
-   - `CONTRIBUTING.md` (+ `.es.md`): setup, `flutter analyze` en 0, tests, Conventional Commits, ramas, DCO (`Signed-off-by`, sin CLA), flujo de PR, cómo traducir.
-   - `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md` (reporte privado vía GitHub Security Advisories), `SUPPORT.md`, `GOVERNANCE.md` corto (mantenedor principal, cómo se decide), `CODEOWNERS`.
+## Phase A — Cleanup and governance (without touching app code)
+1. **Clean the tree**: `ROADMAP.md` (lines 3 and 5, "for the AI" → "for contributors"); `.gitignore` (assistant block, L154-187: leave neutral rules; local stuff goes to the developer's global ignore); delete `.github/modernize/`; `AGENTS.md` leaves the repo and its content moves to `docs/ARCHITECTURE.md`, written as a contributor guide.
+2. **Community files** (es/en wherever public):
+   - `CONTRIBUTING.md` (+ `.es.md`): setup, `flutter analyze` at 0, tests, Conventional Commits, branches, DCO (`Signed-off-by`, no CLA), PR flow, how to translate.
+   - `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md` (private report via GitHub Security Advisories), `SUPPORT.md`, a short `GOVERNANCE.md` (lead maintainer, how decisions are made), `CODEOWNERS`.
    - `.github/ISSUE_TEMPLATE/{bug,feature,translation}.yml` + `config.yml`, `.github/pull_request_template.md`, `dependabot.yml`.
-   - Licencia: mantener GPL-3.0-or-later; documentar fuentes OFL (`third_party_licenses/`) y regla CC0/CC-BY para el marketplace.
-3. **Docs**: `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md` (tokens, reglas de UI, checklist premium), `docs/TRANSLATING.md`, `docs/RELEASING.md` (firma, tags, CHANGELOG; sin secretos). Enlazar desde ambos README. Reducir `ROADMAP.md` a estado + próximas rondas.
+   - License: keep GPL-3.0-or-later; document OFL fonts (`third_party_licenses/`) and the CC0/CC-BY rule for the marketplace.
+3. **Docs**: `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md` (tokens, UI rules, premium checklist), `docs/TRANSLATING.md`, `docs/RELEASING.md` (signing, tags, CHANGELOG; no secrets). Link them from both READMEs. Reduce `ROADMAP.md` to status + upcoming rounds.
 
-## Fase B — Datos seguros
-- `WidgetsBindingObserver` → `flush()` en `paused/inactive/detached` (`lib/logic/canvas_controller.dart`, `lib/ui/home_screen.dart`).
-- Aviso visible si falla el guardado (hoy solo `debugPrint` en `saveNow`); enrutar los `catch (_)` críticos de `storage_service.dart` a `ErrorLog`.
-- `schemaVersion` por nota (`Note.toJson/fromJson`) con migración trivial y test de ida y vuelta.
-- `analysis_options.yaml`: `strict-casts`, `strict-raw-types`, `unawaited_futures`, `use_build_context_synchronously`, `prefer_const_constructors`; corregir lo que salga sin suprimir.
+## Phase B — Safe data
+- `WidgetsBindingObserver` → `flush()` on `paused/inactive/detached` (`lib/logic/canvas_controller.dart`, `lib/ui/home_screen.dart`).
+- Visible warning if saving fails (today it's only `debugPrint` in `saveNow`); route the critical `catch (_)` blocks in `storage_service.dart` to `ErrorLog`.
+- Per-note `schemaVersion` (`Note.toJson/fromJson`) with a trivial migration and a round-trip test.
+- `analysis_options.yaml`: `strict-casts`, `strict-raw-types`, `unawaited_futures`, `use_build_context_synchronously`, `prefer_const_constructors`; fix whatever comes up without suppressing it.
 
-## Fase C — Consistencia de UI y sensación premium
-Reutilizar `ui/theme/tokens.dart`, `inklus_colors.dart`, `ui/widgets/page_scaffold.dart`, `dialogs.dart`.
-1. Borrar código muerto `lib/utils/design_tokens.dart` y `lib/utils/theme_colors.dart`.
-2. Tokens nuevos: elevaciones/sombras (hoy 6 `BoxShadow` y 12 `elevation:` sueltos) y roles de texto para los ~58 `fontSize:` inline; unificar el azul de marca (`app_theme.dart:19` 0xFF3B6FF6 vs `constants.dart:135` 0xFF3B82F6; `kAccentDark`).
-3. Migrar a tokens: `create_notebook_screen.dart` (45 literales), `template_picker_sheet.dart` (36), `notebook_library.dart` (17), `custom_color_dialog.dart`, `layers_sidebar.dart` (L160 rompe modo oscuro). Quitar texto <12 pt y objetivos <48 dp.
-4. Componentes únicos: biblioteca usa `EmptyState`; hojas con `SheetHeader`; menú de tarjetas con `MenuAnchor` (`note_list_screen.dart:339`); helper único de snackbar; `showConfirmDialog/showTextPrompt` con etiquetas l10n obligatorias.
-5. **Notas elegantes**: portadas con miniatura de la página 1 o placa de título (fuentes empaquetadas), color de título con contraste automático, radio del painter = radio de tarjeta, sombras en capas, `Hero` tarjeta→editor, feedback de pulsación y háptico; barra del editor flotante y redondeada con glifos propios (punta, grosor y color en vivo); `textScaler` y celdas flexibles; ancho máximo de contenido en pantallas anchas; semantics en swatches, portadas y miniaturas.
-6. Verificación visual: `flutter test tool/screenshots/screenshots_test.dart` en claro/oscuro, es/en y un idioma largo (de).
+## Phase C — UI consistency and premium feel
+Reuse `ui/theme/tokens.dart`, `inklus_colors.dart`, `ui/widgets/page_scaffold.dart`, `dialogs.dart`.
+1. Delete dead code `lib/utils/design_tokens.dart` and `lib/utils/theme_colors.dart`.
+2. New tokens: elevations/shadows (today 6 loose `BoxShadow` and 12 `elevation:`) and text roles for the ~58 inline `fontSize:`; unify the brand blue (`app_theme.dart:19` 0xFF3B6FF6 vs `constants.dart:135` 0xFF3B82F6; `kAccentDark`).
+3. Migrate to tokens: `create_notebook_screen.dart` (45 literals), `template_picker_sheet.dart` (36), `notebook_library.dart` (17), `custom_color_dialog.dart`, `layers_sidebar.dart` (L160 breaks dark mode). Remove text <12 pt and targets <48 dp.
+4. Single components: library uses `EmptyState`; sheets with `SheetHeader`; card menu with `MenuAnchor` (`note_list_screen.dart:339`); a single snackbar helper; `showConfirmDialog/showTextPrompt` with mandatory l10n labels.
+5. **Elegant notes**: covers with a page-1 thumbnail or title plate (bundled fonts), title color with automatic contrast, painter radius = card radius, layered shadows, `Hero` card→editor, press feedback and haptic; floating rounded editor bar with its own glyphs (nib, width and color live); `textScaler` and flexible cells; max content width on wide screens; semantics on swatches, covers and thumbnails.
+6. Visual verification: `flutter test tool/screenshots/screenshots_test.dart` in light/dark, es/en and a long language (de).
 
-## Fase D — Multilingüe
-- Añadir `app_pt.arb` (pt-BR), `app_fr.arb`, `app_de.arb` desde `app_es.arb` (603 claves). Extender `test/l10n_test.dart` a los cinco idiomas.
-- Pasar a l10n los literales restantes (`Half Ltr`, `Hex`, nombres de `kCoverColors`). Los títulos por defecto guardados en datos ('Sin título', 'Mi cuaderno') quedan como deuda documentada: clave neutra + migración en una ronda posterior.
-- READMEs pt/fr/de mínimos o dejar es/en y pedir ayuda comunitaria en `docs/TRANSLATING.md`.
+## Phase D — Multilingual
+- Add `app_pt.arb` (pt-BR), `app_fr.arb`, `app_de.arb` from `app_es.arb` (603 keys). Extend `test/l10n_test.dart` to all five languages.
+- Move the remaining literals to l10n (`Half Ltr`, `Hex`, names in `kCoverColors`). Default titles stored in data ('Untitled', 'My notebook') remain documented debt: neutral key + migration in a later round.
+- Minimal pt/fr/de READMEs or leave es/en and ask for community help in `docs/TRANSLATING.md`.
 
-## Ronda 2 (después)
-Latencia de tinta (`getCoalescedEvents`, puntos predichos, trazo activo incremental, curva de presión/calibración); dividir `StorageService` (1606 l.) y `HomeScreen` (1783 l.); tests de borrador, lazo, undo, painters con goldens; PDF vectorial; accesibilidad completa; marketplace con contenido real.
+## Round 2 (later)
+Ink latency (`getCoalescedEvents`, predicted points, incremental active stroke, pressure curve/calibration); split `StorageService` (1,606 lines) and `HomeScreen` (1,783 lines); tests for eraser, lasso, undo, painters with goldens; vector PDF; full accessibility; marketplace with real content.
 
-## Verificación
+## Verification
 - `flutter analyze` → 0 issues; `flutter test`; `flutter test integration_test -d linux`.
-- Capturas claro/oscuro y recorrido manual biblioteca → cuaderno → editor (`flutter run -d linux`); prueba en tablet según `docs/testing.md`.
-- Búsqueda en el árbol (excluyendo `.git`, `build`, `.dart_tool`) de menciones a herramientas de generación de código o a "la IA" sin resultados, salvo el reconocimiento de escritura on-device (ML Kit), que es legítimo.
+- Light/dark screenshots and a manual walkthrough library → notebook → editor (`flutter run -d linux`); tablet test according to `docs/testing.md`.
+- Search the tree (excluding `.git`, `build`, `.dart_tool`) for mentions of code-generation tools or "the AI" with no results, except on-device handwriting recognition (ML Kit), which is legitimate.
 
 ---
 
-# Anexo — Hallazgos de la auditoría (2026-10-14)
+# Appendix — Audit findings (2026-10-14)
 
-## Gobernanza
-- Existen: `LICENSE` (GPL-3.0), `CHANGELOG.md`, `ROADMAP.md`, `docs/{privacy,testing}.md`, `third_party_licenses/` (8 OFL), `marketplace/`, CI en `.github/workflows/ci.yml`.
-- Faltan: CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, SUPPORT, GOVERNANCE, CODEOWNERS, plantillas de issue/PR, dependabot.
-- Siete commits antiguos (v1.1–1.3) llevan trailers automáticos de una herramienta externa; se dejan como están (no reescribir historia).
-- i18n (al auditar): solo es/en, 603 claves cada uno; ahora son 5 idiomas con paridad exigida por `test/l10n_test.dart`.
+## Governance
+- Present: `LICENSE` (GPL-3.0), `CHANGELOG.md`, `ROADMAP.md`, `docs/{privacy,testing}.md`, `third_party_licenses/` (8 OFL), `marketplace/`, CI in `.github/workflows/ci.yml`.
+- Missing: CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, SUPPORT, GOVERNANCE, CODEOWNERS, issue/PR templates, dependabot.
+- Seven old commits (v1.1–1.3) carry automatic trailers from an external tool; they're left as they are (don't rewrite history).
+- i18n (at audit time): only es/en, 603 keys each; now there are 5 languages with parity required by `test/l10n_test.dart`.
 
-## Código y lienzo
-1. Sin flush de autoguardado al pausar la app → se pueden perder los últimos trazos (<600 ms).
-2. `saveNow` solo hace `debugPrint` si falla; 19 `catch (_)` silenciosos.
-3. Sin `schemaVersion` por nota.
-4. Tinta: sin `getCoalescedEvents` ni puntos predichos; presión 0/>1 → 0.5, sin curva ni tilt; `getStroke` recalcula el trazo activo entero por frame (`world_painter.dart:466-476`); `CanvasPainter.shouldRepaint` crea listas por llamada (`drawing_canvas.dart:230-241`).
-5. Archivos grandes: `home_screen.dart` 1783, `storage_service.dart` 1606, `canvas_controller.dart` 1544, `drawing_canvas.dart` 1273, `notebook_library.dart` 1195.
-6. Sin tests de: borrador, lazo, undo_stack, bucket_fill, stroke_engine, painters (sin goldens), Drive, OCR, PDF.
-7. Solo `flutter_lints`; importación/exportación PDF raster; `cupertino_icons` y `_discoveryapis_commons` posiblemente innecesarios; único TODO en `world_painter.dart:61`.
+## Code and canvas
+1. No autosave flush when the app pauses → the last strokes can be lost (<600 ms).
+2. `saveNow` only does `debugPrint` on failure; 19 silent `catch (_)`.
+3. No per-note `schemaVersion`.
+4. Ink: no `getCoalescedEvents` or predicted points; pressure 0/>1 → 0.5, no curve or tilt; `getStroke` recomputes the whole active stroke every frame (`world_painter.dart:466-476`); `CanvasPainter.shouldRepaint` creates lists on every call (`drawing_canvas.dart:230-241`).
+5. Large files: `home_screen.dart` 1,783, `storage_service.dart` 1,606, `canvas_controller.dart` 1,544, `drawing_canvas.dart` 1,273, `notebook_library.dart` 1,195.
+6. No tests for: eraser, lasso, undo_stack, bucket_fill, stroke_engine, painters (no goldens), Drive, OCR, PDF.
+7. Only `flutter_lints`; raster PDF import/export; `cupertino_icons` and `_discoveryapis_commons` possibly unnecessary; the only TODO is in `world_painter.dart:61`.
 
 ## UI
-- Sistema de diseño existente: `ui/theme/{app_theme,inklus_colors,tokens}.dart`, `ui/widgets/{page_scaffold,dialogs}.dart`. Adopción: Spacing 211 usos, Radii 37, Motion 7; ~58 `fontSize:` inline, ~69 `Color(0x..)`, 51 `Colors.x`.
-- Violaciones de las reglas de UI: `layers_sidebar.dart:160`, `text_edit_overlay.dart:295,712`, `notebook_library.dart:968`, `create_notebook_screen.dart:449,463`, `template_picker_sheet.dart:806`, `tool_popovers.dart:298,351`. Texto <12 pt: `note_list_screen.dart:509`, `layers_sidebar.dart:195,286`, `custom_color_dialog.dart:61,82`, `template_picker_sheet.dart:374,907`. Objetivos <48 dp: `editor_toolbar.dart:382`, `notebook_library.dart:986`.
-- Inconsistencias: empty state duplicado (`notebook_library.dart:750-821`); hojas sin `SheetHeader` (`notebook_library.dart:293,455`, `home_screen.dart:659,1408`, `template_picker_sheet.dart`); `MenuAnchor` vs `PopupMenuButton`; 'Aceptar/Cancelar' fijos en `dialogs.dart:19-20,113-114`; ~33 snackbars sin helper.
-- Brechas frente a GoodNotes/Notability/Samsung Notes: portadas sin miniatura ni materiales, sin `Hero`, barra no flotante, iconos genéricos, sin multiselección ni arrastrar a carpetas, sin `textScaler`, sin ancho máximo, semantics incompletos.
+- Existing design system: `ui/theme/{app_theme,inklus_colors,tokens}.dart`, `ui/widgets/{page_scaffold,dialogs}.dart`. Adoption: Spacing 211 uses, Radii 37, Motion 7; ~58 inline `fontSize:`, ~69 `Color(0x..)`, 51 `Colors.x`.
+- UI rule violations: `layers_sidebar.dart:160`, `text_edit_overlay.dart:295,712`, `notebook_library.dart:968`, `create_notebook_screen.dart:449,463`, `template_picker_sheet.dart:806`, `tool_popovers.dart:298,351`. Text <12 pt: `note_list_screen.dart:509`, `layers_sidebar.dart:195,286`, `custom_color_dialog.dart:61,82`, `template_picker_sheet.dart:374,907`. Targets <48 dp: `editor_toolbar.dart:382`, `notebook_library.dart:986`.
+- Inconsistencies: duplicated empty state (`notebook_library.dart:750-821`); sheets without `SheetHeader` (`notebook_library.dart:293,455`, `home_screen.dart:659,1408`, `template_picker_sheet.dart`); `MenuAnchor` vs `PopupMenuButton`; hardcoded 'OK/Cancel' in `dialogs.dart:19-20,113-114`; ~33 snackbars without a helper.
+- Gaps vs GoodNotes/Notability/Samsung Notes: covers without thumbnail or materials, no `Hero`, non-floating bar, generic icons, no multi-select or drag-to-folder, no `textScaler`, no max width, incomplete semantics.
 
-## Referentes (solo ideas; respetar licencias)
-Saber (Flutter, GPL-3.0, github.com/saber-notes/saber), Xournal++ (formato `.xopp`, audio, LaTeX), GoodNotes y Notability (UX). Flutter y DevTools como modelo de CONTRIBUTING y CODE_OF_CONDUCT.
+## References (ideas only; respect licenses)
+Saber (Flutter, GPL-3.0, github.com/saber-notes/saber), Xournal++ (`.xopp` format, audio, LaTeX), GoodNotes and Notability (UX). Flutter and DevTools as models for CONTRIBUTING and CODE_OF_CONDUCT.

@@ -18,6 +18,7 @@ import '../models/image_item.dart';
 import '../models/stroke.dart';
 import '../services/drive_sync_service.dart';
 import '../services/export_service.dart';
+import '../services/ocr_language.dart';
 import '../services/ocr_service.dart';
 import '../services/pdf_import_service.dart';
 import '../models/page.dart' as model show Page;
@@ -41,6 +42,7 @@ import 'theme/tokens.dart';
 import 'widgets/controller_selector.dart';
 import 'widgets/dialogs.dart';
 import 'widgets/layers_sidebar.dart';
+import 'widgets/ocr_language_sheet.dart';
 import 'widgets/search_sheet.dart';
 import 'widgets/template_picker_sheet.dart';
 import 'settings_screen.dart';
@@ -440,6 +442,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _snack(context.l10n.ocrUnsupported);
       return;
     }
+    final selection = await _pickOcrLanguage();
+    if (selection == null || !mounted) return;
+    await OcrLanguageStore.save(selection.language);
+    if (!mounted) return;
+
     unawaited(showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -464,6 +471,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _c.page,
         sheetSize: _c.sheetSize,
         imageCache: _imageService.cache,
+        languageCode: selection.language.code,
       );
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
@@ -502,11 +510,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         ),
       );
+    } on OcrModelUnavailableError catch (e) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      _snack(context.l10n.ocrLanguageDownloadFailed(e.language.label));
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       _snack(_l10n.ocrFailed('$e'));
     }
+  }
+
+  /// Abre la hoja de idioma para OCR con el último idioma preseleccionado.
+  Future<OcrLanguageSelection?> _pickOcrLanguage() async {
+    final current = await OcrLanguageStore.load();
+    final downloaded = await OcrService.downloadedModelCodes();
+    if (!mounted) return null;
+    return showOcrLanguageSheet(
+      context,
+      currentCode: current.code,
+      downloadedCodes: downloaded,
+    );
   }
 
   /// Nombre de archivo seguro a partir del título del cuaderno.
@@ -1136,8 +1160,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _snack(context.l10n.inkUnsupported);
       return;
     }
+    final selection = await _pickOcrLanguage();
+    if (selection == null || !mounted) return;
+    await OcrLanguageStore.save(selection.language);
+    if (!mounted) return;
     try {
       final count = await runWithLoading(context, () async {
+        final language = selection.language;
+        final modelReady = await OcrService.ensureInkModel(language.code);
+        if (!modelReady && !language.hasBitmapFallback) {
+          throw OcrModelUnavailableError(language);
+        }
         await _search.indexNote(widget.notebookId, _c.note);
         var n = 0;
         for (final page in _c.pages) {
@@ -1145,14 +1178,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           final result = await OcrService.recognizeStrokes(
             page.strokes,
             sheetSize: page.template.sheetSize,
+            languageCode: language.code,
           );
           await _search.setHandwriting(_c.note.id, page.id, result.text);
           n++;
         }
         return n;
       });
+      if (!mounted) return;
       _snack(_l10n.inkIndexed(count));
+    } on OcrModelUnavailableError catch (e) {
+      if (!mounted) return;
+      _snack(_l10n.ocrLanguageDownloadFailed(e.language.label));
     } catch (e) {
+      if (!mounted) return;
       _snack(_l10n.inkFailed('$e'));
     }
   }

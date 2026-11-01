@@ -1,54 +1,64 @@
-# Pruebas en dispositivo (antes de cada release)
+# Device testing (before every release)
 
-Los tests automáticos (`flutter test`, capturas e `integration_test`) cubren datos, lógica y los flujos principales. Lo que depende del **lápiz real, la pantalla y la red** hay que comprobarlo a mano en una tablet. Este guion tarda unos 15 minutos.
+The automated tests (`flutter test`, screenshots and `integration_test`) cover data, logic and the main flows. Everything that depends on the **real stylus, the screen and the network** must be checked by hand on a tablet. This script takes about 15 minutes.
 
-**Dispositivos de referencia:** Galaxy Tab S (S-Pen), una tablet con lápiz USI y un teléfono (sin lápiz).
+**Reference devices:** Galaxy Tab S (S-Pen), a tablet with a USI stylus and a phone (no stylus).
 
-## 0. Instalación
+## 0. Installation
 
-- [ ] El APK de la release (firmado) se instala **encima** de la versión anterior sin perder notas.
-- [ ] Configuración muestra la versión correcta.
+- [ ] The release APK (signed) installs **on top of** the previous version without losing notes.
+- [ ] Settings shows the correct version.
 
-## 1. Escritura y lápiz
+## 1. Writing and stylus
 
-- [ ] Escribir con el lápiz: trazo sin retraso visible, con variación de presión (lápiz, pincel).
-- [ ] Apoyar la palma mientras se escribe: no deja marcas.
-- [ ] Al detectar el lápiz, un dedo desplaza la página y dos dedos hacen zoom sin saltos.
-- [ ] Botón lateral del S-Pen / goma del lápiz: borra mientras se mantiene.
-- [ ] Mantener el lápiz quieto al final de una figura la endereza (línea, rectángulo, círculo).
-- [ ] Regla: se arrastra con un dedo, gira con dos, el trazo se pega al borde.
+- [ ] Write with the stylus: stroke with no visible lag, with pressure variation (pen, brush).
+- [ ] Rest your palm while writing: it leaves no marks.
+- [ ] Once the stylus is detected, one finger scrolls the page and two fingers zoom without jumps.
+- [ ] S-Pen side button / stylus eraser: erases while held.
+- [ ] Holding the stylus still at the end of a shape straightens it (line, rectangle, circle).
+- [ ] Ruler: drags with one finger, rotates with two, the stroke sticks to the edge.
 
-## 2. Vista (rendimiento)
+## 2. View (performance)
 
-Importa el cuaderno de estrés (`flutter test tool/stress/stress_note_test.dart` → `build/inklus_stress.inklus`) y ábrelo con `flutter run --profile` (tecla `P` para ver la gráfica de frames):
+Import the stress notebook (`flutter test tool/stress/stress_note_test.dart` → `build/inklus_stress.inklus`) and open it with `flutter run --profile` (key `P` to see the frame graph):
 
-- [ ] Desplazar y hacer zoom en la página con 1.700 trazos: fluido; al soltar se ve nítido.
-- [ ] Al desplazar no aparecen líneas ni saltos entre la zona "congelada" y la que se dibuja en vivo.
-- [ ] Página con 5 fotos de 12 MP: abre y se mueve sin cierres por memoria.
-- [ ] Hoja fija: al arrastrar lejos, la hoja se detiene cerca del borde.
+- [ ] Scroll and zoom on the page with 1,700 strokes: smooth; it looks crisp on release.
+- [ ] While scrolling, no lines or jumps appear between the "frozen" area and the one drawn live.
+- [ ] Page with 5 12 MP photos: opens and moves without memory-related crashes.
+- [ ] Fixed sheet: when dragged far, the sheet stops near the edge.
 
-## 3. Selección
+## 3. Selection
 
-- [ ] Lazo alrededor de trazos + imagen + texto: mover, escalar (asa inferior derecha) y rotar (asa superior); deshacer lo revierte en un paso.
-- [ ] Copiar y pegar la selección: aparece desplazada y seleccionada.
+- [ ] Lasso around strokes + image + text: move, scale (bottom-right handle) and rotate (top handle); undo reverts it in one step.
+- [ ] Copy and paste the selection: it appears offset and selected.
 
-## 4. Datos
+## 4. Data
 
-- [ ] Cerrar la app a la fuerza justo después de escribir: al volver, el trazo está.
-- [ ] Borrar una nota y restaurarla desde la Papelera: vuelve a su cuaderno.
-- [ ] Exportar respaldo completo, importarlo (Configuración → Importar): cuadernos intactos.
-- [ ] Exportar página PNG/PDF y cuaderno PDF (calidad alta): se ven las fotos.
+- [ ] Force-close the app right after writing: when you come back, the stroke is there.
+- [ ] Delete a note and restore it from the Trash: it returns to its notebook.
+- [ ] Export a full backup, import it (Settings → Import): notebooks intact.
+- [ ] Export page PNG/PDF and notebook PDF (high quality): the photos are visible.
 
-## 5. Google Drive (con la cuenta de pruebas)
+## 5. Google Drive (with the test account)
 
-- [ ] Conectar: sin error `DEVELOPER_ERROR` (la huella SHA-1 del APK está registrada).
-- [ ] Escribir, salir del editor: la nota se sube (☁️ verde).
-- [ ] Historial de versiones: aparecen copias locales y revisiones de Drive; restaurar una funciona.
-- [ ] En otro dispositivo: Configuración → Restaurar desde Drive trae las notas.
+- [ ] Connect: no `DEVELOPER_ERROR` (the APK's SHA-1 fingerprint is registered).
+- [ ] Write, leave the editor: the note is uploaded (green ☁️).
+- [ ] Version history: local copies and Drive revisions appear; restoring one works.
+- [ ] On another device: Settings → Restore from Drive brings the notes over.
 
-## 6. Tema y accesibilidad
+## 5b. Handwriting OCR (Android/iOS)
 
-- [ ] Modo oscuro: todas las pantallas legibles (biblioteca, notas, configuración, papelera, estadísticas, hojas).
-- [ ] Selector de fecha de recordatorios en español.
+- [ ] Lasso → "Convert to text": the sheet with English / 日本語 / ไทย appears.
+- [ ] An already-downloaded language recognizes directly, without a download dialog.
+- [ ] A language without a model asks for confirmation; Cancel doesn't download or recognize.
+- [ ] Without Wi-Fi, the download fails with a clear warning (the plugin requires Wi-Fi).
+- [ ] Thai with a model recognizes Thai; without a model and offline it shows the error (it doesn't fall back to Latin).
+- [ ] Page "Recognize text" and "Index handwriting" use the last chosen language.
+- [ ] After restarting the app, the last language is remembered.
 
-Anota el dispositivo, la versión de Android y cualquier fallo en un *issue*; si la app se cerró, adjunta Configuración → Registro de errores → Compartir.
+## 6. Theme and accessibility
+
+- [ ] Dark mode: all screens legible (library, notes, settings, trash, stats, sheets).
+- [ ] Reminder date picker in Spanish.
+
+Note the device, the Android version and any failure in an *issue*; if the app crashed, attach Settings → Error log → Share.

@@ -1322,6 +1322,26 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ocrCopied => 'Text in die Zwischenablage kopiert';
 
   @override
+  String get ocrLanguageTitle => 'Erkennungssprache';
+
+  @override
+  String get ocrLanguageDownload => 'Herunterladen (~20 MB)';
+
+  @override
+  String ocrLanguageDownloadTitle(String language) {
+    return 'Modell für $language herunterladen?';
+  }
+
+  @override
+  String get ocrLanguageDownloadMessage =>
+      'Es werden etwa 20 MB von Google über WLAN heruntergeladen. Danach funktioniert es offline.';
+
+  @override
+  String ocrLanguageDownloadFailed(String language) {
+    return 'Das Modell für $language konnte nicht heruntergeladen werden. Verbinde dich mit WLAN und versuche es erneut.';
+  }
+
+  @override
   String get edGoogleAccount => 'Google-Konto';
 
   @override

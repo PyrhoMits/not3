@@ -2390,6 +2390,36 @@ abstract class AppLocalizations {
   /// **'Texto copiado al portapapeles'**
   String get ocrCopied;
 
+  /// No description provided for @ocrLanguageTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma de reconocimiento'**
+  String get ocrLanguageTitle;
+
+  /// No description provided for @ocrLanguageDownload.
+  ///
+  /// In es, this message translates to:
+  /// **'Descargar (~20 MB)'**
+  String get ocrLanguageDownload;
+
+  /// No description provided for @ocrLanguageDownloadTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descargar el modelo de {language}?'**
+  String ocrLanguageDownloadTitle(String language);
+
+  /// No description provided for @ocrLanguageDownloadMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Se descargarán unos 20 MB desde Google por Wi-Fi. Después funcionará sin conexión.'**
+  String get ocrLanguageDownloadMessage;
+
+  /// No description provided for @ocrLanguageDownloadFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo descargar el modelo de {language}. Conéctate a Wi-Fi e inténtalo de nuevo.'**
+  String ocrLanguageDownloadFailed(String language);
+
   /// No description provided for @edGoogleAccount.
   ///
   /// In es, this message translates to:

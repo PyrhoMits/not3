@@ -1318,6 +1318,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ocrCopied => 'Text copied to the clipboard';
 
   @override
+  String get ocrLanguageTitle => 'Recognition language';
+
+  @override
+  String get ocrLanguageDownload => 'Download (~20 MB)';
+
+  @override
+  String ocrLanguageDownloadTitle(String language) {
+    return 'Download the $language model?';
+  }
+
+  @override
+  String get ocrLanguageDownloadMessage =>
+      'About 20 MB will be downloaded from Google over Wi-Fi. It works offline afterwards.';
+
+  @override
+  String ocrLanguageDownloadFailed(String language) {
+    return 'Couldn\'t download the $language model. Connect to Wi-Fi and try again.';
+  }
+
+  @override
   String get edGoogleAccount => 'Google account';
 
   @override

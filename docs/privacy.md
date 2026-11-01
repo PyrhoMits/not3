@@ -1,57 +1,51 @@
-# Política de privacidad de Inklus
+# Inklus Privacy Policy
 
-*Última actualización: 27 de septiembre de 2026*
+*Last updated: September 27, 2026*
 
-Inklus es una app de escritura a mano **libre y gratuita** (licencia GPL-3.0). No tiene cuentas propias, anuncios, analítica ni funciones de pago. Esta política explica qué datos maneja la app y adónde van.
+Inklus is a **free and open source** handwriting app (GPL-3.0 license). It has no accounts of its own, no ads, no analytics and no paid features. This policy explains what data the app handles and where it goes.
 
-## Resumen
+## Summary
 
-- **Tus notas se guardan en tu dispositivo.** Inklus no tiene servidores y nadie más que tú puede leerlas.
-- **Google Drive es opcional.** Si conectas tu cuenta, Inklus sube una copia de tus notas a **tu** Drive. Nosotros no tenemos acceso a ella.
-- **Sin analítica, sin anuncios, sin rastreo.** No vendemos ni compartimos datos con nadie.
+- **Your notes are stored on your device.** Inklus has no servers and nobody but you can read them.
+- **Google Drive is optional.** If you connect your account, Inklus uploads a copy of your notes to **your** Drive. We have no access to it.
+- **No analytics, no ads, no tracking.** We don't sell or share data with anyone.
 
-## Datos que se guardan en el dispositivo
+## Data stored on the device
 
-Cuadernos, notas, páginas, trazos, imágenes que insertes, plantillas, etiquetas, recordatorios, estadísticas de escritura y el historial de versiones se guardan en la carpeta privada de la app (`inklus/`). Se borran al desinstalar la app. Puedes exportarlos cuando quieras (Configuración → "Exportar respaldo completo").
+Notebooks, notes, pages, strokes, images you insert, templates, tags, reminders, writing statistics and version history are stored in the app's private folder (`inklus/`). They are deleted when you uninstall the app. You can export them at any time (Settings → "Export full backup").
 
-## Google Drive (opcional)
+## Google Drive (optional)
 
-Solo si pulsas "Conectar" en Configuración:
+Only if you tap "Connect" in Settings:
 
-- **Inicio de sesión con Google**: la app recibe el correo de tu cuenta solo para mostrarte con cuál estás conectado. No se guarda en ningún servidor.
-- **Permiso `drive.file`**: Inklus **solo puede ver y modificar los archivos que ella misma crea** (una carpeta "Inklus" con un archivo `.inklus` por nota). No puede leer el resto de tu Drive.
-- Las copias pueden **cifrarse con una contraseña** (AES-256-GCM) antes de subirse. La contraseña nunca sale del dispositivo.
-- Google trata esos archivos según la [política de privacidad de Google](https://policies.google.com/privacy). Puedes desconectar la cuenta en Configuración y borrar la carpeta "Inklus" de tu Drive cuando quieras.
+- **Google sign-in**: the app receives your account email only to show you which account you're connected with. It is not stored on any server.
+- **`drive.file` permission**: Inklus **can only see and modify the files it creates itself** (an "Inklus" folder with one `.inklus` file per note). It cannot read the rest of your Drive.
+- Backups can be **encrypted with a password** (AES-256-GCM) before being uploaded. The password never leaves the device.
+- Google handles those files according to [Google's privacy policy](https://policies.google.com/privacy). You can disconnect the account in Settings and delete the "Inklus" folder from your Drive whenever you want.
 
-El uso y la transferencia a cualquier otra app de la información recibida de las API de Google se ajustan a la [Política de datos de usuario de los servicios de API de Google](https://developers.google.com/terms/api-services-user-data-policy), incluidos los requisitos de uso limitado.
+Inklus' use and transfer to any other app of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
 
-## Reconocimiento de escritura (ML Kit)
+## Handwriting recognition (ML Kit)
 
-Las funciones "Convertir a texto" e "Indexar escritura" usan **Google ML Kit**, que reconoce el texto **en el dispositivo**: tus trazos y páginas no se envían a ningún servidor. La primera vez, ML Kit descarga desde los servidores de Google el modelo del idioma. Según sus [condiciones](https://developers.google.com/ml-kit/terms), ML Kit puede enviar a Google métricas técnicas anónimas de uso y rendimiento, que no incluyen el contenido de tus notas.
+The "Convert to text", "Recognize text" and "Index handwriting" features use **Google ML Kit**, which recognizes text **on the device**: your strokes and pages are not sent to any server. The available languages are English, Japanese and Thai. The first time you choose a language, the app asks you to confirm and downloads its model (~20 MB) from Google's servers; after that it works offline. Under its [terms](https://developers.google.com/ml-kit/terms), ML Kit may send Google anonymous technical usage and performance metrics, which do not include the content of your notes.
 
 ## Marketplace
 
-Al abrir el Marketplace, la app descarga el catálogo y los paquetes gratuitos (plantillas, paletas, stickers) desde la CDN pública de jsDelivr (`cdn.jsdelivr.net`), que sirve el repositorio público `inklus-marketplace` de GitHub. Como cualquier descarga web, esa CDN ve tu dirección IP. No se envía ningún otro dato.
+When you open the Marketplace, the app downloads the catalog and the free packs (templates, palettes, stickers) from the public jsDelivr CDN (`cdn.jsdelivr.net`), which serves the public `inklus-marketplace` GitHub repository. Like any web download, that CDN sees your IP address. No other data is sent.
 
-## Registro de errores
+## Error log
 
-Si la app falla, el error se guarda **solo en tu dispositivo** (Configuración → "Registro de errores"). No se envía automáticamente a nadie. Puedes compartirlo tú, si quieres ayudar a corregir el fallo.
+If the app fails, the error is stored **only on your device** (Settings → "Error log"). It is not automatically sent to anyone. You can share it yourself if you want to help fix the bug.
 
-## Permisos de Android
+## Android permissions
 
-- **Internet**: solo para Google Drive (si lo activas), el Marketplace y los modelos de ML Kit.
-- **Archivos**: solo los que eliges tú en el selector del sistema (importar PDF, imágenes o `.inklus`; exportar).
+- **Internet**: only for Google Drive (if you enable it), the Marketplace and the ML Kit models.
+- **Files**: only the ones you choose in the system picker (import PDFs, images or `.inklus`; export).
 
-## Menores
+## Minors
 
-Inklus no recoge datos personales, así que es apta para cualquier edad. El inicio de sesión con Google está sujeto a los requisitos de edad de Google.
+Inklus does not collect personal data, so it is suitable for any age. Google sign-in is subject to Google's age requirements.
 
-## Cambios y contacto
+## Changes and contact
 
-Si esta política cambia, se actualizará este documento (su historial está en el repositorio). Para cualquier duda, abre un *issue* en <https://github.com/Pedroj-64/inklus/issues>.
-
----
-
-### English summary
-
-Inklus stores your notes **only on your device**. There are no Inklus servers, accounts, ads, analytics or tracking. **Google Drive backup is optional**: it uses the `drive.file` scope, so the app can only see the files it creates in your own Drive (optionally encrypted with your password). Handwriting recognition runs **on-device** with Google ML Kit, which downloads language models from Google and may send anonymous technical metrics under its own terms. The Marketplace downloads free packs from the jsDelivr CDN. Crash logs stay on your device unless you share them. Inklus' use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. Questions: <https://github.com/Pedroj-64/inklus/issues>.
+If this policy changes, this document will be updated (its history is in the repository). For any questions, open an *issue* at <https://github.com/Pedroj-64/inklus/issues>.

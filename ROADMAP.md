@@ -89,9 +89,7 @@
 
 ### 🔍 OCR y búsqueda
 - **OCR de tinta**: reconocimiento on-device con ML Kit (Android/iOS).
-- **Idiomas**: inglés, japonés y tailandés; se eligen con una hoja cada vez que se usa el OCR y se recuerda el último. El tailandés solo admite tinta (ML Kit no lo soporta en bitmap).
-- **Descarga con consentimiento**: el primer uso de un idioma pide confirmación y descarga ~20 MB desde Google; después funciona sin conexión.
-- **OCR on-demand** (`recognizeStrokes()`): trazos vectoriales → ML Kit; fallback a bitmap para inglés/japonés.
+- **OCR on-demand** (`recognizeStrokes()`): renderiza trazos → ML Kit para reconocer la última escritura.
 - **Búsqueda en contenido**: `SearchService` indexa textItems + OCR.
 - **Plan de mejora del OCR** (calidad, sobre todo tailandés): [`docs/OCR_IMPROVEMENT.md`](docs/OCR_IMPROVEMENT.md) — diagnóstico + 3 etapas (mejorar la entrada al modelo, post-procesamiento, fallback rasterizado). Propuesto, sin ejecutar.
 

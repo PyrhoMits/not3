@@ -737,6 +737,25 @@
   "ocrNoText": "No se reconoció texto en esta página",
   "ocrResultTitle": "Texto reconocido",
   "ocrCopied": "Texto copiado al portapapeles",
+  "ocrLanguageTitle": "Idioma de reconocimiento",
+  "ocrLanguageDownload": "Descargar (~20 MB)",
+  "ocrLanguageDownloadTitle": "¿Descargar el modelo de {language}?",
+  "@ocrLanguageDownloadTitle": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrLanguageDownloadMessage": "Se descargarán unos 20 MB desde Google por Wi-Fi. Después funcionará sin conexión.",
+  "ocrLanguageDownloadFailed": "No se pudo descargar el modelo de {language}. Conéctate a Wi-Fi e inténtalo de nuevo.",
+  "@ocrLanguageDownloadFailed": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
   "edGoogleAccount": "Cuenta Google",
   "edSyncedCloud": "Sincronizado con la nube",
   "edRestoreCloud": "Restaurar desde la nube",
