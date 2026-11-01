@@ -28,7 +28,7 @@ void main() {
         return true;
       };
 
-      runApp(const InklusApp());
+      runApp(const Not3App());
     },
     (error, stackTrace) {
       debugPrint('Uncaught exception: $error');

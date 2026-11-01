@@ -6,7 +6,7 @@ import 'models/stroke.dart';
 // Para evitar importar Flutter aquí, usamos los valores hex equivalentes.
 
 // ============================================================================
-// Constantes globales de Inklus
+// Constantes globales de Not3
 //
 // Centraliza colores, dimensiones, tiempos y configuraciones que antes estaban
 // hardcodeadas en múltiples archivos. Usa esta lib para todo valor que pueda
@@ -18,8 +18,8 @@ import 'models/stroke.dart';
 const String kAppVersion = '1.9.1';
 
 /// Idioma fijo SOLO para las capturas de pantalla (`tool/screenshots`) y los
-/// tests; la app real sigue el idioma del sistema.
-const Locale kAppLocale = Locale('es');
+/// tests. La interfaz de la app solo se publica en inglés.
+const Locale kAppLocale = Locale('en');
 
 /// Repositorio del proyecto y política de privacidad (enlazada desde
 /// Configuración y necesaria para la pantalla de consentimiento de Google).

@@ -1,8 +1,6 @@
-# Traducciones de Inklus (flutter gen-l10n). El español es la fuente:
-# toda clave nueva va primero a app_es.arb y luego a app_en, app_pt (pt-BR),
-# app_fr y app_de (test/l10n_test.dart comprueba que no falte ninguna).
+# English-only localization source (flutter gen-l10n).
 arb-dir: lib/l10n
-template-arb-file: app_es.arb
+template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 output-class: AppLocalizations
 nullable-getter: false

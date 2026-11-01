@@ -31,13 +31,17 @@ mixin _CanvasSelection on _CanvasCore {
 
   /// Número total de elementos seleccionados con el lazo.
   int get selectionCount =>
-      _selectedStrokes.length + _selectedImageIds.length + _selectedTextIds.length;
+      _selectedStrokes.length +
+      _selectedImageIds.length +
+      _selectedTextIds.length;
 
   bool get hasLassoSelection => selectionCount > 0;
 
   /// Rectángulo que envuelve toda la selección (trazos, imágenes y textos).
   Rect get selectionBoundsAll {
-    Rect? r = _selectedStrokes.isEmpty ? null : selectionBounds(_selectedStrokes);
+    Rect? r = _selectedStrokes.isEmpty
+        ? null
+        : selectionBounds(_selectedStrokes);
     for (final i in selectedImages) {
       r = r == null ? i.rect : r.expandToInclude(i.rect);
     }
@@ -65,7 +69,8 @@ mixin _CanvasSelection on _CanvasCore {
   /// Asas del recuadro de selección en coordenadas de mundo: escala (esquina
   /// inferior derecha) y rotación (sobre el centro superior). **Única
   /// fuente** para pintarlas y para detectar el toque.
-  ({Rect frame, Offset scale, Offset rotate, double radius}) get selectionHandles {
+  ({Rect frame, Offset scale, Offset rotate, double radius})
+  get selectionHandles {
     final frame = selectionBoundsAll.inflate(8 / _scale);
     final r = 11 / _scale;
     return (
@@ -125,14 +130,19 @@ mixin _CanvasSelection on _CanvasCore {
 
     // Imágenes y cajas de texto: entran si su centro está dentro del lazo
     // (capas ocultas o bloqueadas se ignoran).
-    bool selectable(int layer) => _isLayerVisible(layer) && !_isLayerLocked(layer);
+    bool selectable(int layer) =>
+        _isLayerVisible(layer) && !_isLayerLocked(layer);
     _selectedImageIds = {
       for (final i in page.images)
-        if (selectable(i.layerIndex) && pointInPolygon(Offset(i.x, i.y), lassoPolygon)) i.id,
+        if (selectable(i.layerIndex) &&
+            pointInPolygon(Offset(i.x, i.y), lassoPolygon))
+          i.id,
     };
     _selectedTextIds = {
       for (final t in page.textItems)
-        if (selectable(t.layerIndex) && pointInPolygon(Offset(t.x, t.y), lassoPolygon)) t.id,
+        if (selectable(t.layerIndex) &&
+            pointInPolygon(Offset(t.x, t.y), lassoPolygon))
+          t.id,
     };
 
     _lassoPath = [];
@@ -184,8 +194,12 @@ mixin _CanvasSelection on _CanvasCore {
     if (!hasLassoSelection) return;
     final removable = Set<Stroke>.identity()
       ..addAll(_selectedStrokes.where((s) => !_isLayerLocked(s.layerIndex)));
-    final images = selectedImages.where((i) => !_isLayerLocked(i.layerIndex)).toList();
-    final texts = selectedTexts.where((t) => !_isLayerLocked(t.layerIndex)).toList();
+    final images = selectedImages
+        .where((i) => !_isLayerLocked(i.layerIndex))
+        .toList();
+    final texts = selectedTexts
+        .where((t) => !_isLayerLocked(t.layerIndex))
+        .toList();
     if (removable.isEmpty && images.isEmpty && texts.isEmpty) return;
     final before = List<Stroke>.of(page.strokes);
     page.strokes.removeWhere(removable.contains);
@@ -197,12 +211,14 @@ mixin _CanvasSelection on _CanvasCore {
     _selectedImageIds.removeAll(imageIds);
     _selectedTextIds.removeAll(textIds);
     final diff = CanvasAction.strokeDiff(before, page.strokes);
-    _undoStack.push(CanvasAction(
-      strokesRemoved: diff.strokesRemoved,
-      strokesRemovedAt: diff.strokesRemovedAt,
-      imagesRemoved: images,
-      textItemsRemoved: texts,
-    ));
+    _undoStack.push(
+      CanvasAction(
+        strokesRemoved: diff.strokesRemoved,
+        strokesRemovedAt: diff.strokesRemovedAt,
+        imagesRemoved: images,
+        textItemsRemoved: texts,
+      ),
+    );
     _notifyBottomBarContext();
     _touch();
   }
@@ -230,7 +246,9 @@ mixin _CanvasSelection on _CanvasCore {
     // Conservan color, relleno, figura y ajustes; se pegan en la capa activa.
     final strokes = [
       for (final s in _clipboardStrokes)
-        s.translated(offset).copyWith(id: newId('st'), layerIndex: _activeLayerIndex),
+        s
+            .translated(offset)
+            .copyWith(id: newId('st'), layerIndex: _activeLayerIndex),
     ];
     final images = [
       for (final i in _clipboardImages)
@@ -253,11 +271,13 @@ mixin _CanvasSelection on _CanvasCore {
     page.strokes.addAll(strokes);
     page.images.addAll(images);
     page.textItems.addAll(texts);
-    _undoStack.push(CanvasAction(
-      strokesAdded: strokes,
-      imagesAdded: images,
-      textItemsAdded: texts,
-    ));
+    _undoStack.push(
+      CanvasAction(
+        strokesAdded: strokes,
+        imagesAdded: images,
+        textItemsAdded: texts,
+      ),
+    );
     _selectedStrokes = strokes;
     _selectedImageIds = {for (final i in images) i.id};
     _selectedTextIds = {for (final t in texts) t.id};
@@ -278,7 +298,9 @@ mixin _CanvasSelection on _CanvasCore {
 
   /// Multiplica el grosor de los trazos seleccionados (deshacible).
   void scaleSelectionThickness(double factor) {
-    _editSelection((s) => s.copyWith(size: (s.size * factor).clamp(0.5, 120.0)));
+    _editSelection(
+      (s) => s.copyWith(size: (s.size * factor).clamp(0.5, 120.0)),
+    );
   }
 
   /// Aplica [edit] a cada trazo seleccionado (salvo capas bloqueadas),
@@ -336,11 +358,13 @@ mixin _CanvasSelection on _CanvasCore {
     page.strokes.removeWhere(removeSet.contains);
     page.textItems.add(item);
     final diff = CanvasAction.strokeDiff(before, page.strokes);
-    _undoStack.push(CanvasAction(
-      strokesRemoved: diff.strokesRemoved,
-      strokesRemovedAt: diff.strokesRemovedAt,
-      textItemsAdded: [item],
-    ));
+    _undoStack.push(
+      CanvasAction(
+        strokesRemoved: diff.strokesRemoved,
+        strokesRemovedAt: diff.strokesRemovedAt,
+        textItemsAdded: [item],
+      ),
+    );
     _selectedStrokes = [];
     _touch();
   }
@@ -393,7 +417,7 @@ mixin _CanvasSelection on _CanvasCore {
       if (_isLayerLocked(original.layerIndex)) continue;
       final newPoints = [
         for (final p in original.points)
-          StrokePoint.fromOffset(map(p.x, p.y), p.pressure),
+          StrokePoint.fromOffset(map(p.x, p.y), p.pressure, t: p.t),
       ];
       // copyWith conserva capa, figura, relleno y ajustes.
       final newStroke = original.copyWith(
@@ -407,10 +431,12 @@ mixin _CanvasSelection on _CanvasCore {
       if (selIdx >= 0) _selectedStrokes[selIdx] = newStroke;
     }
 
-    _transformImagesBefore ??=
-        selectedImages.where((i) => !_isLayerLocked(i.layerIndex)).toList();
-    _transformTextsBefore ??=
-        selectedTexts.where((t) => !_isLayerLocked(t.layerIndex)).toList();
+    _transformImagesBefore ??= selectedImages
+        .where((i) => !_isLayerLocked(i.layerIndex))
+        .toList();
+    _transformTextsBefore ??= selectedTexts
+        .where((t) => !_isLayerLocked(t.layerIndex))
+        .toList();
     final imageIds = {for (final i in _transformImagesBefore!) i.id};
     final textIds = {for (final t in _transformTextsBefore!) t.id};
     for (var i = 0; i < page.images.length; i++) {
@@ -456,8 +482,9 @@ mixin _CanvasSelection on _CanvasCore {
         imagesRemoved: imagesBefore,
         imagesAdded: page.images.where((i) => imageIds.contains(i.id)).toList(),
         textItemsRemoved: textsBefore,
-        textItemsAdded:
-            page.textItems.where((t) => textIds.contains(t.id)).toList(),
+        textItemsAdded: page.textItems
+            .where((t) => textIds.contains(t.id))
+            .toList(),
       ),
     );
     _touch();
@@ -500,18 +527,28 @@ mixin _CanvasSelection on _CanvasCore {
   /// reemplazados y `indexOf` devolvería -1.
   void moveSelectedStrokes(Offset delta, {required List<Stroke> before}) {
     // Imágenes y textos del lazo: se trasladan desde su estado inicial.
-    _moveImagesBefore ??=
-        selectedImages.where((i) => !_isLayerLocked(i.layerIndex)).toList();
-    _moveTextsBefore ??=
-        selectedTexts.where((t) => !_isLayerLocked(t.layerIndex)).toList();
+    _moveImagesBefore ??= selectedImages
+        .where((i) => !_isLayerLocked(i.layerIndex))
+        .toList();
+    _moveTextsBefore ??= selectedTexts
+        .where((t) => !_isLayerLocked(t.layerIndex))
+        .toList();
     for (final img in _moveImagesBefore!) {
       final idx = page.images.indexWhere((i) => i.id == img.id);
-      if (idx >= 0) page.images[idx] = img.copyWith(x: img.x + delta.dx, y: img.y + delta.dy);
+      if (idx >= 0) {
+        page.images[idx] = img.copyWith(
+          x: img.x + delta.dx,
+          y: img.y + delta.dy,
+        );
+      }
     }
     for (final txt in _moveTextsBefore!) {
       final idx = page.textItems.indexWhere((t) => t.id == txt.id);
       if (idx >= 0) {
-        page.textItems[idx] = txt.copyWith(x: txt.x + delta.dx, y: txt.y + delta.dy);
+        page.textItems[idx] = txt.copyWith(
+          x: txt.x + delta.dx,
+          y: txt.y + delta.dy,
+        );
       }
     }
     // Filtrar trazos en capas bloqueadas: esos no se mueven.
@@ -554,7 +591,9 @@ mixin _CanvasSelection on _CanvasCore {
         imagesRemoved: imagesBefore,
         imagesAdded: page.images.where((i) => imageIds.contains(i.id)).toList(),
         textItemsRemoved: textsBefore,
-        textItemsAdded: page.textItems.where((t) => textIds.contains(t.id)).toList(),
+        textItemsAdded: page.textItems
+            .where((t) => textIds.contains(t.id))
+            .toList(),
       ),
     );
     _moveImagesBefore = null;

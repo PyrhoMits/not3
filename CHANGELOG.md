@@ -62,7 +62,7 @@ Cada versión se escribe en español y en inglés (sección `### English`): el w
 
 ### Añadido
 - **Texto enriquecido en las cajas de texto**: negrita, cursiva, subrayado, alineación y 8 fuentes empaquetadas (Lato, Lora, Caveat, Oswald, Playfair Display, Pacifico, Indie Flower, Source Code Pro; licencias OFL en `third_party_licenses/`). El formato se aplica a la selección o a toda la caja, y se ve igual en el lienzo, en el editor y en las exportaciones.
-- **Abrir `.inklus` desde fuera de la app (Android)**: desde Drive, Archivos o "Compartir", Inklus aparece como opción y el cuaderno o la nota se importan a la biblioteca.
+- **Abrir `.inklus` desde fuera de la app (Android)**: desde Drive, Archivos o "Compartir", Not3 aparece como opción y el cuaderno o la nota se importan a la biblioteca.
 - **Toda la app en español e inglés**: todas las pantallas y los mensajes de error están traducidos y siguen el idioma del sistema.
 - **Figuras más precisas**: las rectas casi horizontales o verticales se ajustan al eje (±4°, resaltador ±8°) y el resaltador solo endereza rectas.
 
@@ -80,7 +80,7 @@ Cada versión se escribe en español y en inglés (sección `### English`): el w
 
 **Added**
 - **Rich text in text boxes**: bold, italic, underline, alignment and 8 bundled fonts (Lato, Lora, Caveat, Oswald, Playfair Display, Pacifico, Indie Flower, Source Code Pro; OFL licenses in `third_party_licenses/`). Formatting applies to the selection or the whole box and looks the same on the canvas, in the editor and in exports.
-- **Open `.inklus` files from outside the app (Android)**: from Drive, Files or "Share", Inklus shows up as an option and the notebook or note is imported into the library.
+- **Open `.inklus` files from outside the app (Android)**: from Drive, Files or "Share", Not3 shows up as an option and the notebook or note is imported into the library.
 - **Whole app in Spanish and English**: every screen and error message is translated and follows the system language.
 - **More precise shapes**: nearly horizontal or vertical lines snap to the axis (±4°, highlighter ±8°) and the highlighter only straightens lines.
 

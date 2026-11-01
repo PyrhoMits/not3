@@ -6,7 +6,7 @@
 //   dart run bin/build_catalog.dart --check   # solo valida (para PRs)
 //
 // Las reglas son las MISMAS que aplica la app
-// (`MarketplaceService.validatePack` en el repo de Inklus): si cambias una,
+// (`MarketplaceService.validatePack` en el repo de Not3): si cambias una,
 // cambia la otra.
 import 'dart:convert';
 import 'dart:io';

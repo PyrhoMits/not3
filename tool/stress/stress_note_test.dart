@@ -71,7 +71,7 @@ void main() {
       final out = File(Platform.environment['INKLUS_STRESS_OUT'] ??
           'build/inklus_stress.inklus');
       out.parent.createSync(recursive: true);
-      out.writeAsBytesSync(await InklusFormat.exportNotebookBytes(nb));
+      out.writeAsBytesSync(await Not3Format.exportNotebookBytes(nb));
       tmp.deleteSync(recursive: true);
       // ignore: avoid_print
       print('→ ${out.path} (${(out.lengthSync() / 1e6).toStringAsFixed(1)} MB)');

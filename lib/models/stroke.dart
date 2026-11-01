@@ -20,32 +20,46 @@ enum ToolType {
   text, // cajas de texto
 }
 
-ToolType toolTypeFromName(String name) =>
-    ToolType.values.firstWhere((t) => t.name == name, orElse: () => ToolType.pen);
+ToolType toolTypeFromName(String name) => ToolType.values.firstWhere(
+  (t) => t.name == name,
+  orElse: () => ToolType.pen,
+);
 
-/// Un punto del trazo en coordenadas de "mundo" (independientes del zoom).
+/// A stroke point in zoom-independent world coordinates.
 ///
-/// [pressure] va de 0 a 1 y lo reporta el stylus; se usa para modular el
-/// grosor del trazo en tiempo real.
+/// [pressure] ranges from zero to one and is reported by the stylus. It
+/// controls stroke thickness in real time.
+///
+/// [t] is elapsed time in milliseconds from the start of the stroke. ML Kit's
+/// ink model is temporal, so real timing improves recognition, especially for
+/// Thai. It is `null` for legacy strokes; OCR synthesizes their timing.
 class StrokePoint {
   final double x;
   final double y;
   final double pressure;
+  final int? t;
 
-  const StrokePoint(this.x, this.y, this.pressure);
+  const StrokePoint(this.x, this.y, this.pressure, [this.t]);
 
   Offset get offset => Offset(x, y);
 
-  factory StrokePoint.fromOffset(Offset o, double pressure) =>
-      StrokePoint(o.dx, o.dy, pressure);
+  factory StrokePoint.fromOffset(Offset o, double pressure, {int? t}) =>
+      StrokePoint(o.dx, o.dy, pressure, t);
 
   factory StrokePoint.fromJson(Map<String, dynamic> json) => StrokePoint(
-        (json['x'] as num).toDouble(),
-        (json['y'] as num).toDouble(),
-        (json['p'] as num?)?.toDouble() ?? 0.5,
-      );
+    (json['x'] as num).toDouble(),
+    (json['y'] as num).toDouble(),
+    (json['p'] as num?)?.toDouble() ?? 0.5,
+    (json['t'] as num?)?.toInt(),
+  );
 
-  Map<String, dynamic> toJson() => {'x': x, 'y': y, 'p': pressure};
+  Map<String, dynamic> toJson() => {
+    'x': x,
+    'y': y,
+    'p': pressure,
+    // Timing is optional because legacy files do not contain it.
+    if (t != null) 't': t,
+  };
 }
 
 /// Un trazo completo confirmado sobre la página.
@@ -126,56 +140,57 @@ class Stroke {
     int? layerIndex,
     String? shapeType,
     bool clearShapeType = false,
-  }) =>
-      Stroke(
-        id: id ?? this.id,
-        points: points ?? this.points,
-        tool: tool ?? this.tool,
-        colorValue: colorValue ?? this.colorValue,
-        size: size ?? this.size,
-        fillColorValue: clearFillColor ? null : (fillColorValue ?? this.fillColorValue),
-        layerIndex: layerIndex ?? this.layerIndex,
-        shapeType: clearShapeType ? null : (shapeType ?? this.shapeType),
-        thinning: thinning,
-        smoothing: smoothing,
-        streamline: streamline,
-      );
+  }) => Stroke(
+    id: id ?? this.id,
+    points: points ?? this.points,
+    tool: tool ?? this.tool,
+    colorValue: colorValue ?? this.colorValue,
+    size: size ?? this.size,
+    fillColorValue: clearFillColor
+        ? null
+        : (fillColorValue ?? this.fillColorValue),
+    layerIndex: layerIndex ?? this.layerIndex,
+    shapeType: clearShapeType ? null : (shapeType ?? this.shapeType),
+    thinning: thinning,
+    smoothing: smoothing,
+    streamline: streamline,
+  );
 
   /// Copia desplazada [delta] (mismo id y atributos).
   Stroke translated(Offset delta) => copyWith(
-        points: [
-          for (final p in points)
-            StrokePoint(p.x + delta.dx, p.y + delta.dy, p.pressure),
-        ],
-      );
+    points: [
+      for (final p in points)
+        StrokePoint(p.x + delta.dx, p.y + delta.dy, p.pressure, p.t),
+    ],
+  );
 
   factory Stroke.fromJson(Map<String, dynamic> json) => Stroke(
-        id: json['id'] as String,
-        points: (json['points'] as List)
-            .map((p) => StrokePoint.fromJson(p as Map<String, dynamic>))
-            .toList(),
-        tool: toolTypeFromName(json['tool'] as String),
-        colorValue: (json['color'] as num).toInt(),
-        size: (json['size'] as num).toDouble(),
-        fillColorValue: (json['fillColor'] as num?)?.toInt(),
-        layerIndex: (json['layer'] as num?)?.toInt() ?? 0,
-        shapeType: json['shape'] as String?,
-        thinning: (json['th'] as num?)?.toDouble(),
-        smoothing: (json['sm'] as num?)?.toDouble(),
-        streamline: (json['sl'] as num?)?.toDouble(),
-      );
+    id: json['id'] as String,
+    points: (json['points'] as List)
+        .map((p) => StrokePoint.fromJson(p as Map<String, dynamic>))
+        .toList(),
+    tool: toolTypeFromName(json['tool'] as String),
+    colorValue: (json['color'] as num).toInt(),
+    size: (json['size'] as num).toDouble(),
+    fillColorValue: (json['fillColor'] as num?)?.toInt(),
+    layerIndex: (json['layer'] as num?)?.toInt() ?? 0,
+    shapeType: json['shape'] as String?,
+    thinning: (json['th'] as num?)?.toDouble(),
+    smoothing: (json['sm'] as num?)?.toDouble(),
+    streamline: (json['sl'] as num?)?.toDouble(),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'points': points.map((p) => p.toJson()).toList(),
-        'tool': tool.name,
-        'color': colorValue,
-        'size': size,
-        if (fillColorValue != null) 'fillColor': fillColorValue,
-        if (layerIndex != 0) 'layer': layerIndex,
-        if (shapeType != null) 'shape': shapeType,
-        if (thinning != null) 'th': thinning,
-        if (smoothing != null) 'sm': smoothing,
-        if (streamline != null) 'sl': streamline,
-      };
+    'id': id,
+    'points': points.map((p) => p.toJson()).toList(),
+    'tool': tool.name,
+    'color': colorValue,
+    'size': size,
+    if (fillColorValue != null) 'fillColor': fillColorValue,
+    if (layerIndex != 0) 'layer': layerIndex,
+    if (shapeType != null) 'shape': shapeType,
+    if (thinning != null) 'th': thinning,
+    if (smoothing != null) 'sm': smoothing,
+    if (streamline != null) 'sl': streamline,
+  };
 }

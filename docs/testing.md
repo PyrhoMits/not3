@@ -53,12 +53,15 @@ Import the stress notebook (`flutter test tool/stress/stress_note_test.dart` →
 - [ ] A language without a model asks for confirmation; Cancel doesn't download or recognize.
 - [ ] Without Wi-Fi, the download fails with a clear warning (the plugin requires Wi-Fi).
 - [ ] Thai with a model recognizes Thai; without a model and offline it shows the error (it doesn't fall back to Latin).
+- [ ] A page with at least two handwritten lines is returned in reading order; retrying one line only changes that line.
+- [ ] Edit an OCR result, recognize the same writing again, and confirm the local correction is applied automatically.
+- [ ] An older note created before point timestamps were stored still recognizes without errors.
 - [ ] Page "Recognize text" and "Index handwriting" use the last chosen language.
 - [ ] After restarting the app, the last language is remembered.
 
 ## 6. Theme and accessibility
 
 - [ ] Dark mode: all screens legible (library, notes, settings, trash, stats, sheets).
-- [ ] Reminder date picker in Spanish.
+- [ ] Reminder date picker and all surrounding UI are in English.
 
 Note the device, the Android version and any failure in an *issue*; if the app crashed, attach Settings → Error log → Share.

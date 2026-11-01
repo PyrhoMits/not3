@@ -1,5 +1,5 @@
 name: inklus
-description: "Inklus — free, offline-first handwriting app for stylus tablets: pressure ink, palm rejection, infinite canvas, lasso, PDF annotation and optional Drive backup."
+description: "Not3 — free, offline-first handwriting app for stylus tablets: pressure ink, palm rejection, infinite canvas, lasso, PDF annotation and optional Drive backup."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.9.1+14
 
 environment:
-  sdk: ^3.13.0
+  sdk: ^3.12.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -53,7 +53,7 @@ dependencies:
   url_launcher: ^6.3.2
   flutter_localizations:
     sdk: flutter
-  intl: ^0.20.3
+  intl: ^0.20.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -73,7 +73,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-  # Textos traducibles: lib/l10n/*.arb → AppLocalizations (flutter gen-l10n).
+  # Translatable text: lib/l10n/*.arb → AppLocalizations (flutter gen-l10n).
   generate: true
 
   # The following line ensures that the Material Icons font is
@@ -81,7 +81,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # Fuentes para las cajas de texto (licencia OFL: third_party_licenses/).
+  # Fonts for text boxes (OFL licenses: third_party_licenses/).
   fonts:
     - family: Lato
       fonts: [{asset: assets/fonts/Lato-Regular.ttf}]
@@ -104,6 +104,10 @@ flutter:
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
+  assets:
+    # Thai dictionary for OCR candidate reranking (PyThaiNLP, Apache-2.0;
+    # attribution in third_party_licenses/pythainlp.txt).
+    - assets/ocr/thai_words.txt
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

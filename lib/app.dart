@@ -8,21 +8,21 @@ import 'ui/theme/app_theme.dart';
 import 'ui/notebook_library.dart';
 import 'ui/onboarding_screen.dart';
 
-/// Widget raíz de Inklus.
+/// Widget raíz de Not3.
 ///
 /// Soporta tema claro y oscuro. El usuario puede alternar desde la
 /// configuración del sistema o desde un toggle manual.
-class InklusApp extends StatefulWidget {
+class Not3App extends StatefulWidget {
   /// Solo para tests: fija el idioma (null = el del sistema).
-  const InklusApp({super.key, this.locale});
+  const Not3App({super.key, this.locale});
 
   final Locale? locale;
 
   @override
-  State<InklusApp> createState() => _InklusAppState();
+  State<Not3App> createState() => _Not3AppState();
 }
 
-class _InklusAppState extends State<InklusApp> {
+class _Not3AppState extends State<Not3App> {
   bool _showOnboarding = true;
 
   @override
@@ -37,34 +37,32 @@ class _InklusAppState extends State<InklusApp> {
     if (mounted) setState(() => _showOnboarding = shouldShow);
   }
 
-
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeModeController.mode,
       builder: (context, themeMode, _) => MaterialApp(
-      title: 'Inklus',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: themeMode,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      // Sin `locale`: sigue el idioma del sistema; si no hay traducción, inglés.
-      locale: widget.locale,
-      localeListResolutionCallback: resolveAppLocale,
-      home: _showOnboarding
-          ? OnboardingScreen(
-              onDone: () => setState(() => _showOnboarding = false),
-            )
-          : const NotebookLibraryScreen(),
+        title: 'Not3',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: themeMode,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        // La única localización publicada es inglés.
+        locale: widget.locale,
+        localeListResolutionCallback: resolveAppLocale,
+        home: _showOnboarding
+            ? OnboardingScreen(
+                onDone: () => setState(() => _showOnboarding = false),
+              )
+            : const NotebookLibraryScreen(),
       ),
     );
   }
 }
 
-/// Primer idioma preferido del sistema que Inklus traduce (es, en, pt, fr, de);
-/// si ninguno, inglés (sin esto caería en el primero de la lista: alemán).
+/// Devuelve el primer idioma soportado; actualmente siempre es inglés.
 Locale resolveAppLocale(List<Locale>? preferred, Iterable<Locale> supported) {
   for (final p in preferred ?? const <Locale>[]) {
     for (final s in supported) {

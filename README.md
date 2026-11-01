@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/assets/icon-animated.svg" width="168" alt="Inklus">
+  <img src="docs/assets/icon-animated.svg" width="168" alt="Not3">
 </p>
 
-<h1 align="center">Inklus</h1>
+<h1 align="center">Not3</h1>
 
 <p align="center"><b>Handwriting for stylus tablets. Free, offline-first, open source.</b></p>
 
@@ -29,7 +29,7 @@ Handwriting app for **stylus** tablets, in the spirit of GoodNotes or Samsung No
 
 ## 📲 Install (Android)
 
-Inklus is distributed as an APK on [**GitHub Releases**](https://github.com/Pedroj-64/inklus/releases) (it is not on Google Play).
+Not3 is distributed as an APK on [**GitHub Releases**](https://github.com/Pedroj-64/inklus/releases) (it is not on Google Play).
 
 1. From the latest release, download the APK for your tablet. Most current tablets use **`app-arm64-v8a-release.apk`**; if it won't install, try `app-armeabi-v7a-release.apk`.
 2. Open it. Android will ask you to allow **installing apps from unknown sources** for your browser or file manager: grant it for this installation only.
@@ -87,7 +87,7 @@ Inklus is distributed as an APK on [**GitHub Releases**](https://github.com/Pedr
 
 ### ☁️ Google Drive (optional)
 The app is **offline-first**: it works 100% without an account or network. If you sign in with Google:
-- Each notebook is mirrored to an **Inklus** folder in your Drive as `.inklus`, always in the same file.
+- Each notebook is mirrored to an **Not3** folder in your Drive as `.inklus`, always in the same file.
 - It uses the **`drive.file`** scope: the app only sees files it created itself.
 - **Restore from Drive** brings back the latest version of each note, and the version history also shows revisions saved on Drive.
 
@@ -95,7 +95,7 @@ The app is **offline-first**: it works 100% without an account or network. If yo
 
 ## 🔒 Privacy
 
-There are no Inklus servers, analytics or ads. Errors are logged **on the device only** and you decide whether to share them (Settings → Error log). Details in [`docs/privacy.md`](docs/privacy.md).
+There are no Not3 servers, analytics or ads. Errors are logged **on the device only** and you decide whether to share them (Settings → Error log). Details in [`docs/privacy.md`](docs/privacy.md).
 
 ### Secrets (for contributors and publishers)
 
@@ -155,7 +155,7 @@ lib/
 │   ├── theme/                     # Design system (theme, tokens, colors)
 │   ├── widgets/                   # Shared components
 │   └── *_screen.dart              # Library, settings, trash, reminders…
-└── l10n/                          # Translations (es, en, pt-BR, fr, de)
+└── l10n/                          # English UI strings
 ```
 
 ---
@@ -218,11 +218,11 @@ Contributions are welcome: code, translations, templates for the marketplace, bu
 
 ## 📜 License
 
-Inklus is free software: you can redistribute it and/or modify it under the terms of the
+Not3 is free software: you can redistribute it and/or modify it under the terms of the
 **GNU General Public License v3.0 or later** (GPL-3.0-or-later), published by the Free
 Software Foundation. See the [`LICENSE`](LICENSE) file.
 
-Copyright © 2026 Pedro ([@Pedroj-64](https://github.com/Pedroj-64)) and Inklus contributors.
+Copyright © 2026 Pedro ([@Pedroj-64](https://github.com/Pedroj-64)) and Not3 contributors.
 
 Every source file carries the header `// SPDX-License-Identifier: GPL-3.0-or-later`.
 Any modified version that is distributed must also be released under GPL-3.0 with its source code.

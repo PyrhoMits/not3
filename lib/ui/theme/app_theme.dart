@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'inklus_colors.dart';
 import 'tokens.dart';
 
-/// Construye los [ThemeData] de Inklus (claro y oscuro).
+/// Construye los [ThemeData] de Not3 (claro y oscuro).
 ///
 /// Reglas:
 /// - Todo color de interfaz sale de `Theme.of(context).colorScheme` o de
-///   [InklusColors] (`context.inklus`). Nada de `Colors.white`/`Color(0x…)`
+///   [Not3Colors] (`context.inklus`). Nada de `Colors.white`/`Color(0x…)`
 ///   sueltos en los widgets.
 /// - La escala tipográfica está pensada para tablet (nada por debajo de
 ///   12 pt; texto de interfaz habitual 14–16 pt).
@@ -23,7 +23,7 @@ abstract final class AppTheme {
 
   static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final extra = isDark ? InklusColors.dark : InklusColors.light;
+    final extra = isDark ? Not3Colors.dark : Not3Colors.light;
     final scheme = ColorScheme.fromSeed(
       seedColor: seed,
       brightness: brightness,

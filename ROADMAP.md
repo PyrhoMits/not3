@@ -1,4 +1,4 @@
-# 🗺️ Hoja de ruta — Inklus
+# 🗺️ Hoja de ruta — Not3
 
 > Estado del proyecto y próximos pasos. **Rework (gobernanza, datos seguros, UI premium, 5 idiomas): ejecutado, ver [`docs/REWORK.md`](docs/REWORK.md)** (queda su «Ronda 2» y los pendientes que lista). Camino a 2.0 más abajo; manual de usuario en [`README.md`](README.md).
 
@@ -129,7 +129,7 @@
 
 ## 🚀 Camino a la release 2.0 (plan por versiones)
 
-> Estado de partida (sept. 2026): base técnica sólida (persistencia atómica, backup completo, rendimiento del lienzo, rechazo de palma, regla, PDF multipágina, exportación sin recortes). Lo que separa a Inklus de GoodNotes/Notability/Samsung Notes ahora es sobre todo **experiencia** (UI, flujo de páginas, búsqueda, lazo) y **distribución** (tienda, legal, marketplace).
+> Estado de partida (sept. 2026): base técnica sólida (persistencia atómica, backup completo, rendimiento del lienzo, rechazo de palma, regla, PDF multipágina, exportación sin recortes). Lo que separa a Not3 de GoodNotes/Notability/Samsung Notes ahora es sobre todo **experiencia** (UI, flujo de páginas, búsqueda, lazo) y **distribución** (tienda, legal, marketplace).
 
 ### ✅ v1.4 — "Escribe como debe" (hecho en la rama `optimizacion`)
 - Rechazo de palma completo + modo solo lápiz + pan con un dedo + botón S-Pen; arreglado el bug que dejaba la pantalla sin responder al tacto tras mover una selección con el lápiz.
@@ -140,7 +140,7 @@
 - Regla/transportador rediseñados y usables. PDF multipágina para anotar. Tema claro/oscuro recordado y funcional desde cualquier pantalla. Editor con ~15 % más de lienzo visible (barra inferior en una fila, miniaturas plegadas por defecto).
 
 ### ✅ v1.4 (cont.) — Lavado de cara y paridad (hecho en la rama `optimizacion`)
-- **U1 Sistema de diseño**: `ui/theme/` (ThemeData central, `InklusColors`, tokens), esquema `fidelity` que respeta el azul de marca.
+- **U1 Sistema de diseño**: `ui/theme/` (ThemeData central, `Not3Colors`, tokens), esquema `fidelity` que respeta el azul de marca.
 - **U2 Editor**: barra superior única con plumas, herramientas, deshacer, páginas, capas, ☁️ y ⋮; opciones en **popovers anclados**; panel lateral de páginas; indicador "‹ 2/5 ›"; zoom compacto. Se eliminaron el riel lateral, la barra inferior y la tira de miniaturas.
 - **U3 Plumas favoritas**: 3 plumas + resaltador con color/grosor propios y colores recientes (persistentes).
 - **U4 Menú ⋮** agrupado en submenús (Exportar y compartir · Página · Nota · Ver · Datos).
@@ -203,7 +203,7 @@
 | 1.5 | 🔧 Medir en la tablet con `flutter run --profile`: cuaderno de prueba generado por `flutter test tool/stress/stress_note_test.dart` → `build/inklus_stress.inklus`. | — |
 
 #### Fase 2 — v1.6 "Todo con el mismo diseño" (✅ hecha)
-- ✅ **P1**: todas las pantallas y hojas migradas a `ui/widgets/page_scaffold.dart` + tokens (`InklusPage` aplica el margen lateral; `showConfirmDialog` para confirmaciones destructivas). Quedan colores literales solo donde son **contenido** (paletas de portada/etiquetas/plantillas, selector de color, lienzo).
+- ✅ **P1**: todas las pantallas y hojas migradas a `ui/widgets/page_scaffold.dart` + tokens (`Not3Page` aplica el margen lateral; `showConfirmDialog` para confirmaciones destructivas). Quedan colores literales solo donde son **contenido** (paletas de portada/etiquetas/plantillas, selector de color, lienzo).
 - ✅ **P7**: el lazo escala/rota/copia/pega/duplica imágenes y textos (`transformSelectedStrokes`, portapapeles de tres tipos, `selectionHandles` como única fuente de las asas).
 - ✅ **P8**: revisiones de Drive en el historial (`DriveSyncService.listRevisions/downloadRevision`, `ui/editor/version_history_sheet.dart`).
 - ✅ Extra: papelera reescrita (`TrashEntry`, notas sueltas, purga de 30 días).
@@ -266,7 +266,7 @@ Hecho de P1–P3, P7, P8, R1, R2, R4–R6, R9: ver versiones 1.4–1.8.
 | Media | **Varias notas abiertas / pestañas**, atajos ampliados, IzzyOnDroid | |
 | Baja | Audio sincronizado (P4), ventana de zoom (P5), iPadOS/Windows (R8) | Aparcado: coste alto. |
 
-### 🛒 Marketplace propio de Inklus
+### 🛒 Marketplace propio de Not3
 
 **Estado actual:** `TemplateMarketplaceService` es **código muerto** (ninguna pantalla lo usa). Solo maneja *parámetros* de plantillas integradas (tipo, color, espaciado), no archivos, sin validación, y apunta a un repo externo (`nicblo/inclus-templates`). Se puede reutilizar su estructura de caché/parseo, pero el formato hay que rehacerlo.
 

@@ -100,7 +100,8 @@ class CanvasPainter extends CustomPainter {
   /// vuelve a tomar (más allá se nota borrosa o destapa demasiado).
   static const double _maxSnapshotZoomDrift = 1.6;
 
-  static final Paint _snapshotPaint = Paint()..filterQuality = FilterQuality.low;
+  static final Paint _snapshotPaint = Paint()
+    ..filterQuality = FilterQuality.low;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -111,8 +112,16 @@ class CanvasPainter extends CustomPainter {
       return;
     }
 
-    final key = Object.hash(page, contentVersion, imageCacheVersion, isDark,
-        sheetSize, size, devicePixelRatio, Object.hashAll(neighbors.map((n) => n.page)));
+    final key = Object.hash(
+      page,
+      contentVersion,
+      imageCacheVersion,
+      isDark,
+      sheetSize,
+      size,
+      devicePixelRatio,
+      Object.hashAll(neighbors.map((n) => n.page)),
+    );
     final drift = snap.image == null ? 1.0 : scale / snap.scale;
     if (snap.image == null ||
         snap.key != key ||
@@ -164,7 +173,12 @@ class CanvasPainter extends CustomPainter {
   }
 
   /// Pinta el mundo en la zona [screenRect] de la pantalla (culling incluido).
-  void _paintLive(Canvas canvas, Rect screenRect, double scale, Offset translate) {
+  void _paintLive(
+    Canvas canvas,
+    Rect screenRect,
+    double scale,
+    Offset translate,
+  ) {
     canvas.save();
     canvas.translate(translate.dx, translate.dy);
     canvas.scale(scale);
@@ -180,8 +194,13 @@ class CanvasPainter extends CustomPainter {
     for (final n in neighbors) {
       final nSize = n.page.template.sheetSize;
       final shifted = visible.shift(Offset(0, -n.dy));
-      if (!shifted.overlaps(Rect.fromCenter(
-          center: Offset.zero, width: nSize.width, height: nSize.height).inflate(24))) {
+      if (!shifted.overlaps(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: nSize.width,
+          height: nSize.height,
+        ).inflate(24),
+      )) {
         continue;
       }
       canvas.save();
@@ -218,11 +237,13 @@ class CanvasPainter extends CustomPainter {
     final c = view.intersect(cover);
     if (c.width <= 0 || c.height <= 0) return [view];
     return [
-      if (c.top > view.top) Rect.fromLTRB(view.left, view.top, view.right, c.top),
+      if (c.top > view.top)
+        Rect.fromLTRB(view.left, view.top, view.right, c.top),
       if (c.bottom < view.bottom)
         Rect.fromLTRB(view.left, c.bottom, view.right, view.bottom),
       if (c.left > view.left) Rect.fromLTRB(view.left, c.top, c.left, c.bottom),
-      if (c.right < view.right) Rect.fromLTRB(c.right, c.top, view.right, c.bottom),
+      if (c.right < view.right)
+        Rect.fromLTRB(c.right, c.top, view.right, c.bottom),
     ];
   }
 
@@ -238,8 +259,10 @@ class CanvasPainter extends CustomPainter {
       oldDelegate.isDark != isDark ||
       oldDelegate.viewGesture != viewGesture ||
       oldDelegate.devicePixelRatio != devicePixelRatio ||
-      !listEquals(oldDelegate.neighbors.map((n) => n.page).toList(),
-          neighbors.map((n) => n.page).toList());
+      !listEquals(
+        oldDelegate.neighbors.map((n) => n.page).toList(),
+        neighbors.map((n) => n.page).toList(),
+      );
 }
 
 /// Instantánea rasterizada de la capa confirmada usada durante un gesto de
@@ -349,8 +372,13 @@ class ActiveLayerPainter extends CustomPainter {
           ..color = Colors.white;
         canvas.drawCircle(h.scale, h.radius, fill);
         canvas.drawCircle(h.scale, h.radius, ring);
-        canvas.drawLine(h.frame.topCenter, h.rotate,
-            Paint()..color = _strokeSelectionColor..strokeWidth = 2 / scale);
+        canvas.drawLine(
+          h.frame.topCenter,
+          h.rotate,
+          Paint()
+            ..color = _strokeSelectionColor
+            ..strokeWidth = 2 / scale,
+        );
         canvas.drawCircle(h.rotate, h.radius, fill);
         canvas.drawCircle(h.rotate, h.radius, ring);
       }
@@ -372,11 +400,7 @@ class ActiveLayerPainter extends CustomPainter {
         // Asa de redimensionado (esquina inferior derecha).
         final handle = rect.bottomRight;
         final r = 11 / scale;
-        canvas.drawCircle(
-          handle,
-          r,
-          Paint()..color = kAccentColor,
-        );
+        canvas.drawCircle(handle, r, Paint()..color = kAccentColor);
         canvas.drawCircle(
           handle,
           r,
@@ -386,10 +410,7 @@ class ActiveLayerPainter extends CustomPainter {
             ..color = Colors.white,
         );
         // Asa de rotación (línea hacia arriba desde el centro superior).
-        final rotHandle = Offset(
-          rect.center.dx,
-          rect.top - r * 3,
-        );
+        final rotHandle = Offset(rect.center.dx, rect.top - r * 3);
         canvas.drawLine(
           rect.topCenter,
           rotHandle,
@@ -397,11 +418,7 @@ class ActiveLayerPainter extends CustomPainter {
             ..color = kAccentColor
             ..strokeWidth = 2 / scale,
         );
-        canvas.drawCircle(
-          rotHandle,
-          r,
-          Paint()..color = kAccentColor,
-        );
+        canvas.drawCircle(rotHandle, r, Paint()..color = kAccentColor);
         canvas.drawCircle(
           rotHandle,
           r,
@@ -485,7 +502,9 @@ class ActiveLayerPainter extends CustomPainter {
       final age = (now - trail[i].t).clamp(0, fade);
       final alpha = 1 - age / fade;
       if (alpha <= 0) continue;
-      _laserGlow.color = const Color(0xFFFF1744).withValues(alpha: 0.35 * alpha);
+      _laserGlow.color = const Color(
+        0xFFFF1744,
+      ).withValues(alpha: 0.35 * alpha);
       _laserCore.color = const Color(0xFFFF5252).withValues(alpha: alpha);
       canvas.drawLine(trail[i - 1].point, trail[i].point, _laserGlow);
       canvas.drawLine(trail[i - 1].point, trail[i].point, _laserCore);
@@ -627,67 +646,80 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-          Listener(
-          behavior: HitTestBehavior.opaque,
-          onPointerDown: _onPointerDown,
-          onPointerHover: _onPointerHover,
-          onPointerMove: _onPointerMove,
-          onPointerUp: _onPointerUp,
-          onPointerCancel: _onPointerCancel,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onScaleStart: _onScaleStart,
-            onScaleUpdate: _onScaleUpdate,
-            onScaleEnd: (_) => _transforming = false,
-            child: ClipRect(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Capa confirmada, cacheada por RepaintBoundary.
-                  _nightFilter(RepaintBoundary(
-                    child: ListenableBuilder(
-                      listenable: Listenable.merge([widget.controller, _viewGesture]),
-                      builder: (context, _) {
-                        return CustomPaint(
-                          size: Size.infinite,
-                          painter: CanvasPainter(
-                            viewGesture: _viewGesture.value,
-                            snapshot: _viewSnapshot,
-                            devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
-                            neighbors: widget.controller.stackedNeighbors,
-                            page: widget.controller.page,
-                            contentVersion: widget.controller.contentVersion,
-                            sheetSize: widget.controller.sheetSize,
-                            imageCache: widget.imageService.cache,
-                            imageCacheVersion: widget.imageService.cache.version,
-                            scale: widget.controller.scale,
-                            translate: widget.controller.translate,
-                            isDark: Theme.of(context).brightness == Brightness.dark,
+              Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: _onPointerDown,
+                onPointerHover: _onPointerHover,
+                onPointerMove: _onPointerMove,
+                onPointerUp: _onPointerUp,
+                onPointerCancel: _onPointerCancel,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onScaleStart: _onScaleStart,
+                  onScaleUpdate: _onScaleUpdate,
+                  onScaleEnd: (_) => _transforming = false,
+                  child: ClipRect(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Capa confirmada, cacheada por RepaintBoundary.
+                        _nightFilter(
+                          RepaintBoundary(
+                            child: ListenableBuilder(
+                              listenable: Listenable.merge([
+                                widget.controller,
+                                _viewGesture,
+                              ]),
+                              builder: (context, _) {
+                                return CustomPaint(
+                                  size: Size.infinite,
+                                  painter: CanvasPainter(
+                                    viewGesture: _viewGesture.value,
+                                    snapshot: _viewSnapshot,
+                                    devicePixelRatio:
+                                        MediaQuery.devicePixelRatioOf(context),
+                                    neighbors:
+                                        widget.controller.stackedNeighbors,
+                                    page: widget.controller.page,
+                                    contentVersion:
+                                        widget.controller.contentVersion,
+                                    sheetSize: widget.controller.sheetSize,
+                                    imageCache: widget.imageService.cache,
+                                    imageCacheVersion:
+                                        widget.imageService.cache.version,
+                                    scale: widget.controller.scale,
+                                    translate: widget.controller.translate,
+                                    isDark:
+                                        Theme.of(context).brightness ==
+                                        Brightness.dark,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                  )),
-                  // Capa activa (trazo en curso, cursor, selección).
-                  _nightFilter(ListenableBuilder(
-                    listenable: widget.controller,
-                    builder: (context, _) => CustomPaint(
-                      size: Size.infinite,
-                      painter: ActiveLayerPainter(
-                        controller: widget.controller,
-                        imageCache: widget.imageService.cache,
-                      ),
-                    ),
-                  )),
-                ],
-              ),  // Stack
-            ),    // ClipRect
-          ),      // GestureDetector
-          ),      // Listener
+                        ),
+                        // Capa activa (trazo en curso, cursor, selección).
+                        _nightFilter(
+                          ListenableBuilder(
+                            listenable: widget.controller,
+                            builder: (context, _) => CustomPaint(
+                              size: Size.infinite,
+                              painter: ActiveLayerPainter(
+                                controller: widget.controller,
+                                imageCache: widget.imageService.cache,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ), // Stack
+                  ), // ClipRect
+                ), // GestureDetector
+              ), // Listener
               ClipRect(child: TextEditOverlay(controller: widget.controller)),
             ],
-          ),      // Stack
-        );        // Focus + return
+          ), // Stack
+        ); // Focus + return
       },
     );
   }
@@ -746,17 +778,30 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       _drawingPointer = event.pointer;
       // Goma física del lápiz (invertedStylus) o botón lateral del S-Pen
       // pulsado = borrador para este trazo.
-      final eraserButton = kind == PointerDeviceKind.invertedStylus ||
+      final eraserButton =
+          kind == PointerDeviceKind.invertedStylus ||
           (kind == PointerDeviceKind.stylus &&
               // Algunos lápices (p. ej. el de la Lenovo) reportan el botón
               // lateral como primario y otras veces como secundario.
-              (event.buttons & (kPrimaryStylusButton | kSecondaryStylusButton)) != 0);
+              (event.buttons &
+                      (kPrimaryStylusButton | kSecondaryStylusButton)) !=
+                  0);
       if (eraserButton) {
-        c.beginStroke(world, event.pressure, tool: ToolType.eraser);
+        c.beginStroke(
+          world,
+          event.pressure,
+          tool: ToolType.eraser,
+          timeStamp: event.timeStamp,
+        );
       } else if (c.tool == ToolType.select) {
         _handleSelectDown(event.localPosition, world, event.pointer);
       } else {
-        c.beginStroke(world, event.pressure, tool: c.tool);
+        c.beginStroke(
+          world,
+          event.pressure,
+          tool: c.tool,
+          timeStamp: event.timeStamp,
+        );
       }
       return;
     }
@@ -793,7 +838,12 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     } else if (c.fingerDrawingEnabled || c.tool == ToolType.text) {
       // (la herramienta de texto responde al dedo aunque sea "solo lápiz")
       _drawingPointer = event.pointer;
-      c.beginStroke(world, event.pressure, tool: c.tool);
+      c.beginStroke(
+        world,
+        event.pressure,
+        tool: c.tool,
+        timeStamp: event.timeStamp,
+      );
     }
     // Si no se dibuja con el dedo, el GestureDetector desplaza la página.
   }
@@ -809,7 +859,8 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     if (_transforming) {
       final start = _transformStartTime;
       if (start != null &&
-          DateTime.now().difference(start) < const Duration(milliseconds: 600)) {
+          DateTime.now().difference(start) <
+              const Duration(milliseconds: 600)) {
         c.setView(_startScale, _startTranslate); // deshace el pan de la palma
       }
       _transforming = false;
@@ -842,13 +893,19 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       event.localPosition,
       _viewport,
     );
-    widget.controller.addStrokePoint(world, event.pressure);
+    widget.controller.addStrokePoint(
+      world,
+      event.pressure,
+      timeStamp: event.timeStamp,
+    );
   }
 
   void _onPointerUp(PointerUpEvent event) {
     // Siempre, antes de cualquier return: si no, el estado "lápiz apoyado"
     // se quedaba atascado y la pantalla dejaba de responder al tacto.
-    if (PalmRejection.isStylusKind(event.kind)) _palm.stylusUpEvent(event.pointer);
+    if (PalmRejection.isStylusKind(event.kind)) {
+      _palm.stylusUpEvent(event.pointer);
+    }
     _rejectedPointers.remove(event.pointer);
     if (_rulerPointers.remove(event.pointer) != null) {
       _restartRulerGesture();
@@ -861,7 +918,9 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       final elapsed = DateTime.now().difference(_twoFingerStartTime!);
       _twoFingerStartTime = null;
       if (widget.controller.twoFingerUndo &&
-          elapsed.inMilliseconds < 300 && !_twoFingerMoved && !_palm.stylusNearby) {
+          elapsed.inMilliseconds < 300 &&
+          !_twoFingerMoved &&
+          !_palm.stylusNearby) {
         widget.controller.undo();
         return;
       }
@@ -888,7 +947,9 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
   }
 
   void _onPointerCancel(PointerCancelEvent event) {
-    if (PalmRejection.isStylusKind(event.kind)) _palm.stylusUpEvent(event.pointer);
+    if (PalmRejection.isStylusKind(event.kind)) {
+      _palm.stylusUpEvent(event.pointer);
+    }
     _rejectedPointers.remove(event.pointer);
     if (_rulerPointers.remove(event.pointer) != null) {
       _restartRulerGesture();
@@ -925,7 +986,9 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       widget.controller.tool != ToolType.select;
 
   bool get _gestureBlocked =>
-      _palm.stylusDown || _rejectedPointers.isNotEmpty || _rulerPointers.isNotEmpty;
+      _palm.stylusDown ||
+      _rejectedPointers.isNotEmpty ||
+      _rulerPointers.isNotEmpty;
 
   // -------------------------------------------------------------------------
   // Regla: arrastrar (1 dedo) y rotar (2 dedos)
@@ -941,7 +1004,10 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
 
   void _updateRulerGesture() {
     final c = widget.controller;
-    final ids = _rulerGrab.keys.where(_rulerPointers.containsKey).take(2).toList();
+    final ids = _rulerGrab.keys
+        .where(_rulerPointers.containsKey)
+        .take(2)
+        .toList();
     if (ids.isEmpty) return;
     if (ids.length == 1) {
       final delta = (_rulerPointers[ids[0]]! - _rulerGrab[ids[0]]!) / c.scale;
@@ -964,7 +1030,9 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
 
   void _onScaleStart(ScaleStartDetails details) {
     if (_gestureBlocked) return;
-    if (details.pointerCount >= 2 || _oneFingerPans) _beginTransform(details.pointerCount);
+    if (details.pointerCount >= 2 || _oneFingerPans) {
+      _beginTransform(details.pointerCount);
+    }
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
@@ -973,7 +1041,8 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       return;
     }
     if (details.pointerCount >= 2 &&
-        ((details.scale - 1).abs() > 0.05 || details.focalPointDelta.distance > 3)) {
+        ((details.scale - 1).abs() > 0.05 ||
+            details.focalPointDelta.distance > 3)) {
       _twoFingerMoved = true;
     }
     if (!_transforming) {
@@ -991,20 +1060,25 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       return;
     }
     final controller = widget.controller;
-    final factor = _prevGestureScale == 0 ? 1.0 : details.scale / _prevGestureScale;
+    final factor = _prevGestureScale == 0
+        ? 1.0
+        : details.scale / _prevGestureScale;
     _prevGestureScale = details.scale;
     final newScale = (controller.scale * factor).clamp(kMinZoom, kMaxZoom);
     final ratio = newScale / controller.scale;
     final focal = details.localFocalPoint;
     // Mantiene fijo el punto bajo los dedos y aplica el desplazamiento.
     final newTranslate =
-        focal - (focal - controller.translate) * ratio + details.focalPointDelta;
+        focal -
+        (focal - controller.translate) * ratio +
+        details.focalPointDelta;
     controller.setView(newScale, newTranslate);
   }
 
   void _beginTransform(int pointerCount) {
     // Si había un trazo de dedo en curso, se cancela al empezar el gesto.
-    if (widget.controller.isDrawing && _touchPointers.contains(_drawingPointer)) {
+    if (widget.controller.isDrawing &&
+        _touchPointers.contains(_drawingPointer)) {
       widget.controller.cancelStroke();
       _drawingPointer = null;
     }
@@ -1172,12 +1246,11 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     if (_rotatingImage) {
       // Rotación: calcula el ángulo desde el centro de la imagen.
       final center = _imageGestureStartRect.center;
-      final startAngle = (world - center).direction -
+      final startAngle =
+          (world - center).direction -
           (_imageGestureStartWorld - center).direction;
       widget.controller.updateImageLive(
-        original.copyWith(
-          rotation: _imageGestureStartRotation + startAngle,
-        ),
+        original.copyWith(rotation: _imageGestureStartRotation + startAngle),
       );
     } else if (_resizingImage) {
       // Redimensionado manteniendo el aspect ratio.
@@ -1186,10 +1259,7 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       final aspect =
           _imageGestureStartRect.width / _imageGestureStartRect.height;
       widget.controller.updateImageLive(
-        original.copyWith(
-          width: newWidth,
-          height: newWidth / aspect,
-        ),
+        original.copyWith(width: newWidth, height: newWidth / aspect),
       );
     } else if (_movingImage) {
       final delta = world - _imageGestureStartWorld;
@@ -1208,14 +1278,14 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
             : null,
         excludeImageId: original.id,
       );
-      widget.controller.setSnapGuides(snap.verticalGuides, snap.horizontalGuides);
+      widget.controller.setSnapGuides(
+        snap.verticalGuides,
+        snap.horizontalGuides,
+      );
       // hasSnap (no `!= Offset.zero`): ajustar al centro (0,0) es un snap válido.
       final adjusted = snap.hasSnap ? snap.snappedPoint : candidateCenter;
       widget.controller.updateImageLive(
-        original.copyWith(
-          x: adjusted.dx,
-          y: adjusted.dy,
-        ),
+        original.copyWith(x: adjusted.dx, y: adjusted.dy),
       );
     }
   }
@@ -1270,6 +1340,4 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     _strokesBeforeMove = [];
     _drawingPointer = null;
   }
-
-
 }

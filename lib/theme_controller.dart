@@ -9,7 +9,7 @@ class ThemeModeController {
 
   static const _pref = 'theme_mode';
 
-  /// Modo actual. `InklusApp` lo escucha para reconstruir el MaterialApp.
+  /// Modo actual. `Not3App` lo escucha para reconstruir el MaterialApp.
   static final ValueNotifier<ThemeMode> mode = ValueNotifier(ThemeMode.system);
 
   static Future<void> load() async {

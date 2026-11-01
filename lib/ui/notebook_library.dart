@@ -374,7 +374,7 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
 
   /// Importa un cuaderno `.inklus` o un respaldo completo `.zip` (el tipo se
   /// detecta por el contenido, ver [ImportService]).
-  Future<void> _importInklus() async {
+  Future<void> _importNot3() async {
     final l10n = context.l10n;
     try {
       final bytes = await ImportService.pickFile();
@@ -645,7 +645,7 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
           Icons.file_download_outlined,
           context.l10n.libImport,
           false,
-          _importInklus,
+          _importNot3,
         ),
         tile(Icons.delete_outline, context.l10n.libTrash, false, _openTrash),
         tile(
@@ -856,7 +856,7 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
                 label: Text(context.l10n.createAction),
               ),
               OutlinedButton.icon(
-                onPressed: _importInklus,
+                onPressed: _importNot3,
                 icon: const Icon(Icons.file_download_outlined, size: 18),
                 label: Text(context.l10n.libImport),
               ),
@@ -879,10 +879,10 @@ class _Brand extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      const InklusLogo(size: 32),
+      const Not3Logo(size: 32),
       const SizedBox(width: Spacing.md),
       Text(
-        'Inklus',
+        'Not3',
         style: context.text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
       ),
     ],

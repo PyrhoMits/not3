@@ -35,8 +35,8 @@ import 'app_errors.dart';
 ///
 /// Se mantiene compatibilidad con v1 (document.json) para importar
 /// archivos antiguos.
-class InklusFormat {
-  InklusFormat._();
+class Not3Format {
+  Not3Format._();
 
   // Nombres de entrada en el ZIP
   static const _formatEntry = 'format.json';
@@ -156,7 +156,7 @@ class InklusFormat {
     }
 
     if (notebookBytes == null) {
-      throw const AppError(AppErrorCode.notInklusV2);
+      throw const AppError(AppErrorCode.notNot3V2);
     }
 
     final nbJson = jsonDecode(utf8.decode(notebookBytes)) as Map<String, dynamic>;
@@ -278,7 +278,7 @@ class InklusFormat {
       }
     }
     if (docBytes == null) {
-      throw const AppError(AppErrorCode.notInklusFile);
+      throw const AppError(AppErrorCode.notNot3File);
     }
 
     final doc = Document.fromJson(

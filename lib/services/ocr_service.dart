@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -14,27 +15,72 @@ import '../models/page.dart';
 import '../models/stroke.dart';
 import 'export_service.dart';
 import 'image_service.dart';
+import 'ocr_candidate.dart';
+import 'ocr_correction_store.dart';
 import 'ocr_language.dart';
+import 'ocr_lexicon.dart';
+import 'ocr_lines.dart';
 
-/// Resultado del reconocimiento de texto de una página.
+export 'ocr_candidate.dart';
+
+/// Text-recognition result for a page.
 class OcrResult {
-  /// Texto completo reconocido (todas las líneas concatenadas con saltos).
+  /// Full recognized text, with lines joined by newline characters.
   final String text;
 
-  /// Bloques de texto reconocidos, cada uno con su texto y bounding box
-  /// en coordenadas de imagen (px, no mundo).
+  /// Recognized text blocks with approximate image-coordinate bounds.
   final List<OcrBlock> blocks;
 
-  const OcrResult({required this.text, required this.blocks});
+  /// All model candidates, best first. Multi-line results concatenate the
+  /// candidates from each line.
+  final List<OcrCandidate> candidates;
+
+  /// Per-line results with their source strokes, allowing the UI to retry one
+  /// line without recognizing the entire page again.
+  final List<OcrLine> lines;
+
+  const OcrResult({
+    required this.text,
+    required this.blocks,
+    this.candidates = const [],
+    this.lines = const [],
+  });
+
+  factory OcrResult.fromLines(List<OcrLine> lines) {
+    final visible = lines.where((line) => line.text.trim().isNotEmpty).toList();
+    return OcrResult(
+      text: visible.map((line) => line.text).join('\n'),
+      blocks: [for (final line in visible) line.block],
+      candidates: [for (final line in visible) ...line.candidates],
+      lines: List<OcrLine>.unmodifiable(visible),
+    );
+  }
 
   bool get isEmpty => text.isEmpty;
 }
 
-/// Un bloque de texto reconocido con su posición aproximada.
+/// A recognized line with the data needed to retry it.
+class OcrLine {
+  final String text;
+  final OcrBlock block;
+  final List<Stroke> strokes;
+  final List<OcrCandidate> candidates;
+
+  const OcrLine({
+    required this.text,
+    required this.block,
+    required this.strokes,
+    this.candidates = const [],
+  });
+
+  bool get isEmpty => text.isEmpty;
+}
+
+/// A recognized text block with its approximate position.
 class OcrBlock {
   final String text;
   final double x; // izquierda (px)
-  final double y; // arriba (px)
+  final double y; // Top edge in pixels.
   final double width;
   final double height;
 
@@ -47,8 +93,8 @@ class OcrBlock {
   });
 }
 
-/// El idioma elegido necesita el modelo de tinta y no hay fallback por bitmap
-/// (p. ej. tailandés), o la descarga del modelo falló.
+/// The selected language requires a digital-ink model and has no bitmap
+/// fallback, or the model download failed.
 class OcrModelUnavailableError implements Exception {
   const OcrModelUnavailableError(this.language);
 
@@ -58,18 +104,27 @@ class OcrModelUnavailableError implements Exception {
   String toString() => 'OCR model unavailable for ${language.code}';
 }
 
-/// Servicio de OCR on-device (solo Android/iOS).
+/// On-device OCR service for Android and iOS.
 ///
-/// **Estrategia principal**: usa `google_mlkit_digital_ink_recognition` que
-/// trabaja directamente con los trazos vectoriales (coordenadas de mundo),
-/// sin necesidad de renderizar a bitmap. Esto da mejor precisión y permite
-/// reconocer texto por trazos individuales.
+/// **Primary strategy**: `google_mlkit_digital_ink_recognition` processes
+/// vector strokes directly, without rendering a bitmap. This improves
+/// accuracy and allows recognition from individual strokes.
 ///
-/// **Fallback**: si no hay trazos disponibles o el reconocimiento de tinta
-/// falla, usa `google_mlkit_text_recognition` sobre un bitmap renderizado.
-/// El tailandés no tiene fallback porque ML Kit no lo soporta en bitmap.
+/// **Accuracy improvements** (see `docs/OCR_IMPROVEMENT.md`):
+/// - real point timing (`StrokePoint.t`) instead of a synthetic sequence;
+/// - line segmentation with one model call per line;
+/// - `preContext` from the end of the previous line;
+/// - all candidates ranked by score and lexicon coverage;
+/// - locally learned user corrections.
+///
+/// **Fallback**: when strokes are unavailable or ink recognition fails,
+/// `google_mlkit_text_recognition` processes a rendered bitmap. Thai has no
+/// bitmap fallback because ML Kit does not support it.
 class OcrService {
   const OcrService._();
+
+  /// Maximum previous-line context passed to the model.
+  static const int _preContextChars = 32;
 
   /// Plataformas soportadas (Android/iOS).
   static bool get isSupported =>
@@ -77,18 +132,17 @@ class OcrService {
       defaultTargetPlatform == TargetPlatform.iOS;
 
   // -------------------------------------------------------------------------
-  // Modelo de tinta (descarga y cache)
+  // Digital-ink model download and cache
   // -------------------------------------------------------------------------
 
-  /// Idiomas cuyo modelo ya está en el dispositivo (o se descargó en esta
-  /// sesión).
+  /// Language models available on the device or downloaded this session.
   static final Set<String> _downloadedModels = {};
 
-  /// Limpia la caché de modelos descargados entre tests.
+  /// Clears the downloaded-model cache between tests.
   @visibleForTesting
   static void resetInkModelCacheForTest() => _downloadedModels.clear();
 
-  /// Comprueba si el modelo de [languageCode] está descargado, sin red.
+  /// Checks whether the [languageCode] model is already downloaded.
   static Future<bool> isInkModelDownloaded(String languageCode) async {
     if (!isSupported) return false;
     if (_downloadedModels.contains(languageCode)) return true;
@@ -103,7 +157,7 @@ class OcrService {
     }
   }
 
-  /// Códigos de los modelos ya disponibles en el dispositivo.
+  /// Language codes for models already available on the device.
   static Future<Set<String>> downloadedModelCodes() async {
     if (!isSupported) return const <String>{};
     final result = <String>{};
@@ -115,11 +169,10 @@ class OcrService {
     return result;
   }
 
-  /// Verifica y descarga el modelo de reconocimiento de tinta si es necesario.
+  /// Checks for the digital-ink model and downloads it when necessary.
   ///
-  /// Llamar antes de `recognizeStrokes()` para garantizar que el modelo
-  /// esté disponible. Es silencioso: si la descarga falla, se devuelve false
-  /// para que el caller pueda usar el fallback de bitmap.
+  /// Call before `recognizeStrokes()` to ensure the model is available. A
+  /// failed download returns false so the caller can use the bitmap fallback.
   static Future<bool> ensureInkModel(String languageCode) async {
     if (!isSupported) return false;
     if (_downloadedModels.contains(languageCode)) return true;
@@ -140,128 +193,129 @@ class OcrService {
   }
 
   // -------------------------------------------------------------------------
-  // Método principal: reconocimiento de tinta vectorial (preferred)
+  // Primary method: vector digital-ink recognition
   // -------------------------------------------------------------------------
 
-  /// Reconoce texto a partir de trazos vectoriales directamente.
+  /// Recognizes text directly from vector strokes.
   ///
-  /// [strokes] son los trazos de la página en coordenadas de mundo.
-  /// Convierte cada trazo al formato `Ink` de ML Kit, que espera
-  /// `StrokePoint(x, y, t)` — los timestamps se sintetizan a partir
-  /// del orden de los puntos.
+  /// [strokes] contains page strokes in world coordinates. They are grouped
+  /// into lines before calling the model because the model is designed for a
+  /// line rather than a complete page.
   ///
-  /// Devuelve el texto reconocido con sus bloques posicionados.
+  /// [preContext] is known text immediately before these strokes and is used
+  /// for the first line. Later lines automatically receive the previous line.
+  ///
+  /// When [segmentLines] is false, all [strokes] are recognized as one line,
+  /// which is useful when the UI retries a specific line.
+  ///
+  /// Returns recognized text with positioned blocks.
   static Future<OcrResult> recognizeStrokes(
     List<Stroke> strokes, {
     required ui.Size sheetSize,
     required String languageCode,
+    String? preContext,
+    bool segmentLines = true,
   }) async {
     if (!isSupported) {
       throw UnsupportedError('OCR is only available on Android and iOS.');
     }
-    if (strokes.isEmpty) return const OcrResult(text: '', blocks: []);
+
+    final usable = strokes.where((stroke) => stroke.points.isNotEmpty).toList();
+    if (usable.isEmpty) return const OcrResult(text: '', blocks: []);
 
     final language =
         ocrLanguageByCode(languageCode) ?? supportedOcrLanguages.first;
 
-    // Asegurar que el modelo de tinta esté descargado.
+    // Ensure the digital-ink model is downloaded.
     final modelReady = await ensureInkModel(language.code);
     if (!modelReady) {
-      // Fallback: renderizar a bitmap y usar text recognition. El tailandés
-      // no tiene script en ML Kit, así que no se puede reconocer sin modelo.
+      // Render a bitmap for text recognition as a fallback. ML Kit has no Thai
+      // bitmap script, so Thai cannot be recognized without its ink model.
       final script = language.script;
       if (script == null) throw OcrModelUnavailableError(language);
-      return _recognizeFallback(strokes, sheetSize: sheetSize, script: script);
+      return _recognizeFallback(usable, sheetSize: sheetSize, script: script);
     }
 
-    // Convertir nuestros Stroke al formato Ink de ML Kit.
-    final inkStrokes = _convertToInkStrokes(strokes);
-    final inkData = ink.Ink()..strokes = inkStrokes;
+    final lines = segmentLines
+        ? segmentStrokesIntoLines(usable)
+        : <List<Stroke>>[usable];
+    if (lines.isEmpty) return const OcrResult(text: '', blocks: []);
 
-    // Contexto de reconocimiento: usa el tamaño de la hoja como área
-    // de escritura para mejorar la precisión.
-    final context = ink.DigitalInkRecognitionContext(
-      writingArea: ink.WritingArea(
-        width: sheetSize.width,
-        height: sheetSize.height,
-      ),
-    );
+    // Local post-processing: learned corrections and the Thai lexicon.
+    final corrections = await OcrCorrectionStore.load(language.code);
+    final lexicon = await OcrLexicon.load(language.code);
 
+    // Reuse one recognizer for all lines because creation is expensive.
     final recognizer = ink.DigitalInkRecognizer(languageCode: language.code);
+    final recognized = <OcrLine>[];
+    Object? lastError;
 
     try {
-      final candidates = await recognizer.recognize(inkData, context: context);
-
-      if (candidates.isEmpty) {
-        return const OcrResult(text: '', blocks: []);
+      var context = _cleanPreContext(preContext);
+      for (final line in lines) {
+        try {
+          final result = await _recognizeLine(
+            recognizer,
+            line,
+            sheetSize: sheetSize,
+            corrections: corrections,
+            lexicon: lexicon,
+            preContext: context,
+            compactWritingArea: !segmentLines,
+          );
+          if (result.isEmpty) continue;
+          recognized.add(result);
+          // Pass the end of this line as context for the next one.
+          context = _cleanPreContext(result.text);
+        } catch (e) {
+          // An unreadable line must not discard the rest of the page.
+          lastError = e;
+          debugPrint('OcrService.recognizeStrokes (line): $e');
+        }
       }
-
-      // El mejor candidato (mayor score).
-      final best = candidates.first;
-      final text = best.text;
-
-      if (text.isEmpty) {
-        return const OcrResult(text: '', blocks: []);
-      }
-
-      // Para la tinta vectorial, no tenemos bounding boxes precisos
-      // por bloque de texto (ML Kit solo devuelve el texto completo).
-      // Estimamos la posición basándonos en los puntos de los trazos.
-      final bounds = _estimateTextBounds(strokes);
-
-      final blocks = [
-        OcrBlock(
-          text: text,
-          x: bounds.left,
-          y: bounds.top,
-          width: bounds.width,
-          height: bounds.height,
-        ),
-      ];
-
-      return OcrResult(text: text, blocks: blocks);
     } finally {
-      unawaited(recognizer.close());
+      // Version 0.16.1 closes the native Android recognizer but never replies
+      // to this method-channel call. Dispatch cleanup without awaiting that
+      // missing reply, otherwise successful OCR leaves the spinner open.
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        unawaited(recognizer.close());
+      } else {
+        await recognizer.close();
+      }
     }
+
+    if (recognized.isEmpty) {
+      if (lastError != null) throw lastError;
+      return const OcrResult(text: '', blocks: []);
+    }
+    return OcrResult.fromLines(recognized);
   }
 
-  /// Reconoce texto de TODA la página usando tinta vectorial.
+  /// Recognizes an entire page using vector ink.
   ///
-  /// Convenience method que toma una [Page] completa y extrae todos sus trazos.
+  /// Convenience method that extracts strokes from a complete [Page].
   static Future<OcrResult> recognizePageInk(
     Page page, {
     required ui.Size sheetSize,
     required String languageCode,
+    String? preContext,
   }) async {
-    // Filtrar trazos visibles (no borrador, no herramientas especiales).
-    final inkStrokes = page.strokes
-        .where(
-          (s) =>
-              s.tool != ToolType.eraser &&
-              s.tool != ToolType.select &&
-              s.tool != ToolType.lasso &&
-              s.tool != ToolType.bucket &&
-              s.tool != ToolType.text,
-        )
-        .toList();
-
     return recognizeStrokes(
-      inkStrokes,
+      _inkStrokesOf(page),
       sheetSize: sheetSize,
       languageCode: languageCode,
+      preContext: preContext,
     );
   }
 
   // -------------------------------------------------------------------------
-  // Método legacy: reconocimiento por bitmap (fallback)
+  // Legacy bitmap-recognition fallback
   // -------------------------------------------------------------------------
 
-  /// Reconoce el texto de una página renderizada como imagen (fallback).
+  /// Recognizes text from a page rendered as an image.
   ///
-  /// Se usa cuando:
-  /// 1. El modelo de tinta no está disponible.
-  /// 2. Se necesita reconocimiento de texto impreso (no escrito a mano).
-  /// 3. Hay imágenes en la página que contienen texto.
+  /// Used when the ink model is unavailable, printed text must be recognized,
+  /// or the page contains images with text.
   static Future<OcrResult> recognizeText(
     Page page, {
     required ui.Size sheetSize,
@@ -273,7 +327,7 @@ class OcrService {
       throw UnsupportedError('OCR is only available on Android and iOS.');
     }
 
-    // 1) Renderizar la página a PNG temporal.
+    // Render the page to a temporary PNG.
     final pngBytes = await ExportService.renderPagePng(
       page,
       sheetSize: sheetSize,
@@ -281,19 +335,19 @@ class OcrService {
       options: const ExportOptions(maxDimension: kOcrResolution),
     );
 
-    // 2) Guardar en archivo temporal.
+    // Save the image to a temporary file.
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/inklus_ocr_temp.png');
     await file.writeAsBytes(pngBytes);
 
-    // 3) Ejecutar ML Kit text recognition (bitmap).
+    // Run ML Kit bitmap text recognition.
     final inputImage = InputImage.fromFilePath(file.path);
     final textRecognizer = TextRecognizer(script: script);
 
     try {
       final recognized = await textRecognizer.processImage(inputImage);
 
-      // 4) Convertir bloques a nuestro modelo.
+      // Convert ML Kit blocks to the app model.
       final blocks = <OcrBlock>[];
       for (final block in recognized.blocks) {
         blocks.add(
@@ -310,7 +364,7 @@ class OcrService {
       return OcrResult(text: recognized.text, blocks: blocks);
     } finally {
       await textRecognizer.close();
-      // Limpiar archivo temporal.
+      // Remove the temporary file.
       try {
         await file.delete();
       } catch (_) {}
@@ -318,13 +372,13 @@ class OcrService {
   }
 
   // -------------------------------------------------------------------------
-  // Método unificado: inteligentemente elige la mejor estrategia
+  // Unified method that chooses the best strategy
   // -------------------------------------------------------------------------
 
-  /// Reconoce el texto de una página usando la mejor estrategia disponible.
+  /// Recognizes page text using the best available strategy.
   ///
-  /// Intenta primero el reconocimiento de tinta vectorial (más preciso
-  /// para escritura a mano). Si no hay trazos o falla, cae al bitmap.
+  /// Vector-ink recognition is attempted first because it is more accurate for
+  /// handwriting. Missing strokes or failures fall back to bitmap OCR.
   static Future<OcrResult> recognizeSmart(
     Page page, {
     required ui.Size sheetSize,
@@ -335,19 +389,10 @@ class OcrService {
     final language =
         ocrLanguageByCode(languageCode) ?? supportedOcrLanguages.first;
 
-    // Filtrar trazos de escritura (no borradores ni herramientas especiales).
-    final inkStrokes = page.strokes
-        .where(
-          (s) =>
-              s.tool != ToolType.eraser &&
-              s.tool != ToolType.select &&
-              s.tool != ToolType.lasso &&
-              s.tool != ToolType.bucket &&
-              s.tool != ToolType.text,
-        )
-        .toList();
+    // Keep handwriting strokes and remove erasers and special tools.
+    final inkStrokes = _inkStrokesOf(page);
 
-    // Si hay trazos vectoriales, intentar reconocimiento de tinta.
+    // Try digital-ink recognition when vector strokes are available.
     if (inkStrokes.isNotEmpty) {
       try {
         final inkResult = await recognizeStrokes(
@@ -355,9 +400,9 @@ class OcrService {
           sheetSize: sheetSize,
           languageCode: language.code,
         );
-        // Si la tinta devolvió texto, usarlo.
+        // Use the ink result when it contains text.
         if (!inkResult.isEmpty) return inkResult;
-        // Sin resultado de tinta y sin fallback por bitmap: no hay más.
+        // No ink result and no bitmap fallback means recognition is finished.
         if (language.script == null) return inkResult;
       } on OcrModelUnavailableError {
         rethrow;
@@ -366,7 +411,7 @@ class OcrService {
         if (language.script == null) {
           throw OcrModelUnavailableError(language);
         }
-        // Continuar con fallback.
+        // Continue with the fallback.
       }
     }
 
@@ -375,7 +420,7 @@ class OcrService {
       return const OcrResult(text: '', blocks: []);
     }
 
-    // Fallback: bitmap (captura también texto impreso e imágenes).
+    // Bitmap fallback also captures printed text and embedded images.
     return recognizeText(
       page,
       sheetSize: sheetSize,
@@ -385,42 +430,185 @@ class OcrService {
     );
   }
 
+  /// Strokes included in OCR, excluding erasers and special tools.
+  static List<Stroke> _inkStrokesOf(Page page) => page.strokes
+      .where(
+        (s) =>
+            s.tool != ToolType.eraser &&
+            s.tool != ToolType.select &&
+            s.tool != ToolType.lasso &&
+            s.tool != ToolType.bucket &&
+            s.tool != ToolType.text,
+      )
+      .toList();
+
   // -------------------------------------------------------------------------
-  // Helpers de conversión
+  // Recognition helpers
   // -------------------------------------------------------------------------
 
-  /// Convierte nuestros [Stroke] al formato `ink.Stroke` de ML Kit.
+  /// Recognizes one line and returns its ranked candidates.
+  static Future<OcrLine> _recognizeLine(
+    ink.DigitalInkRecognizer recognizer,
+    List<Stroke> strokes, {
+    required ui.Size sheetSize,
+    required Map<String, String> corrections,
+    OcrLexicon? lexicon,
+    String? preContext,
+    required bool compactWritingArea,
+  }) async {
+    final bounds = _estimateTextBounds(strokes);
+
+    // ML Kit interprets stroke size relative to the writing area. Passing the
+    // full page height makes a normal handwritten line look punctuation-sized
+    // and is especially harmful for Thai. Keep the page width, but translate
+    // Y into a padded line-local area as recommended for single-line input.
+    final verticalPadding = math.max(bounds.height * 0.35, 4.0);
+    final horizontalPadding = math.max(bounds.height * 0.5, 4.0);
+    final originX = compactWritingArea
+        ? bounds.left - horizontalPadding
+        : (bounds.left < 0 ? bounds.left - 4 : 0.0);
+    final origin = ui.Offset(originX, bounds.top - verticalPadding);
+    final writingWidth = compactWritingArea
+        ? math.max(bounds.width + horizontalPadding * 2, 1.0)
+        : math.max(sheetSize.width - origin.dx, bounds.right - origin.dx + 4);
+    final writingHeight = math.max(bounds.height + verticalPadding * 2, 1.0);
+
+    final inkStrokes = _convertToInkStrokes(strokes, origin: origin);
+    if (inkStrokes.isEmpty) {
+      return const OcrLine(
+        text: '',
+        block: OcrBlock(text: '', x: 0, y: 0, width: 0, height: 0),
+        strokes: [],
+      );
+    }
+    final inkData = ink.Ink()..strokes = inkStrokes;
+
+    // ML Kit normalizes against the sheet-sized writing area. The end of the
+    // previous line supplies language context.
+    final context = ink.DigitalInkRecognitionContext(
+      preContext: preContext,
+      writingArea: ink.WritingArea(width: writingWidth, height: writingHeight),
+    );
+
+    final rawCandidates = await recognizer.recognize(inkData, context: context);
+    if (rawCandidates.isEmpty) {
+      return const OcrLine(
+        text: '',
+        block: OcrBlock(text: '', x: 0, y: 0, width: 0, height: 0),
+        strokes: [],
+      );
+    }
+
+    // Apply user corrections and deduplicate candidates that become equal.
+    final seen = <String>{};
+    final candidates = <OcrCandidate>[];
+    for (final raw in rawCandidates) {
+      final corrected = OcrCorrectionStore.apply(raw.text, corrections).trim();
+      if (corrected.isEmpty || !seen.add(corrected)) continue;
+      candidates.add(OcrCandidate(text: corrected, score: raw.score));
+    }
+    if (candidates.isEmpty) {
+      return const OcrLine(
+        text: '',
+        block: OcrBlock(text: '', x: 0, y: 0, width: 0, height: 0),
+        strokes: [],
+      );
+    }
+
+    final ranked = lexicon == null
+        ? _rankByModelScore(candidates)
+        : lexicon.rank(candidates);
+    final best = ranked.first;
+
+    // Digital Ink returns only complete text, so estimate its position from
+    // the points belonging to this line.
+    return OcrLine(
+      text: best.text,
+      block: OcrBlock(
+        text: best.text,
+        x: bounds.left,
+        y: bounds.top,
+        width: bounds.width,
+        height: bounds.height,
+      ),
+      strokes: List<Stroke>.unmodifiable(strokes),
+      candidates: List<OcrCandidate>.unmodifiable(ranked),
+    );
+  }
+
+  /// Ranks candidates only by model score when no lexicon is available.
+  static List<OcrCandidate> _rankByModelScore(List<OcrCandidate> candidates) {
+    if (candidates.length <= 1) return candidates;
+    final sorted = [...candidates];
+    sorted.sort(
+      (a, b) => _sortableScore(a.score).compareTo(_sortableScore(b.score)),
+    );
+    return sorted;
+  }
+
+  static double _sortableScore(double score) =>
+      score.isNaN ? double.infinity : score;
+
+  /// Normalizes previous text to a single line before passing it to the model.
+  static String? _cleanPreContext(String? text) {
+    if (text == null) return null;
+    final clean = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (clean.isEmpty) return null;
+    if (clean.length <= _preContextChars) return clean;
+    return clean.substring(clean.length - _preContextChars);
+  }
+
+  // -------------------------------------------------------------------------
+  // Conversion helpers
+  // -------------------------------------------------------------------------
+
+  /// Converts app [Stroke] objects to ML Kit `ink.Stroke` objects.
   ///
-  /// Sintetiza timestamps crecientes (1ms por punto) ya que nuestro modelo
-  /// no almacena tiempo. El orden de los puntos preserva la secuencia
-  /// temporal del trazo original.
-  static List<ink.Stroke> _convertToInkStrokes(List<Stroke> strokes) {
+  /// Uses real timing (`StrokePoint.t`, milliseconds from stroke start) when
+  /// available. Legacy strokes synthesize one millisecond per point, with a
+  /// 50-millisecond gap between strokes.
+  static List<ink.Stroke> _convertToInkStrokes(
+    List<Stroke> strokes, {
+    ui.Offset origin = ui.Offset.zero,
+  }) {
     final result = <ink.Stroke>[];
-    var baseTime = 0; // timestamp base creciente entre trazos.
+    var baseTime = 0; // Monotonically increasing time across strokes.
 
     for (final stroke in strokes) {
+      if (stroke.points.isEmpty) continue;
       final inkPoints = <ink.StrokePoint>[];
+      var relative = 0;
+
       for (var i = 0; i < stroke.points.length; i++) {
         final p = stroke.points[i];
-        // Timestamp sintético: 1ms por punto, con 50ms entre trazos.
-        final t = baseTime + i;
-        inkPoints.add(ink.StrokePoint(x: p.x, y: p.y, t: t));
+        final real = p.t;
+        if (real != null && real > relative) {
+          // Preserve real timing within the stroke.
+          relative = real;
+        } else if (i > 0) {
+          // Add one millisecond for an untimed legacy or partial point.
+          relative += 1;
+        }
+        inkPoints.add(
+          ink.StrokePoint(
+            x: p.x - origin.dx,
+            y: p.y - origin.dy,
+            t: baseTime + relative,
+          ),
+        );
       }
-      if (inkPoints.isNotEmpty) {
-        final inkStroke = ink.Stroke()..points = inkPoints;
-        result.add(inkStroke);
-      }
-      // Siguiente trazo empieza con un gap de 50ms.
-      baseTime += stroke.points.length + 50;
+
+      result.add(ink.Stroke()..points = inkPoints);
+      // Start the next stroke after a short pause.
+      baseTime += relative + 50;
     }
 
     return result;
   }
 
-  /// Estima los límites del texto basándose en los puntos de los trazos.
+  /// Estimates text bounds from stroke points.
   ///
-  /// Devuelve un [Rect] que contiene todos los puntos de los trazos,
-  /// con un margen para el grosor del trazo.
+  /// Returns a [Rect] containing all stroke points plus a thickness margin.
   static ui.Rect _estimateTextBounds(List<Stroke> strokes) {
     if (strokes.isEmpty) return ui.Rect.zero;
 
@@ -441,7 +629,7 @@ class OcrService {
       if (stroke.size > maxSize) maxSize = stroke.size;
     }
 
-    // Incluir el grosor del trazo más ancho.
+    // Include the widest stroke thickness.
     final margin = maxSize;
     return ui.Rect.fromLTRB(
       left - margin,
@@ -451,8 +639,7 @@ class OcrService {
     );
   }
 
-  /// Fallback: renderiza solo los trazos dados a un PNG temporal y ejecuta
-  /// text recognition por bitmap.
+  /// Renders the supplied strokes to a temporary PNG for bitmap OCR fallback.
   static Future<OcrResult> _recognizeFallback(
     List<Stroke> strokes, {
     required ui.Size sheetSize,
@@ -460,7 +647,7 @@ class OcrService {
   }) async {
     if (strokes.isEmpty) return const OcrResult(text: '', blocks: []);
 
-    // Crear una página temporal solo con estos trazos.
+    // Create a temporary page containing only these strokes.
     final tempPage = Page.blank(name: 'ocr_temp');
     tempPage.strokes.addAll(strokes);
 
@@ -471,4 +658,9 @@ class OcrService {
       script: script,
     );
   }
+
+  /// Groups strokes into lines; exposed for tests and the UI.
+  @visibleForTesting
+  static List<List<Stroke>> segmentIntoLines(List<Stroke> strokes) =>
+      segmentStrokesIntoLines(strokes);
 }

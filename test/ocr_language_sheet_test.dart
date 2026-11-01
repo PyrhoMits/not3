@@ -6,27 +6,29 @@ import 'package:inklus/ui/widgets/ocr_language_sheet.dart';
 
 void main() {
   Widget app({required Widget home}) => MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: home,
-      );
+    locale: const Locale('en'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: home,
+  );
 
-  testWidgets('muestra los tres idiomas y el aviso de descarga', (tester) async {
-    await tester.pumpWidget(app(
-      home: Scaffold(
-        body: Builder(
-          builder: (context) => TextButton(
-            onPressed: () => showOcrLanguageSheet(
-              context,
-              currentCode: 'en',
-              downloadedCodes: const {'en', 'ja'},
+  testWidgets('shows three languages and the download notice', (tester) async {
+    await tester.pumpWidget(
+      app(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showOcrLanguageSheet(
+                context,
+                currentCode: 'en',
+                downloadedCodes: const {'en', 'ja'},
+              ),
+              child: const Text('open'),
             ),
-            child: const Text('open'),
           ),
         ),
       ),
-    ));
+    );
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -35,28 +37,32 @@ void main() {
     expect(find.text('English'), findsOneWidget);
     expect(find.text('日本語 (Japanese)'), findsOneWidget);
     expect(find.text('ไทย (Thai)'), findsOneWidget);
-    // Solo Thai necesita descarga.
+    // Only Thai needs a download.
     expect(find.text('Download (~20 MB)'), findsOneWidget);
   });
 
-  testWidgets('cancelar la descarga no elige idioma', (tester) async {
+  testWidgets('canceling the download does not select a language', (
+    tester,
+  ) async {
     OcrLanguageSelection? selection;
-    await tester.pumpWidget(app(
-      home: Scaffold(
-        body: Builder(
-          builder: (context) => TextButton(
-            onPressed: () async {
-              selection = await showOcrLanguageSheet(
-                context,
-                currentCode: 'en',
-                downloadedCodes: const {'en', 'ja'},
-              );
-            },
-            child: const Text('open'),
+    await tester.pumpWidget(
+      app(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                selection = await showOcrLanguageSheet(
+                  context,
+                  currentCode: 'en',
+                  downloadedCodes: const {'en', 'ja'},
+                );
+              },
+              child: const Text('open'),
+            ),
           ),
         ),
       ),
-    ));
+    );
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -68,28 +74,32 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(selection, isNull);
-    // La hoja sigue abierta.
+    // The language sheet remains open.
     expect(find.text('Recognition language'), findsOneWidget);
   });
 
-  testWidgets('confirmar la descarga devuelve el idioma elegido', (tester) async {
+  testWidgets('confirming the download returns the selected language', (
+    tester,
+  ) async {
     OcrLanguageSelection? selection;
-    await tester.pumpWidget(app(
-      home: Scaffold(
-        body: Builder(
-          builder: (context) => TextButton(
-            onPressed: () async {
-              selection = await showOcrLanguageSheet(
-                context,
-                currentCode: 'en',
-                downloadedCodes: const {'en', 'ja'},
-              );
-            },
-            child: const Text('open'),
+    await tester.pumpWidget(
+      app(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                selection = await showOcrLanguageSheet(
+                  context,
+                  currentCode: 'en',
+                  downloadedCodes: const {'en', 'ja'},
+                );
+              },
+              child: const Text('open'),
+            ),
           ),
         ),
       ),
-    ));
+    );
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -102,24 +112,28 @@ void main() {
     expect(selection?.needsDownload, isTrue);
   });
 
-  testWidgets('un idioma ya descargado no pide confirmación', (tester) async {
+  testWidgets('a downloaded language does not ask for confirmation', (
+    tester,
+  ) async {
     OcrLanguageSelection? selection;
-    await tester.pumpWidget(app(
-      home: Scaffold(
-        body: Builder(
-          builder: (context) => TextButton(
-            onPressed: () async {
-              selection = await showOcrLanguageSheet(
-                context,
-                currentCode: 'en',
-                downloadedCodes: const {'en', 'ja'},
-              );
-            },
-            child: const Text('open'),
+    await tester.pumpWidget(
+      app(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                selection = await showOcrLanguageSheet(
+                  context,
+                  currentCode: 'en',
+                  downloadedCodes: const {'en', 'ja'},
+                );
+              },
+              child: const Text('open'),
+            ),
           ),
         ),
       ),
-    ));
+    );
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();

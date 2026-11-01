@@ -4,11 +4,11 @@ import 'dart:ui' show Locale, PlatformDispatcher;
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Idioma disponible para el OCR de escritura a mano.
+/// A language available for handwriting OCR.
 ///
-/// [code] es el código BCP-47 que espera ML Kit Digital Ink. [script] es el
-/// script que usa el fallback por bitmap (`google_mlkit_text_recognition`);
-/// es `null` cuando ML Kit no ofrece ese script (p. ej. tailandés).
+/// [code] is the BCP-47 code expected by ML Kit Digital Ink. [script] is used
+/// by the bitmap fallback (`google_mlkit_text_recognition`); it is `null` when
+/// ML Kit does not provide that script, such as for Thai.
 class OcrLanguage {
   const OcrLanguage({
     required this.code,
@@ -23,9 +23,9 @@ class OcrLanguage {
   bool get hasBitmapFallback => script != null;
 }
 
-/// Idiomas soportados por el OCR de la app.
+/// Languages supported by the app's OCR feature.
 ///
-/// Solo se ofrecen los que el usuario pidió: inglés, japonés y tailandés.
+/// Only English, Japanese, and Thai are offered.
 const List<OcrLanguage> supportedOcrLanguages = [
   OcrLanguage(
     code: 'en',
@@ -40,13 +40,13 @@ const List<OcrLanguage> supportedOcrLanguages = [
   OcrLanguage(
     code: 'th',
     label: 'ไทย (Thai)',
-    // ML Kit Text Recognition no soporta tailandés: el modelo de tinta es
-    // la única vía para este idioma.
+    // ML Kit Text Recognition does not support Thai, so the digital-ink model
+    // is the only recognition path for this language.
     script: null,
   ),
 ];
 
-/// Devuelve el idioma con [code] o `null` si no está soportado.
+/// Returns the language matching [code], or `null` when it is unsupported.
 OcrLanguage? ocrLanguageByCode(String? code) {
   if (code == null) return null;
   for (final language in supportedOcrLanguages) {
@@ -55,10 +55,10 @@ OcrLanguage? ocrLanguageByCode(String? code) {
   return null;
 }
 
-/// Idioma por defecto según el idioma del sistema.
+/// Selects the default OCR language from the system locale.
 ///
-/// Si el dispositivo usa tailandés o japonés se elige ese idioma; para
-/// cualquier otro (incluido español) se usa inglés.
+/// Thai and Japanese devices use their respective language; all other locales
+/// default to English.
 OcrLanguage defaultOcrLanguageForLocale(Locale? locale) {
   return switch (locale?.languageCode.toLowerCase()) {
     'th' => supportedOcrLanguages[2],
@@ -67,16 +67,17 @@ OcrLanguage defaultOcrLanguageForLocale(Locale? locale) {
   };
 }
 
-/// Persistencia del último idioma elegido para OCR.
+/// Persists the most recently selected OCR language.
 class OcrLanguageStore {
   const OcrLanguageStore._();
 
   static const String _prefKey = 'ocr_ink_language';
 
-  /// Último idioma guardado, o el del sistema si no hay uno válido.
+  /// Returns the saved language, or the system default if none is valid.
   static Future<OcrLanguage> load() async {
-    final fallback =
-        defaultOcrLanguageForLocale(PlatformDispatcher.instance.locale);
+    final fallback = defaultOcrLanguageForLocale(
+      PlatformDispatcher.instance.locale,
+    );
     try {
       final prefs = await SharedPreferences.getInstance();
       return ocrLanguageByCode(prefs.getString(_prefKey)) ?? fallback;
@@ -90,7 +91,7 @@ class OcrLanguageStore {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefKey, language.code);
     } catch (_) {
-      // Sin persistencia: el OCR sigue funcionando en esta sesión.
+      // OCR remains usable for this session when persistence is unavailable.
     }
   }
 }

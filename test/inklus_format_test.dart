@@ -65,12 +65,12 @@ void main() {
     );
   }
 
-  group('InklusFormat', () {
+  group('Not3Format', () {
     test('roundtrip: exporta e importa el cuaderno con sus imágenes', () async {
-      final bytes = await InklusFormat.exportBytes(buildNotebook());
+      final bytes = await Not3Format.exportBytes(buildNotebook());
       expect(bytes, isNotEmpty);
 
-      final doc = await InklusFormat.importBytes(bytes, extractTo: extractDir);
+      final doc = await Not3Format.importBytes(bytes, extractTo: extractDir);
 
       expect(doc.id, 'doc_test');
       expect(doc.title, 'Cuaderno de prueba');
@@ -92,8 +92,8 @@ void main() {
     });
 
     test('los archivos inexistentes se dejan con su ruta original', () async {
-      final bytes = await InklusFormat.exportBytes(buildNotebook(missingImage: true));
-      final doc = await InklusFormat.importBytes(bytes, extractTo: extractDir);
+      final bytes = await Not3Format.exportBytes(buildNotebook(missingImage: true));
+      final doc = await Not3Format.importBytes(bytes, extractTo: extractDir);
 
       final img = doc.pages.first.images.first;
       expect(img.localPath, '/no/existe.png');
@@ -101,7 +101,7 @@ void main() {
 
     test('bytes inválidos lanzan FormatException', () async {
       expect(
-        () => InklusFormat.importBytes(
+        () => Not3Format.importBytes(
           Uint8List.fromList([1, 2, 3, 4]),
           extractTo: extractDir,
         ),
@@ -137,10 +137,10 @@ void main() {
         pages: [page],
       );
 
-      final bytes = await InklusFormat.exportNoteBytes(note);
+      final bytes = await Not3Format.exportNoteBytes(note);
       expect(bytes, isNotEmpty);
 
-      final restored = await InklusFormat.importNoteBytes(
+      final restored = await Not3Format.importNoteBytes(
         bytes,
         extractTo: extractDir,
       );
@@ -168,8 +168,8 @@ void main() {
         pages: [Page.blank()],
       );
 
-      final bytes = await InklusFormat.exportNoteBytes(note);
-      final doc = await InklusFormat.importBytes(bytes, extractTo: extractDir);
+      final bytes = await Not3Format.exportNoteBytes(note);
+      final doc = await Not3Format.importBytes(bytes, extractTo: extractDir);
 
       // El Document importado tiene el mismo id y contenido
       expect(doc.id, 'note_compat');
@@ -179,10 +179,10 @@ void main() {
   });
 
   test('una copia cifrada no se abre como .inklus: FormatException', () async {
-    final bytes = await InklusFormat.exportNoteBytes(Note.newBlank(title: 'x'));
+    final bytes = await Not3Format.exportNoteBytes(Note.newBlank(title: 'x'));
     final encrypted = await BackupCrypto.encrypt(bytes, 'secreta');
     await expectLater(
-      InklusFormat.importNoteBytes(encrypted, extractTo: extractDir),
+      Not3Format.importNoteBytes(encrypted, extractTo: extractDir),
       throwsA(isA<FormatException>()),
     );
   });

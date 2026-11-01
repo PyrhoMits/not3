@@ -1,9 +1,9 @@
-# Inklus — Rework plan (foundation, community and premium UI)
+# Not3 — Rework plan (foundation, community and premium UI)
 
 > Status (2026-10-15): **Phases A–D executed**; *Round 2* and the items marked "pending" below remain. Audit from 2026-10-14. Handover document: whoever picks the work back up can start here. Technical context in `ROADMAP.md`; architecture in `docs/ARCHITECTURE.md` (Phase A creates it from the current technical guide).
 
 ## Goal
-Get Inklus ready for contributors and make the library, covers and editor bar feel like a premium product (GoodNotes/Notability level), while keeping it: free, offline-first, GPL-3.0-or-later, multilingual.
+Get Not3 ready for contributors and make the library, covers and editor bar feel like a premium product (GoodNotes/Notability level), while keeping it: free, offline-first, GPL-3.0-or-later, multilingual.
 
 ## Project rules (apply to every run)
 - Everything under the maintainer's name (Pedro, `Pedroj-64`) with their git/gh identity. No trailers or mentions of code-generation tools in commits, PRs, docs or code.

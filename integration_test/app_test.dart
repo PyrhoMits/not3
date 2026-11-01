@@ -60,7 +60,7 @@ void main() {
     tester.view.physicalSize = const Size(1280, 720); // como en CI
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(const InklusApp(locale: Locale('es')));
+    await tester.pumpWidget(const Not3App(locale: Locale('es')));
 
     // 1. Primer arranque: bienvenida.
     await waitFor(tester, find.text('Saltar'));

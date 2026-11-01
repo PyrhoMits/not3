@@ -41,7 +41,7 @@ void main() {
     addTearDown(() => tempDir.deleteSync(recursive: true));
     final storage = StorageService(baseDir: Directory('${tempDir.path}/lib'));
     final doc = Document.newBlank(title: 'Viejo');
-    final bytes = await InklusFormat.exportBytes(doc);
+    final bytes = await Not3Format.exportBytes(doc);
 
     final result = await ImportService.importBytes(
       bytes,

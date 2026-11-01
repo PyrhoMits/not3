@@ -1,6 +1,6 @@
-# 🏗️ Inklus Architecture
+# 🏗️ Not3 Architecture
 
-Technical guide for anyone who wants to contribute. Inklus is a handwriting app for tablets with a stylus (GoodNotes-style), **Flutter 3.47 / Dart 3.13**, Material 3, UI and comments in **Spanish**. Targets: **Android** (primary) + **Linux desktop** (development).
+Technical guide for anyone who wants to contribute. Not3 is a handwriting app for tablets with a stylus (GoodNotes-style), **Flutter 3.47 / Dart 3.13**, Material 3, UI and comments in **Spanish**. Targets: **Android** (primary) + **Linux desktop** (development).
 
 > How to contribute: [`CONTRIBUTING.md`](../CONTRIBUTING.md) · Design system: [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) · Translating: [`TRANSLATING.md`](TRANSLATING.md) · Publishing releases: [`RELEASING.md`](RELEASING.md) · Next steps: [`ROADMAP.md`](../ROADMAP.md)
 
@@ -80,7 +80,7 @@ ui/
                              canvas_overlays (ruler, magnifier)
   widgets/                 controller_selector, dialogs (showTextPrompt, showConfirmDialog, runWithLoading),
                              search_sheet, custom_color_dialog, text_edit_overlay, inklus_logo,
-                             page_scaffold (InklusPage, PageHeader, SectionCard, SettingsTile,
+                             page_scaffold (Not3Page, PageHeader, SectionCard, SettingsTile,
                              EmptyState, SheetHeader: base of secondary screens)…
 l10n/ (lib/l10n)           ARB (app_es = source, app_en) → AppLocalizations; `context.l10n.key`.
                              New text → the ARBs (test/l10n_test.dart requires parity). The app follows the
@@ -167,11 +167,11 @@ Summary in [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md).
 - Every call to `GoogleSignIn.instance` is preceded by `await _ensureInitialized()` (`initialize(serverClientId:)` once; retryable if it fails).
 - `restoreSession()` (silent, One Tap) is called on startup in `NotebookLibraryScreen`.
 - `restoreLibrary(storage)` (Settings → "Restore from Drive"): last-write-wins per note; ones that don't exist locally go to a new notebook "Recovered from Drive". `_BearerClient` applies a 60 s timeout.
-- Backup: `Inklus/<Notebook>/<Note>.inklus` in Drive (a folder per notebook and a file per note, both identified by `appProperties` `notebookId`/`noteId`, not by name: renaming only renames; old `<id>.inklus` copies at the root are located and relocated on upload). `restoreLibrary` returns each note to its notebook according to the folder. ☁️ status per note **and** per notebook. `lastSignInIssue` stores the detail when Android reports "cancelled" (usually an unregistered SHA-1) and the UI shows it. Upsert, doesn't duplicate in the app's own `InklusFormat` (document + **embedded images** → the backup is self-contained). Restore: lists the folder, imports each `.inklus` (extracts images to `<appSupport>/inklus/restored/<id>/`) and picks the most recent by `updatedAt`. `googleapis` 16 (`drive/v3.dart`): `files.create/update` with `uploadMedia: commons.Media`; download with GET `alt=media` via `_BearerClient` (http).
+- Backup: `Not3/<Notebook>/<Note>.inklus` in Drive (a folder per notebook and a file per note, both identified by `appProperties` `notebookId`/`noteId`, not by name: renaming only renames; old `<id>.inklus` copies at the root are located and relocated on upload). `restoreLibrary` returns each note to its notebook according to the folder. ☁️ status per note **and** per notebook. `lastSignInIssue` stores the detail when Android reports "cancelled" (usually an unregistered SHA-1) and the UI shows it. Upsert, doesn't duplicate in the app's own `Not3Format` (document + **embedded images** → the backup is self-contained). Restore: lists the folder, imports each `.inklus` (extracts images to `<appSupport>/inklus/restored/<id>/`) and picks the most recent by `updatedAt`. `googleapis` 16 (`drive/v3.dart`): `files.create/update` with `uploadMedia: commons.Media`; download with GET `alt=media` via `_BearerClient` (http).
 - Automatic backup = silent (if the scope isn't authorized it's skipped, local already protects you); 'Upload now' uses `promptForConsent: true` (may show consent).
 - The UI finds out via `controller.onRemoteSync` (callback on every local save; `HomeScreen` batches it: at most one upload every 20 s + on exit) and `controller.replaceNote(note)` after restoring.
 - Leaving the editor: `_goBack()`/`PopScope` do `await controller.flush()` before the `pop` (the library reads the already-updated index); `HomeScreen.dispose` does `controller.dispose()`.
-- Export (editor ⋮ menu): page PNG/PDF, **notebook PDF** (`renderNotebookPdf`) and **.inklus copy** (`InklusFormat.exportBytes` → `FilePicker.saveFile`).
+- Export (editor ⋮ menu): page PNG/PDF, **notebook PDF** (`renderNotebookPdf`) and **.inklus copy** (`Not3Format.exportBytes` → `FilePicker.saveFile`).
 
 ## 🔐 Secrets
 
@@ -203,7 +203,7 @@ Summary in [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md).
 
 ## Design decisions (made; open an issue before proposing changes)
 
-- **Everything free, no premium.** Inklus is open source and will have no paid features. GoodNotes/Samsung Notes/Notability premium features are implemented here for free.
+- **Everything free, no premium.** Not3 is open source and will have no paid features. GoodNotes/Samsung Notes/Notability premium features are implemented here for free.
 - **Drive conflicts: last-write-wins**. When two devices edit the same notebook, the document with the most recent `updatedAt` wins. It's simpler than per-page merge and avoids unintentional content loss. The user can see all versions in Drive (☁️ menu → "View versions") and restore whichever they want.
 - **Backup encryption: AES-256-GCM + PBKDF2-HMAC-SHA256 (100k)** with `cryptography` (it replaced the original XOR). Format `[salt 16][nonce 12][ciphertext][tag 16]`, in `BackupCrypto`. The key is derived from the UTF-8 bytes of the password; decryption retries with `codeUnits` to open old backups.
 - **Selective sync**: `NotebookMeta.syncEnabled` (null = true by default for compatibility). Automatic backup only uploads notebooks with sync enabled.

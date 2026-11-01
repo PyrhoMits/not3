@@ -105,6 +105,13 @@ class CanvasController extends _CanvasCore
   List<Offset> _activeEraserPath = [];
   bool _isDrawing = false;
 
+  // In-progress stroke timing. [t] is stored in milliseconds relative to the
+  // stroke start, as expected by the ink model. Prefer the monotonic pointer
+  // event `timeStamp`, with the wall clock as a fallback.
+  Duration? _strokeStartEvent;
+  DateTime? _strokeStartWall;
+  int _lastPointT = 0;
+
   // ---- Selección de imágenes ----
   @override
   String? _selectedImageId;
@@ -144,8 +151,10 @@ class CanvasController extends _CanvasCore
   /// desplazarse de forma continua) ya no pierde lo que se podía deshacer.
   final Map<String, UndoStack> _undoStacks = {};
   @override
-  UndoStack get _undoStack =>
-      _undoStacks.putIfAbsent(page.id, () => UndoStack(maxDepth: kMaxUndoDepth));
+  UndoStack get _undoStack => _undoStacks.putIfAbsent(
+    page.id,
+    () => UndoStack(maxDepth: kMaxUndoDepth),
+  );
 
   // ---- Notificadores granulares ----
   // Permiten que la barra del editor y sus popovers solo se reconstruyan cuando
@@ -157,7 +166,8 @@ class CanvasController extends _CanvasCore
   /// Cambia cuando: tool, color, toolSize, shapeDetection, fingerDrawing,
   /// selectedStrokes, hasClipboard.
   final ValueNotifier<int> _bottomBarContextNotifier = ValueNotifier<int>(0);
-  ValueListenable<int> get bottomBarContextNotifier => _bottomBarContextNotifier;
+  ValueListenable<int> get bottomBarContextNotifier =>
+      _bottomBarContextNotifier;
 
   int _toolContextVersion = 0;
   int _bottomBarContextVersion = 0;
@@ -183,7 +193,12 @@ class CanvasController extends _CanvasCore
   /// que reconstruirse en cada punto del trazo.
   @override
   void notifyListeners() {
-    final toolKey = Object.hash(_tool, _rulerEnabled, _rulerType, _magnifierEnabled);
+    final toolKey = Object.hash(
+      _tool,
+      _rulerEnabled,
+      _rulerType,
+      _magnifierEnabled,
+    );
     if (toolKey != _lastToolKey) {
       _lastToolKey = toolKey;
       _notifyToolContext();
@@ -231,8 +246,8 @@ class CanvasController extends _CanvasCore
   Timer? _saveTimer;
 
   CanvasController(this._storage, {Note? initial, String? notebookId})
-      : _note = initial ?? Note.newBlank(),
-        _notebookId = notebookId ?? '' {
+    : _note = initial ?? Note.newBlank(),
+      _notebookId = notebookId ?? '' {
     _loadInputPrefs();
   }
 
@@ -252,14 +267,17 @@ class CanvasController extends _CanvasCore
     Size sheet,
     Size viewport, {
     double margin = 48,
-  }) =>
-      clampToWorldRect(
-        translate,
-        scale,
-        Rect.fromCenter(center: Offset.zero, width: sheet.width, height: sheet.height),
-        viewport,
-        margin: margin,
-      );
+  }) => clampToWorldRect(
+    translate,
+    scale,
+    Rect.fromCenter(
+      center: Offset.zero,
+      width: sheet.width,
+      height: sheet.height,
+    ),
+    viewport,
+    margin: margin,
+  );
 
   /// Como [clampSheetTranslate] para cualquier rectángulo del mundo (la hoja
   /// actual más sus vecinas en el desplazamiento continuo).
@@ -346,7 +364,8 @@ class CanvasController extends _CanvasCore
     if (i < 0 || i >= pageCount) return null;
     final other = _note.pages[i];
     if (!other.template.isFinite) return null;
-    final dy = page.template.sheetSize.height / 2 +
+    final dy =
+        page.template.sheetSize.height / 2 +
         pageGap +
         other.template.sheetSize.height / 2;
     return (page: other, dy: delta > 0 ? dy : -dy);
@@ -354,9 +373,9 @@ class CanvasController extends _CanvasCore
 
   /// Hojas vecinas visibles para pintarlas alrededor de la actual.
   List<({Page page, double dy})> get stackedNeighbors => [
-        ?_neighbor(-1),
-        ?_neighbor(1),
-      ];
+    ?_neighbor(-1),
+    ?_neighbor(1),
+  ];
 
   /// Pasa a la página vecina conservando lo que se ve en pantalla (la vista
   /// se desplaza lo mismo que el origen del mundo).
@@ -378,7 +397,10 @@ class CanvasController extends _CanvasCore
       if (n == null) continue;
       final size = n.page.template.sheetSize;
       final rect = Rect.fromCenter(
-          center: Offset(0, n.dy), width: size.width, height: size.height);
+        center: Offset(0, n.dy),
+        width: size.width,
+        height: size.height,
+      );
       if (rect.contains(world)) {
         _enterNeighborPage(delta);
         notifyListeners();
@@ -408,13 +430,13 @@ class CanvasController extends _CanvasCore
 
   /// true si la herramienta actual escribe tinta (plumas; no resaltador).
   bool get isInkTool => const {
-        ToolType.pen,
-        ToolType.pencil,
-        ToolType.calligraphy,
-        ToolType.brush,
-        ToolType.marker,
-        ToolType.spray,
-      }.contains(_tool);
+    ToolType.pen,
+    ToolType.pencil,
+    ToolType.calligraphy,
+    ToolType.brush,
+    ToolType.marker,
+    ToolType.spray,
+  }.contains(_tool);
 
   /// Rango de tamaño permitido para la herramienta actual.
   (double, double) get sizeRange => kToolSizeRanges[_tool] ?? (2, 14);
@@ -434,11 +456,11 @@ class CanvasController extends _CanvasCore
 
   /// Geometría actual de la regla (depende del zoom: tamaño fijo en pantalla).
   RulerGeometry get rulerGeometry => RulerGeometry(
-        type: _rulerType,
-        center: _rulerCenter,
-        angle: _rulerAngle,
-        scale: _scale,
-      );
+    type: _rulerType,
+    center: _rulerCenter,
+    angle: _rulerAngle,
+    scale: _scale,
+  );
 
   // ---- Lupa ----
   bool get magnifierEnabled => _magnifierEnabled;
@@ -578,8 +600,10 @@ class CanvasController extends _CanvasCore
     if (!_isDrawing || active == null || _heldShapeType != null) return;
     if (_activePoints.length < 10) return;
     if (pathLength(_activePoints) * _scale < holdToShapeMinLength) return;
-    final shape = ShapeDetector.detect(_activePoints,
-        lineOnly: active.tool == ToolType.highlighter);
+    final shape = ShapeDetector.detect(
+      _activePoints,
+      lineOnly: active.tool == ToolType.highlighter,
+    );
     if (shape == null) return;
     _activePoints
       ..clear()
@@ -617,7 +641,8 @@ class CanvasController extends _CanvasCore
   void _addLaserPoint(Offset p) {
     _laserTrail.add((point: p, t: DateTime.now().millisecondsSinceEpoch));
     _laserTicker ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
-      final cutoff = DateTime.now().millisecondsSinceEpoch - laserFade.inMilliseconds;
+      final cutoff =
+          DateTime.now().millisecondsSinceEpoch - laserFade.inMilliseconds;
       _laserTrail.removeWhere((e) => e.t < cutoff);
       if (_laserTrail.isEmpty && !_isDrawing) {
         _laserTicker?.cancel();
@@ -745,6 +770,7 @@ class CanvasController extends _CanvasCore
     Offset worldPoint,
     double pressure, {
     required ToolType tool,
+    Duration? timeStamp,
   }) {
     if (tool == ToolType.select) return;
     if (tool != ToolType.text) commitEditingText();
@@ -814,8 +840,9 @@ class CanvasController extends _CanvasCore
       _eraserBefore = List.of(page.strokes);
       _eraseLive([worldPoint]);
     } else {
+      _beginStrokeTiming(timeStamp);
       _activePoints = [
-        StrokePoint.fromOffset(constrainedPoint, _pressure(pressure)),
+        StrokePoint.fromOffset(constrainedPoint, _pressure(pressure), t: 0),
       ];
       _activeStroke = Stroke(
         id: newId('st'),
@@ -835,7 +862,11 @@ class CanvasController extends _CanvasCore
     notifyListeners();
   }
 
-  void addStrokePoint(Offset worldPoint, double pressure) {
+  void addStrokePoint(
+    Offset worldPoint,
+    double pressure, {
+    Duration? timeStamp,
+  }) {
     if (_lassoPath.isNotEmpty) {
       addLassoPoint(worldPoint);
       return;
@@ -850,13 +881,22 @@ class CanvasController extends _CanvasCore
       if (_heldShapeType != null) return;
       // Si la regla está activa, proyecta el punto sobre su borde.
       final snap = _rulerSnap;
-      final constrained =
-          snap != null ? rulerGeometry.project(snap, worldPoint) : worldPoint;
-      _activePoints.add(StrokePoint.fromOffset(constrained, _pressure(pressure)));
+      final constrained = snap != null
+          ? rulerGeometry.project(snap, worldPoint)
+          : worldPoint;
+      _activePoints.add(
+        StrokePoint.fromOffset(
+          constrained,
+          _pressure(pressure),
+          t: _elapsedStrokeMs(timeStamp),
+        ),
+      );
       if (snap == null) _trackHold(worldPoint);
     } else {
       final last = _activeEraserPath.last;
-      _activeEraserPath = [worldPoint]; // solo el cursor; el borrado ya se aplicó
+      _activeEraserPath = [
+        worldPoint,
+      ]; // solo el cursor; el borrado ya se aplicó
       // Interpola para no dejar huecos si el lápiz va rápido.
       final step = eraserRadius;
       final n = ((worldPoint - last).distance / step).ceil().clamp(1, 200);
@@ -880,6 +920,7 @@ class CanvasController extends _CanvasCore
     _isDrawing = false;
     final heldShape = _heldShapeType;
     _resetHold();
+    _resetStrokeTiming();
     if (_laserMode && _activeStroke == null && _activeEraserPath.isEmpty) {
       notifyListeners(); // la estela se desvanece sola
       return;
@@ -900,9 +941,12 @@ class CanvasController extends _CanvasCore
       // "siempre" se detecta ahora al soltar.
       if (heldShape != null) {
         finalStroke = finalStroke.copyWith(shapeType: heldShape);
-      } else if (_shapeMode == ShapeMode.always && active.tool != ToolType.eraser) {
-        final shape = ShapeDetector.detect(finalStroke.points,
-            lineOnly: active.tool == ToolType.highlighter);
+      } else if (_shapeMode == ShapeMode.always &&
+          active.tool != ToolType.eraser) {
+        final shape = ShapeDetector.detect(
+          finalStroke.points,
+          lineOnly: active.tool == ToolType.highlighter,
+        );
         if (shape != null) {
           // copyWith conserva capa, ajustes y demás atributos.
           finalStroke = finalStroke.copyWith(
@@ -912,16 +956,20 @@ class CanvasController extends _CanvasCore
         }
       }
       page.strokes.add(finalStroke);
-      _undoStack.push(CanvasAction(
-        strokesAdded: [finalStroke],
-        strokesAddedAt: [page.strokes.length - 1],
-      ));
+      _undoStack.push(
+        CanvasAction(
+          strokesAdded: [finalStroke],
+          strokesAddedAt: [page.strokes.length - 1],
+        ),
+      );
     } else if (eraserPath.isNotEmpty) {
       _commitEraser();
     }
     _touch();
     // Borrador de la barra: tras el trazo se vuelve a la herramienta anterior.
-    if (_eraserAutoRevert && eraserPath.isNotEmpty && _tool == ToolType.eraser) {
+    if (_eraserAutoRevert &&
+        eraserPath.isNotEmpty &&
+        _tool == ToolType.eraser) {
       setTool(_toolBeforeEraser);
     }
   }
@@ -937,15 +985,20 @@ class CanvasController extends _CanvasCore
     var changed = false;
     final pathBounds = StrokeEraser.bounds(eraserPath); // una vez, no por trazo
     for (final s in before) {
-      final skip = _isLayerLocked(s.layerIndex) ||
+      final skip =
+          _isLayerLocked(s.layerIndex) ||
           (_eraserMode == EraserMode.highlighterOnly &&
               s.tool != ToolType.highlighter);
       if (skip) {
         after.add(s);
         continue;
       }
-      var fragments = StrokeEraser.eraseStroke(s, eraserPath, eraserRadius,
-          pathBounds: pathBounds);
+      var fragments = StrokeEraser.eraseStroke(
+        s,
+        eraserPath,
+        eraserRadius,
+        pathBounds: pathBounds,
+      );
       // Modo trazo completo: si se tocó, desaparece entero.
       if (fragments != null && _eraserMode == EraserMode.stroke) {
         fragments = const [];
@@ -996,6 +1049,7 @@ class CanvasController extends _CanvasCore
 
   void cancelStroke() {
     _resetHold();
+    _resetStrokeTiming();
     _isDrawing = false;
     _activeStroke = null;
     _activePoints = [];
@@ -1015,6 +1069,38 @@ class CanvasController extends _CanvasCore
   /// Presión de entrada: mouse/touch no reportan presión real, así que se
   /// simula una presión media constante (0.5); el stylus reporta la suya.
   double _pressure(double p) => (p <= 0 || p > 1) ? 0.5 : p;
+
+  void _beginStrokeTiming(Duration? timeStamp) {
+    _strokeStartEvent = timeStamp;
+    _strokeStartWall = DateTime.now();
+    _lastPointT = 0;
+  }
+
+  /// Nondecreasing milliseconds elapsed since the stroke started.
+  ///
+  /// The event `timeStamp` is preferred because it is monotonic and reflects
+  /// real capture timing. The system clock is used when it is unavailable.
+  int _elapsedStrokeMs(Duration? timeStamp) {
+    int elapsed;
+    final startEvent = _strokeStartEvent;
+    final startWall = _strokeStartWall;
+    if (startEvent != null && timeStamp != null) {
+      elapsed = (timeStamp - startEvent).inMilliseconds;
+    } else if (startWall != null) {
+      elapsed = DateTime.now().difference(startWall).inMilliseconds;
+    } else {
+      elapsed = 0;
+    }
+    if (elapsed < _lastPointT) elapsed = _lastPointT;
+    _lastPointT = elapsed;
+    return elapsed;
+  }
+
+  void _resetStrokeTiming() {
+    _strokeStartEvent = null;
+    _strokeStartWall = null;
+    _lastPointT = 0;
+  }
 
   // ------------------------------------------------------------------
   // Deshacer / rehacer
@@ -1131,7 +1217,10 @@ class CanvasController extends _CanvasCore
     _resetPageState();
     _viewInitialized = false;
     _touch();
-    onUndoableNotice?.call(ControllerNotice.pageDeleted, () => _restorePage(removed, index));
+    onUndoableNotice?.call(
+      ControllerNotice.pageDeleted,
+      () => _restorePage(removed, index),
+    );
   }
 
   void _restorePage(Page removed, int index) {
@@ -1199,7 +1288,8 @@ class CanvasController extends _CanvasCore
         ),
     ];
     final current = page;
-    final currentEmpty = current.strokes.isEmpty &&
+    final currentEmpty =
+        current.strokes.isEmpty &&
         current.images.isEmpty &&
         current.textItems.isEmpty;
     if (currentEmpty) {
@@ -1374,14 +1464,15 @@ class CanvasController extends _CanvasCore
     final current = page.textItems[index];
     if (current.text.trim().isEmpty) {
       page.textItems.removeAt(index);
-      if (before != null) _undoStack.push(CanvasAction(textItemsRemoved: [before]));
+      if (before != null) {
+        _undoStack.push(CanvasAction(textItemsRemoved: [before]));
+      }
     } else if (before == null) {
       _undoStack.push(CanvasAction(textItemsAdded: [current]));
     } else if (jsonEncode(before.toJson()) != jsonEncode(current.toJson())) {
-      _undoStack.push(CanvasAction(
-        textItemsRemoved: [before],
-        textItemsAdded: [current],
-      ));
+      _undoStack.push(
+        CanvasAction(textItemsRemoved: [before], textItemsAdded: [current]),
+      );
     }
     _touch();
   }
@@ -1396,7 +1487,9 @@ class CanvasController extends _CanvasCore
       _editingTextId = null;
       _editingTextBefore = null;
     }
-    if (before != null) _undoStack.push(CanvasAction(textItemsRemoved: [before]));
+    if (before != null) {
+      _undoStack.push(CanvasAction(textItemsRemoved: [before]));
+    }
     _touch();
   }
 
@@ -1446,8 +1539,9 @@ class CanvasController extends _CanvasCore
     //     múltiples trazos). Agrupa trazos cercanos en componentes
     //     conectados y comprueba si el punto está dentro del bounding
     //     polygon de cada componente. ---
-    final visibleStrokes =
-        page.strokes.where((s) => _isLayerVisible(s.layerIndex)).toList();
+    final visibleStrokes = page.strokes
+        .where((s) => _isLayerVisible(s.layerIndex))
+        .toList();
     if (visibleStrokes.isEmpty) return;
 
     // Agrupar trazos cercanos en componentes conectados.

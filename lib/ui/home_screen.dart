@@ -19,6 +19,7 @@ import '../models/stroke.dart';
 import '../services/drive_sync_service.dart';
 import '../services/export_service.dart';
 import '../services/ocr_language.dart';
+import '../services/ocr_correction_store.dart';
 import '../services/ocr_service.dart';
 import '../services/pdf_import_service.dart';
 import '../models/page.dart' as model show Page;
@@ -76,7 +77,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-
   /// Textos traducidos (atajo seguro tras `await`: el `context` del State vive mientras esté montado).
   AppLocalizations get _l10n => context.l10n;
   final StorageService _storage = StorageService.instance;
@@ -88,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final SearchService _search = SearchService.instance;
   final VersionHistoryService _versions = VersionHistoryService();
   late final CanvasController _controller;
+
   /// Plumas favoritas (color y grosor propios por pluma, persistentes).
   final PenPresetsController _presets = PenPresetsController();
   bool _syncing = false;
@@ -115,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Lleva al preset activo los cambios de color/grosor/pluma del lienzo.
   void _syncPresets() => _presets.syncFrom(_controller);
   DateTime? _sessionStart;
+
   /// `updatedAt` al abrir (el Note se muta en sitio: hay que copiarlo ya).
   late final DateTime _openedAt;
 
@@ -142,13 +144,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     };
     _controller.onUndoableNotice = (notice, undo) {
       if (!mounted) return;
-      showSnack(context, _noticeText(notice),
-          action: SnackBarAction(label: context.l10n.tbUndo, onPressed: undo));
+      showSnack(
+        context,
+        _noticeText(notice),
+        action: SnackBarAction(label: context.l10n.tbUndo, onPressed: undo),
+      );
     };
     _controller.onLayerBlocked = () {
       if (mounted) {
-        showSnack(context, context.l10n.edLayerLocked,
-            duration: const Duration(milliseconds: 1500));
+        showSnack(
+          context,
+          context.l10n.edLayerLocked,
+          duration: const Duration(milliseconds: 1500),
+        );
       }
     };
     // El guardado local ocurre cada ~600 ms; subir a Drive con esa
@@ -192,9 +200,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   String _noticeText(ControllerNotice notice) => switch (notice) {
-        ControllerNotice.stylusDetected => _l10n.noticeStylus,
-        ControllerNotice.pageDeleted => _l10n.noticePageDeleted,
-      };
+    ControllerNotice.stylusDetected => _l10n.noticeStylus,
+    ControllerNotice.pageDeleted => _l10n.noticePageDeleted,
+  };
 
   /// Sube la nota a Drive si hay sesión y el cuaderno tiene sync activa.
   /// Silencioso: el guardado local ya protege los datos.
@@ -315,10 +323,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 value: maxDimension,
                 isExpanded: true,
                 items: [
-                  DropdownMenuItem(value: 1024, child: Text(context.l10n.expLow)),
-                  DropdownMenuItem(value: 2048, child: Text(context.l10n.expMedium)),
-                  DropdownMenuItem(value: 4096, child: Text(context.l10n.expHigh)),
-                  DropdownMenuItem(value: 8192, child: Text(context.l10n.expMax)),
+                  DropdownMenuItem(
+                    value: 1024,
+                    child: Text(context.l10n.expLow),
+                  ),
+                  DropdownMenuItem(
+                    value: 2048,
+                    child: Text(context.l10n.expMedium),
+                  ),
+                  DropdownMenuItem(
+                    value: 4096,
+                    child: Text(context.l10n.expHigh),
+                  ),
+                  DropdownMenuItem(
+                    value: 8192,
+                    child: Text(context.l10n.expMax),
+                  ),
                 ],
                 onChanged: (v) {
                   if (v != null) setDialogState(() => maxDimension = v);
@@ -330,8 +350,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 title: Text(context.l10n.expTransparent),
                 subtitle: Text(context.l10n.expTransparentHint),
                 value: transparentBg,
-                onChanged: (v) =>
-                    setDialogState(() => transparentBg = v),
+                onChanged: (v) => setDialogState(() => transparentBg = v),
                 dense: true,
                 contentPadding: EdgeInsets.zero,
               ),
@@ -341,8 +360,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   title: Text(context.l10n.expStrokesOnly),
                   subtitle: Text(context.l10n.expStrokesOnlyHint),
                   value: strokesOnly,
-                  onChanged: (v) =>
-                      setDialogState(() => strokesOnly = v),
+                  onChanged: (v) => setDialogState(() => strokesOnly = v),
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -375,51 +393,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<Map<String, ui.Image>> _exportImages(
     model.Page page, [
     int maxDimension = kCanvasImageMaxSide,
-  ]) =>
-      _imageService.imagesForExport([page], maxDimension: maxDimension);
+  ]) => _imageService.imagesForExport([page], maxDimension: maxDimension);
 
   Future<void> _exportPng() => _exportWithOptions(
-        (opts) async => ExportService.renderPagePng(
-          _c.page,
-          sheetSize: _c.sheetSize,
-          imageCache: await _exportImages(_c.page, opts.maxDimension),
-          options: opts,
-        ),
-        'inklus_pagina_${_c.pageIndex + 1}.png',
-        showStrokesOnly: true,
-      );
+    (opts) async => ExportService.renderPagePng(
+      _c.page,
+      sheetSize: _c.sheetSize,
+      imageCache: await _exportImages(_c.page, opts.maxDimension),
+      options: opts,
+    ),
+    'inklus_pagina_${_c.pageIndex + 1}.png',
+    showStrokesOnly: true,
+  );
 
   Future<void> _exportPdf() => _exportWithOptions(
-        (opts) async => ExportService.renderPagePdf(
-          _c.page,
-          sheetSize: _c.sheetSize,
-          imageCache: await _exportImages(_c.page, opts.maxDimension),
-          options: opts,
-        ),
-        'inklus_pagina_${_c.pageIndex + 1}.pdf',
-        showStrokesOnly: true,
-      );
+    (opts) async => ExportService.renderPagePdf(
+      _c.page,
+      sheetSize: _c.sheetSize,
+      imageCache: await _exportImages(_c.page, opts.maxDimension),
+      options: opts,
+    ),
+    'inklus_pagina_${_c.pageIndex + 1}.pdf',
+    showStrokesOnly: true,
+  );
 
   Future<void> _exportNotebookPdf() => _exportWithOptions(
-        (opts) => ExportService.renderNotebookPdf(
-          _c.note,
-          imageCache: _imageService.cache,
-          imagesFor: (page) => _exportImages(page, opts.maxDimension),
-          options: opts,
-        ),
-        '${_safeName(_c.note.title)}.pdf',
-        showStrokesOnly: true,
-      );
+    (opts) => ExportService.renderNotebookPdf(
+      _c.note,
+      imageCache: _imageService.cache,
+      imagesFor: (page) => _exportImages(page, opts.maxDimension),
+      options: opts,
+    ),
+    '${_safeName(_c.note.title)}.pdf',
+    showStrokesOnly: true,
+  );
 
-  Future<void> _exportInklusCopy() => _export(
-        () async {
-          final nb = await _storage.loadNotebook(widget.notebookId);
-          if (nb != null) return InklusFormat.exportNotebookBytes(nb);
-          // Fallback: exportar solo el note actual.
-          return InklusFormat.exportNoteBytes(_c.note);
-        },
-        '${_safeName(_c.note.title)}.inklus',
-      );
+  Future<void> _exportNot3Copy() => _export(() async {
+    final nb = await _storage.loadNotebook(widget.notebookId);
+    if (nb != null) return Not3Format.exportNotebookBytes(nb);
+    // Fallback: exportar solo el note actual.
+    return Not3Format.exportNoteBytes(_c.note);
+  }, '${_safeName(_c.note.title)}.inklus');
 
   /// Exporta la página actual a SVG (solo trazos).
   Future<void> _exportSvg() async {
@@ -433,10 +447,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// Reconoce el texto escrito a mano en la página actual (OCR).
+  /// Recognizes handwritten text on the current page.
   ///
-  /// Usa digital ink recognition (trazos vectoriales) como estrategia
-  /// principal, con fallback a bitmap si no hay trazos.
+  /// Digital-ink recognition is primary, with bitmap OCR as a fallback.
   Future<void> _recognizeText() async {
     if (!OcrService.isSupported) {
       _snack(context.l10n.ocrUnsupported);
@@ -447,25 +460,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await OcrLanguageStore.save(selection.language);
     if (!mounted) return;
 
-    unawaited(showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Center(
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(Spacing.xl),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: Spacing.lg),
-                Text(context.l10n.ocrWorking),
-              ],
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => Center(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(Spacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: Spacing.lg),
+                  Text(context.l10n.ocrWorking),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ));
+    );
     try {
       final result = await OcrService.recognizeSmart(
         _c.page,
@@ -480,34 +495,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _snack(context.l10n.ocrNoText);
         return;
       }
-      // Lo reconocido queda buscable.
+      // Keep recognized handwriting searchable.
       unawaited(_search.setHandwriting(_c.note.id, _c.page.id, result.text));
 
-      // Mostrar resultado y permitir copiar.
+      // Show the result and allow copying or retrying one line.
       await showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(context.l10n.ocrResultTitle),
-          content: SingleChildScrollView(
-            child: SelectableText(
-              result.text,
-              style: context.text.bodyLarge?.copyWith(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(context.l10n.commonClose),
-            ),
-            FilledButton(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: result.text));
-                Navigator.pop(context);
-                _snack(context.l10n.ocrCopied);
-              },
-              child: Text(context.l10n.selCopy),
-            ),
-          ],
+        builder: (context) => _OcrResultDialog(
+          result: result,
+          sheetSize: _c.sheetSize,
+          languageCode: selection.language.code,
+          onTextChanged: (text) =>
+              unawaited(_search.setHandwriting(_c.note.id, _c.page.id, text)),
+          onError: (message) => _snack(_l10n.ocrFailed(message)),
         ),
       );
     } on OcrModelUnavailableError catch (e) {
@@ -521,7 +521,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// Abre la hoja de idioma para OCR con el último idioma preseleccionado.
+  /// Opens the OCR language sheet with the last language selected.
   Future<OcrLanguageSelection?> _pickOcrLanguage() async {
     final current = await OcrLanguageStore.load();
     final downloaded = await OcrService.downloadedModelCodes();
@@ -624,7 +624,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/inklus_pagina_${_c.pageIndex + 1}.png');
       await file.writeAsBytes(bytes);
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)], text: _l10n.shareTextPage));
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], text: _l10n.shareTextPage),
+      );
     } catch (e) {
       _snack(_l10n.shareFailed('$e'));
     }
@@ -640,20 +642,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/inklus_pagina_${_c.pageIndex + 1}.pdf');
       await file.writeAsBytes(bytes);
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)], text: _l10n.shareTextPage));
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], text: _l10n.shareTextPage),
+      );
     } catch (e) {
       _snack(_l10n.shareFailed('$e'));
     }
   }
 
-  Future<void> _shareInklus() async {
+  Future<void> _shareNot3() async {
     try {
-      final bytes = await InklusFormat.exportNoteBytes(_c.note);
+      final bytes = await Not3Format.exportNoteBytes(_c.note);
       final dir = await getTemporaryDirectory();
       final name = '${_safeName(_c.note.title)}.inklus';
       final file = File('${dir.path}/$name');
       await file.writeAsBytes(bytes);
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)], text: _l10n.shareTextNotebook));
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], text: _l10n.shareTextNotebook),
+      );
     } catch (e) {
       _snack(_l10n.shareFailed('$e'));
     }
@@ -703,15 +709,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             ListTile(
               leading: const Icon(Icons.upload_file),
-              title: Text(context.l10n.edUploadInklus),
+              title: Text(context.l10n.edUploadNot3),
               onTap: () => Navigator.pop(context, 'uploadFile'),
             ),
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.sync),
-              title: Text(_syncEnabledForCurrent
-                  ? context.l10n.edSyncOnForNotebook
-                  : context.l10n.edSyncOffForNotebook),
+              title: Text(
+                _syncEnabledForCurrent
+                    ? context.l10n.edSyncOnForNotebook
+                    : context.l10n.edSyncOffForNotebook,
+              ),
               onTap: () => Navigator.pop(context, 'toggleSync'),
             ),
             const Divider(height: 1),
@@ -738,7 +746,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       case 'versions':
         await _showVersionHistory();
       case 'uploadFile':
-        await _uploadInklusFile();
+        await _uploadNot3File();
       case 'toggleSync':
         await _toggleSyncForCurrent();
       case 'switchAccount':
@@ -766,9 +774,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await _storage.setSyncEnabled(widget.notebookId, !currentEnabled);
     await _loadSyncEnabled();
     if (mounted) {
-      _snack(currentEnabled
-          ? context.l10n.edSyncDisabledMsg
-          : context.l10n.edSyncEnabledMsg);
+      _snack(
+        currentEnabled
+            ? context.l10n.edSyncDisabledMsg
+            : context.l10n.edSyncEnabledMsg,
+      );
     }
   }
 
@@ -841,7 +851,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   /// Sube un archivo .inklus manual a Drive.
-  Future<void> _uploadInklusFile() async {
+  Future<void> _uploadNot3File() async {
     try {
       final file = await ImportService.pickPlatformFile();
       if (file == null) return;
@@ -851,9 +861,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return;
       }
       // Android puede haberlo renombrado a .zip: en Drive siempre .inklus.
-      final name = file.name.replaceFirst(RegExp(r'(\.inklus)?\.zip$'), '.inklus');
+      final name = file.name.replaceFirst(
+        RegExp(r'(\.inklus)?\.zip$'),
+        '.inklus',
+      );
       setState(() => _syncing = true);
-      await _syncService.uploadInklusFile(bytes, name, promptForConsent: true);
+      await _syncService.uploadNot3File(bytes, name, promptForConsent: true);
       if (mounted) _snack(_l10n.edFileUploaded(name));
     } catch (e) {
       if (mounted) _snack(_l10n.uploadFailed('$e'));
@@ -920,7 +933,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       case 'pptx':
         _exportPptx();
       case 'inklus':
-        _exportInklusCopy();
+        _exportNot3Copy();
       case 'svg':
         _exportSvg();
       case 'ocr':
@@ -929,8 +942,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _sharePng();
       case 'sharePdf':
         _sharePdf();
-      case 'shareInklus':
-        _shareInklus();
+      case 'shareNot3':
+        _shareNot3();
       case 'clear':
         _confirmClearPage();
       case 'backup':
@@ -1115,7 +1128,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
     if (time == null) return;
     final dateTime = DateTime(
-      date.year, date.month, date.day, time.hour, time.minute,
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
     );
     await _reminders.create(
       // Mismo id que los recordatorios creados desde la pantalla de
@@ -1124,20 +1141,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       documentTitle: _c.note.title,
       dateTime: dateTime,
     );
-    _snack(_l10n.reminderCreated('${date.day}/${date.month}', '${time.hour}:${time.minute.toString().padLeft(2, '0')}'));
+    _snack(
+      _l10n.reminderCreated(
+        '${date.day}/${date.month}',
+        '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
+      ),
+    );
   }
 
   // --- Estadísticas ---
   void _openStats() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const WritingStatsScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const WritingStatsScreen()));
   }
 
   void _openSettings() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
   }
 
   // --- Búsqueda en contenido ---
@@ -1153,8 +1175,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Reconoce la escritura de todas las páginas y la guarda en el índice
-  /// de búsqueda (Android/iOS, ML Kit en el dispositivo).
+  /// Recognizes all pages and stores their handwriting in the search index.
   Future<void> _indexHandwriting() async {
     if (!OcrService.isSupported) {
       _snack(context.l10n.inkUnsupported);
@@ -1175,8 +1196,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         var n = 0;
         for (final page in _c.pages) {
           if (page.strokes.isEmpty) continue;
-          final result = await OcrService.recognizeStrokes(
-            page.strokes,
+          final result = await OcrService.recognizePageInk(
+            page,
             sheetSize: page.template.sheetSize,
             languageCode: language.code,
           );
@@ -1217,17 +1238,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final bytes = await ImportService.pickFile();
       if (bytes == null || !mounted) return;
-      final result =
-          await runWithLoading(context, () => ImportService.importBytes(bytes));
+      final result = await runWithLoading(
+        context,
+        () => ImportService.importBytes(bytes),
+      );
       if (!mounted) return;
       _snack(_l10n.importDoneOpen(result.message(_l10n)));
     } catch (e) {
       if (mounted) {
-        _snack(e is FormatException ? userError(_l10n, e) : _l10n.libImportError('$e'));
+        _snack(
+          e is FormatException
+              ? userError(_l10n, e)
+              : _l10n.libImportError('$e'),
+        );
       }
     }
   }
-
 
   // -------------------------------------------------------------------------
   // UI
@@ -1289,8 +1315,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     pagesOpen: _pagesOpen,
                     onTogglePages: () => _setPagesOpen(!_pagesOpen),
                     layersOpen: _layersSidebarOpen,
-                    onToggleLayers: () =>
-                        setState(() => _layersSidebarOpen = !_layersSidebarOpen),
+                    onToggleLayers: () => setState(
+                      () => _layersSidebarOpen = !_layersSidebarOpen,
+                    ),
                     trailing: [
                       _buildCloudButton(),
                       // El menú muestra estados (marcador, vibración): se
@@ -1309,7 +1336,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       if (_layersSidebarOpen && !presentMode)
                         LayersSidebar(
                           controller: controller,
-                          onClose: () => setState(() => _layersSidebarOpen = false),
+                          onClose: () =>
+                              setState(() => _layersSidebarOpen = false),
                         ),
                       Expanded(
                         child: Stack(
@@ -1342,8 +1370,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 child: FloatingActionButton.small(
                                   heroTag: 'deleteImage',
                                   tooltip: context.l10n.edDeleteImage,
-                                  backgroundColor: context.colors.errorContainer,
-                                  foregroundColor: context.colors.onErrorContainer,
+                                  backgroundColor:
+                                      context.colors.errorContainer,
+                                  foregroundColor:
+                                      context.colors.onErrorContainer,
                                   onPressed: _deleteSelectedImage,
                                   child: const Icon(Icons.delete_outline),
                                 ),
@@ -1374,19 +1404,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   children: [
                                     IconButton.filledTonal(
                                       tooltip: context.l10n.edExitPresent,
-                                      onPressed: controller.togglePresentationMode,
+                                      onPressed:
+                                          controller.togglePresentationMode,
                                       icon: const Icon(Icons.fullscreen_exit),
                                     ),
                                     const SizedBox(width: Spacing.sm),
                                     ControllerSelector<CanvasController, bool>(
                                       listenable: controller,
                                       selector: (c) => c.laserMode,
-                                      builder: (context, on) => IconButton.filledTonal(
-                                        tooltip: on ? context.l10n.edLaserOff : context.l10n.tbLaser,
-                                        isSelected: on,
-                                        onPressed: controller.toggleLaser,
-                                        icon: const Icon(Icons.flashlight_on),
-                                      ),
+                                      builder: (context, on) =>
+                                          IconButton.filledTonal(
+                                            tooltip: on
+                                                ? context.l10n.edLaserOff
+                                                : context.l10n.tbLaser,
+                                            isSelected: on,
+                                            onPressed: controller.toggleLaser,
+                                            icon: const Icon(
+                                              Icons.flashlight_on,
+                                            ),
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -1461,7 +1497,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       onPressed: () {
                         Navigator.pop(context);
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const MarketplaceScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const MarketplaceScreen(),
+                          ),
                         );
                       },
                     ),
@@ -1500,25 +1538,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         Offset(_c.viewportSize.width / 2, _c.viewportSize.height / 2),
         _c.viewportSize,
       );
-      _c.addImage(ImageItem(
-        id: newId('img'),
-        localPath: localPath,
-        x: center.dx,
-        y: center.dy,
-        width: w * fit / _c.scale,
-        height: h * fit / _c.scale,
-      ));
+      _c.addImage(
+        ImageItem(
+          id: newId('img'),
+          localPath: localPath,
+          x: center.dx,
+          y: center.dy,
+          width: w * fit / _c.scale,
+          height: h * fit / _c.scale,
+        ),
+      );
     } catch (e) {
       _snack(_l10n.stickerInsertFailed('$e'));
     }
   }
 
   void _openTemplates() => showTemplatePicker(
-        context,
-        controller: _controller,
-        imageService: _imageService,
-        templateLibrary: _templateLibrary,
-      );
+    context,
+    controller: _controller,
+    imageService: _imageService,
+    templateLibrary: _templateLibrary,
+  );
 
   /// ☁️ Estado de sincronización del cuaderno + acceso al menú de Drive.
   Widget _buildCloudButton() {
@@ -1536,14 +1576,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final (IconData icon, Color? color, String tooltip) = _syncing
             ? (Icons.sync, null, context.l10n.edSyncing)
             : !_syncService.isSignedIn
-                ? (Icons.cloud_upload_outlined, null, context.l10n.edSyncToDrive)
-                : switch (status) {
-                    SyncStatus.synced => (Icons.cloud_done, scheme.primary, context.l10n.edSynced),
-                    SyncStatus.syncing => (Icons.sync, null, context.l10n.edSyncing),
-                    SyncStatus.error => (Icons.cloud_off, scheme.error, context.l10n.edSyncError),
-                    SyncStatus.disabled => (Icons.cloud_queue, scheme.outline, context.l10n.edSyncDisabledMsg),
-                    SyncStatus.pending => (Icons.cloud_upload_outlined, null, context.l10n.edSyncToDrive),
-                  };
+            ? (Icons.cloud_upload_outlined, null, context.l10n.edSyncToDrive)
+            : switch (status) {
+                SyncStatus.synced => (
+                  Icons.cloud_done,
+                  scheme.primary,
+                  context.l10n.edSynced,
+                ),
+                SyncStatus.syncing => (
+                  Icons.sync,
+                  null,
+                  context.l10n.edSyncing,
+                ),
+                SyncStatus.error => (
+                  Icons.cloud_off,
+                  scheme.error,
+                  context.l10n.edSyncError,
+                ),
+                SyncStatus.disabled => (
+                  Icons.cloud_queue,
+                  scheme.outline,
+                  context.l10n.edSyncDisabledMsg,
+                ),
+                SyncStatus.pending => (
+                  Icons.cloud_upload_outlined,
+                  null,
+                  context.l10n.edSyncToDrive,
+                ),
+              };
         return IconButton(
           tooltip: tooltip,
           icon: _syncing
@@ -1560,27 +1620,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// Menú ⋮ agrupado en submenús (antes: ~25 entradas en una sola lista).
   Widget _buildMenuButton() {
-    MenuItemButton item(String action, IconData icon, String label, {bool enabled = true}) =>
-        MenuItemButton(
-          leadingIcon: Icon(icon),
-          onPressed: enabled ? () => _onMenuAction(action) : null,
-          child: Text(label),
-        );
+    MenuItemButton item(
+      String action,
+      IconData icon,
+      String label, {
+      bool enabled = true,
+    }) => MenuItemButton(
+      leadingIcon: Icon(icon),
+      onPressed: enabled ? () => _onMenuAction(action) : null,
+      child: Text(label),
+    );
     return MenuAnchor(
       menuChildren: [
         SubmenuButton(
           leadingIcon: const Icon(Icons.ios_share),
           menuChildren: [
             item('png', Icons.image_outlined, context.l10n.menuPagePng),
-            item('pdf', Icons.picture_as_pdf_outlined, context.l10n.menuPagePdf),
+            item(
+              'pdf',
+              Icons.picture_as_pdf_outlined,
+              context.l10n.menuPagePdf,
+            ),
             item('pdfAll', Icons.menu_book_outlined, context.l10n.menuNotePdf),
             item('svg', Icons.code_outlined, context.l10n.menuStrokesSvg),
             item('pptx', Icons.slideshow_outlined, context.l10n.menuPptx),
-            item('inklus', Icons.save_alt, context.l10n.menuInklusCopy),
+            item('inklus', Icons.save_alt, context.l10n.menuNot3Copy),
             const Divider(),
             item('sharePng', Icons.share_outlined, context.l10n.menuShareImage),
             item('sharePdf', Icons.share_outlined, context.l10n.menuSharePdf),
-            item('shareInklus', Icons.share_outlined, context.l10n.menuShareInklus),
+            item('shareNot3', Icons.share_outlined, context.l10n.menuShareNot3),
           ],
           child: Text(context.l10n.menuExportShare),
         ),
@@ -1593,19 +1661,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Text(context.l10n.menuTemplate),
             ),
             MenuItemButton(
-              leadingIcon: Icon(_c.page.bookmarked ? Icons.bookmark_remove : Icons.bookmark_add_outlined),
-              shortcut: const SingleActivator(LogicalKeyboardKey.keyB, control: true),
+              leadingIcon: Icon(
+                _c.page.bookmarked
+                    ? Icons.bookmark_remove
+                    : Icons.bookmark_add_outlined,
+              ),
+              shortcut: const SingleActivator(
+                LogicalKeyboardKey.keyB,
+                control: true,
+              ),
               onPressed: _c.toggleBookmark,
-              child: Text(_c.page.bookmarked ? context.l10n.pgUnbookmark : context.l10n.pgBookmark),
+              child: Text(
+                _c.page.bookmarked
+                    ? context.l10n.pgUnbookmark
+                    : context.l10n.pgBookmark,
+              ),
             ),
             MenuItemButton(
               leadingIcon: const Icon(Icons.format_list_numbered),
-              shortcut: const SingleActivator(LogicalKeyboardKey.keyG, control: true),
+              shortcut: const SingleActivator(
+                LogicalKeyboardKey.keyG,
+                control: true,
+              ),
               onPressed: _goToPageDialog,
               child: Text(context.l10n.menuGoToPage),
             ),
-            item('importPdf', Icons.picture_as_pdf_outlined, context.l10n.menuImportPdf),
-            item('clear', Icons.cleaning_services_outlined, context.l10n.menuClearPage),
+            item(
+              'importPdf',
+              Icons.picture_as_pdf_outlined,
+              context.l10n.menuImportPdf,
+            ),
+            item(
+              'clear',
+              Icons.cleaning_services_outlined,
+              context.l10n.menuClearPage,
+            ),
           ],
           child: Text(context.l10n.menuPage),
         ),
@@ -1613,25 +1703,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           leadingIcon: const Icon(Icons.sticky_note_2_outlined),
           menuChildren: [
             item('searchContent', Icons.search, context.l10n.menuSearchNote),
-            item('indexInk', Icons.manage_search,
-                OcrService.isSupported ? context.l10n.menuIndexInk : context.l10n.menuIndexInkUnsupported,
-                enabled: OcrService.isSupported),
-            item('ocr', Icons.text_snippet_outlined,
-                OcrService.isSupported ? context.l10n.menuOcr : context.l10n.menuOcrUnsupported,
-                enabled: OcrService.isSupported),
+            item(
+              'indexInk',
+              Icons.manage_search,
+              OcrService.isSupported
+                  ? context.l10n.menuIndexInk
+                  : context.l10n.menuIndexInkUnsupported,
+              enabled: OcrService.isSupported,
+            ),
+            item(
+              'ocr',
+              Icons.text_snippet_outlined,
+              OcrService.isSupported
+                  ? context.l10n.menuOcr
+                  : context.l10n.menuOcrUnsupported,
+              enabled: OcrService.isSupported,
+            ),
             item('versions', Icons.history, context.l10n.menuVersions),
-            item('reminder', Icons.alarm_add_outlined, context.l10n.menuReminder),
+            item(
+              'reminder',
+              Icons.alarm_add_outlined,
+              context.l10n.menuReminder,
+            ),
           ],
           child: Text(context.l10n.trashNote),
         ),
         SubmenuButton(
           leadingIcon: const Icon(Icons.visibility_outlined),
           menuChildren: [
-            item('nightMode', _nightMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                _nightMode ? context.l10n.menuNightOff : context.l10n.menuNightOn),
+            item(
+              'nightMode',
+              _nightMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              _nightMode ? context.l10n.menuNightOff : context.l10n.menuNightOn,
+            ),
             item('present', Icons.fullscreen, context.l10n.menuPresent),
-            item('haptics', _c.hapticEnabled ? Icons.vibration : Icons.mobile_off,
-                _c.hapticEnabled ? context.l10n.menuHapticsOn : context.l10n.menuHapticsOff),
+            item(
+              'haptics',
+              _c.hapticEnabled ? Icons.vibration : Icons.mobile_off,
+              _c.hapticEnabled
+                  ? context.l10n.menuHapticsOn
+                  : context.l10n.menuHapticsOff,
+            ),
             CheckboxMenuButton(
               value: _c.continuousScroll,
               onChanged: (v) => _c.setContinuousScroll(v ?? true),
@@ -1649,7 +1761,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           leadingIcon: const Icon(Icons.backup_outlined),
           menuChildren: [
             item('backup', Icons.backup_outlined, context.l10n.menuBackup),
-            item('restoreBackup', Icons.file_download_outlined, context.l10n.menuRestoreBackup),
+            item(
+              'restoreBackup',
+              Icons.file_download_outlined,
+              context.l10n.menuRestoreBackup,
+            ),
           ],
           child: Text(context.l10n.menuData),
         ),
@@ -1686,9 +1802,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(context.l10n.menuClearPage),
-        content: Text(
-          context.l10n.clearPageBody,
-        ),
+        content: Text(context.l10n.clearPageBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -1739,16 +1853,26 @@ class _PageNavPill extends StatelessWidget {
                   borderRadius: Radii.smAll,
                   onTap: onGoToPage,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: Spacing.xs, vertical: Spacing.sm),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Spacing.xs,
+                      vertical: Spacing.sm,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (bookmarked)
                           Padding(
                             padding: const EdgeInsets.only(right: Spacing.xs),
-                            child: Icon(Icons.bookmark, size: 16, color: context.colors.primary),
+                            child: Icon(
+                              Icons.bookmark,
+                              size: 16,
+                              color: context.colors.primary,
+                            ),
                           ),
-                        Text('${index + 1} / $count', style: context.text.labelLarge),
+                        Text(
+                          '${index + 1} / $count',
+                          style: context.text.labelLarge,
+                        ),
                       ],
                     ),
                   ),
@@ -1789,7 +1913,8 @@ class _ZoomPill extends StatelessWidget {
             IconButton(
               tooltip: context.l10n.zoomOut,
               icon: const Icon(Icons.remove),
-              onPressed: () => controller.zoomAt(0.8, _center, controller.viewportSize),
+              onPressed: () =>
+                  controller.zoomAt(0.8, _center, controller.viewportSize),
             ),
             Tooltip(
               message: context.l10n.zoomFit,
@@ -1797,7 +1922,10 @@ class _ZoomPill extends StatelessWidget {
                 borderRadius: Radii.smAll,
                 onTap: () => controller.fitView(controller.viewportSize),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: Spacing.xs, vertical: Spacing.sm),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Spacing.xs,
+                    vertical: Spacing.sm,
+                  ),
                   child: Text('$percent %', style: context.text.labelLarge),
                 ),
               ),
@@ -1805,7 +1933,8 @@ class _ZoomPill extends StatelessWidget {
             IconButton(
               tooltip: context.l10n.zoomIn,
               icon: const Icon(Icons.add),
-              onPressed: () => controller.zoomAt(1.25, _center, controller.viewportSize),
+              onPressed: () =>
+                  controller.zoomAt(1.25, _center, controller.viewportSize),
             ),
           ],
         ),
@@ -1814,7 +1943,184 @@ class _ZoomPill extends StatelessWidget {
   }
 
   Offset get _center => Offset(
-        controller.viewportSize.width / 2,
-        controller.viewportSize.height / 2,
+    controller.viewportSize.width / 2,
+    controller.viewportSize.height / 2,
+  );
+}
+
+/// Dialog containing OCR-recognized text.
+///
+/// Each line can be tapped to retry only its source strokes, avoiding another
+/// recognition pass over the complete page.
+class _OcrResultDialog extends StatefulWidget {
+  const _OcrResultDialog({
+    required this.result,
+    required this.sheetSize,
+    required this.languageCode,
+    required this.onTextChanged,
+    required this.onError,
+  });
+
+  final OcrResult result;
+  final ui.Size sheetSize;
+  final String languageCode;
+  final ValueChanged<String> onTextChanged;
+  final ValueChanged<String> onError;
+
+  @override
+  State<_OcrResultDialog> createState() => _OcrResultDialogState();
+}
+
+class _OcrResultDialogState extends State<_OcrResultDialog> {
+  late final List<OcrLine> _lines = List<OcrLine>.of(widget.result.lines);
+  String? _editedText;
+  int? _busyIndex;
+
+  bool get _canRetry =>
+      _editedText == null &&
+      _lines.isNotEmpty &&
+      _lines.every((line) => line.strokes.isNotEmpty);
+
+  String get _text =>
+      _editedText ??
+      (_lines.isEmpty
+          ? widget.result.text
+          : _lines
+                .where((line) => line.text.trim().isNotEmpty)
+                .map((line) => line.text)
+                .join('\n'));
+
+  Future<void> _edit() async {
+    if (_busyIndex != null) return;
+    final recognized = _text;
+    final corrected = await showTextPrompt(
+      context,
+      title: context.l10n.ocrResultTitle,
+      initialValue: recognized,
+      confirmLabel: context.l10n.commonSave,
+      multiline: true,
+    );
+    if (!mounted || corrected == null || corrected == recognized) return;
+
+    await OcrCorrectionStore.record(
+      languageCode: widget.languageCode,
+      recognized: recognized,
+      corrected: corrected,
+    );
+    if (!mounted) return;
+    setState(() => _editedText = corrected);
+    widget.onTextChanged(corrected);
+  }
+
+  Future<void> _retry(int index) async {
+    if (_busyIndex != null) return;
+    setState(() => _busyIndex = index);
+    try {
+      final previous = index > 0 ? _lines[index - 1].text : null;
+      final result = await OcrService.recognizeStrokes(
+        _lines[index].strokes,
+        sheetSize: widget.sheetSize,
+        languageCode: widget.languageCode,
+        preContext: previous,
+        segmentLines: false,
       );
+      if (!mounted) return;
+      if (result.isEmpty || result.lines.isEmpty) {
+        widget.onError(context.l10n.ocrNoText);
+        return;
+      }
+      setState(() {
+        _lines[index] = result.lines.first;
+      });
+      widget.onTextChanged(_text);
+    } catch (e) {
+      if (mounted) widget.onError('$e');
+    } finally {
+      if (mounted) setState(() => _busyIndex = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(context.l10n.ocrResultTitle),
+      content: SingleChildScrollView(
+        child: !_canRetry
+            ? SelectableText(_text, style: context.text.bodyLarge?.copyWith())
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.ocrTapLineToRetry,
+                    style: context.text.bodySmall,
+                  ),
+                  const SizedBox(height: Spacing.sm),
+                  for (var i = 0; i < _lines.length; i++)
+                    InkWell(
+                      onTap: _busyIndex == null ? () => _retry(i) : null,
+                      borderRadius: Radii.smAll,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: Spacing.xs,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: SelectableText(
+                                _lines[i].text,
+                                style: context.text.bodyLarge?.copyWith(),
+                              ),
+                            ),
+                            if (_busyIndex == i)
+                              const Padding(
+                                padding: EdgeInsets.all(Spacing.xs),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              )
+                            else
+                              IconButton(
+                                tooltip: context.l10n.ocrRetryLine,
+                                iconSize: 18,
+                                onPressed: _busyIndex == null
+                                    ? () => _retry(i)
+                                    : null,
+                                icon: const Icon(Icons.refresh),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(context.l10n.commonClose),
+        ),
+        TextButton.icon(
+          onPressed: _busyIndex == null ? _edit : null,
+          icon: const Icon(Icons.edit_outlined),
+          label: Text(context.l10n.ocrEditResult),
+        ),
+        FilledButton(
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: _text));
+            final messenger = ScaffoldMessenger.maybeOf(context);
+            final message = context.l10n.ocrCopied;
+            Navigator.pop(context);
+            messenger?.showSnackBar(SnackBar(content: Text(message)));
+          },
+          child: Text(context.l10n.selCopy),
+        ),
+      ],
+    );
+  }
 }

@@ -18,7 +18,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Versión de Inklus / Inklus version
+      label: Versión de Not3 / Not3 version
       placeholder: "1.8.0"
     validations:
       required: true

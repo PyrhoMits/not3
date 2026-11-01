@@ -41,7 +41,7 @@ class _WritingStatsScreenState extends State<WritingStatsScreen> {
   @override
   Widget build(BuildContext context) {
     final totals = _totals;
-    return InklusPage(
+    return Not3Page(
       title: context.l10n.statsTitle,
       subtitle: context.l10n.statsSubtitle,
       icon: Icons.insights_outlined,

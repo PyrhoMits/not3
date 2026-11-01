@@ -10,8 +10,8 @@ import '../theme/tokens.dart';
 ///
 /// El contenido se pasa como slivers para poder mezclar listas y rejillas
 /// largas sin anidar scrolls.
-class InklusPage extends StatelessWidget {
-  const InklusPage({
+class Not3Page extends StatelessWidget {
+  const Not3Page({
     super.key,
     required this.title,
     this.subtitle,

@@ -15,7 +15,7 @@ import 'package:inklus/models/template.dart';
 import 'package:inklus/services/storage_service.dart';
 
 void main() {
-  group('Modelos Inklus', () {
+  group('Modelos Not3', () {
     test('Stroke se serializa y deserializa con presión', () {
       final stroke = Stroke(
         id: 'st_1',

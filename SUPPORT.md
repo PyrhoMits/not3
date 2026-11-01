@@ -5,4 +5,4 @@
 - **Security / Seguridad:** see [`SECURITY.md`](SECURITY.md).
 - **Want to help / Quieres ayudar:** [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-Inklus is maintained by volunteers; replies may take a while. / Inklus lo mantienen voluntarios; la respuesta puede tardar.
+Not3 is maintained by volunteers; replies may take a while. / Not3 lo mantienen voluntarios; la respuesta puede tardar.

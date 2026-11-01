@@ -67,9 +67,9 @@ class EncryptedBackupException implements Exception {
 /// - Todo el contenido (trazos, páginas, plantillas e **imágenes**) vive en el
 ///   dispositivo; la app funciona 100% sin red ni cuenta.
 /// - Si el usuario inicia sesión, cada guardado local replica el cuaderno a
-///   una carpeta "Inklus" en su Drive con el scope `drive.file` (la app solo
+///   una carpeta "Not3" en su Drive con el scope `drive.file` (la app solo
 ///   ve/crea sus propios archivos; 15 GB gratis).
-/// - El respaldo usa el formato propio **.inklus** ([InklusFormat]): un único
+/// - El respaldo usa el formato propio **.inklus** ([Not3Format]): un único
 ///   archivo autocontenido por cuaderno con el documento y sus imágenes
 ///   embebidas, igual que hacen las apps del mercado (.goodnotes / .sdoc).
 ///
@@ -85,7 +85,7 @@ class DriveSyncService extends ChangeNotifier {
   static final DriveSyncService instance = DriveSyncService._();
 
   static const _driveScope = 'https://www.googleapis.com/auth/drive.file';
-  static const _folderName = 'Inklus';
+  static const _folderName = 'Not3';
   static const _folderMimeType = 'application/vnd.google-apps.folder';
   static const _inklusMimeType = 'application/x-inklus';
 
@@ -234,7 +234,7 @@ class DriveSyncService extends ChangeNotifier {
   // -------------------------------------------------------------------------
 
   /// Sube un archivo .inklus existente (exportado por el usuario) a Drive.
-  Future<void> uploadInklusFile(
+  Future<void> uploadNot3File(
     Uint8List bytes,
     String fileName, {
     bool promptForConsent = false,
@@ -307,7 +307,7 @@ class DriveSyncService extends ChangeNotifier {
   /// Carpetas ya resueltas en esta sesión (evita una búsqueda por subida).
   final Map<String, String> _folderIds = {};
 
-  /// Busca (o crea) la carpeta raíz "Inklus" y devuelve su id.
+  /// Busca (o crea) la carpeta raíz "Not3" y devuelve su id.
   Future<String> _ensureFolder(drive.DriveApi api) async {
     final cached = _folderIds[_folderName];
     if (cached != null) return cached;
@@ -326,7 +326,7 @@ class DriveSyncService extends ChangeNotifier {
     return _folderIds[_folderName] = folder.id!;
   }
 
-  /// Carpeta de un cuaderno dentro de "Inklus" (se identifica por su id, no
+  /// Carpeta de un cuaderno dentro de "Not3" (se identifica por su id, no
   /// por el nombre: renombrar el cuaderno solo renombra la carpeta).
   Future<String> _ensureNotebookFolder(
     drive.DriveApi api,
@@ -416,7 +416,7 @@ class DriveSyncService extends ChangeNotifier {
   /// Sube un Note individual a Drive como archivo .inklus.
   ///
   /// Cada Note se sincroniza por separado para minimizar tráfico y conflictos.
-  /// Organización en Drive: `Inklus/<Cuaderno>/<Nota>.inklus`. Si se pasa
+  /// Organización en Drive: `Not3/<Cuaderno>/<Nota>.inklus`. Si se pasa
   /// [notebookId], el estado ☁️ de ese cuaderno sigue a esta subida.
   Future<void> backupNote(
     Note note, {
@@ -446,7 +446,7 @@ class DriveSyncService extends ChangeNotifier {
     }
 
     try {
-      var bytes = await InklusFormat.exportNoteBytes(note);
+      var bytes = await Not3Format.exportNoteBytes(note);
       if (password != null && password.isNotEmpty) {
         bytes = await _encryptBytes(bytes, password);
       }
@@ -526,7 +526,7 @@ class DriveSyncService extends ChangeNotifier {
       if (password != null && password.isNotEmpty) {
         rawBytes = await _decryptBytes(rawBytes, password);
       }
-      return await InklusFormat.importNoteBytes(rawBytes);
+      return await Not3Format.importNoteBytes(rawBytes);
     } finally {
       client.close();
     }
@@ -586,7 +586,7 @@ class DriveSyncService extends ChangeNotifier {
         }
       }
       try {
-        return await InklusFormat.importNoteBytes(bytes);
+        return await Not3Format.importNoteBytes(bytes);
       } on FormatException {
         // Un .inklus es un ZIP (ArchiveException es un FormatException): si
         // no se abre, está cifrado.
@@ -598,7 +598,7 @@ class DriveSyncService extends ChangeNotifier {
   }
 
   /// Descarga **todas** las notas `.inklus` que la app tiene en Drive
-  /// (carpeta "Inklus" y sus subcarpetas por cuaderno; las imágenes
+  /// (carpeta "Not3" y sus subcarpetas por cuaderno; las imágenes
   /// embebidas se extraen a local). Las copias ilegibles se omiten.
   Future<List<Note>> downloadAllNotes({String? password}) async =>
       [for (final r in await _downloadAll(password: password)) r.note];
@@ -656,7 +656,7 @@ class DriveSyncService extends ChangeNotifier {
                 if (folders[p] != null) folders[p]!,
             ].firstOrNull;
             out.add(_RemoteNote(
-              await InklusFormat.importNoteBytes(bytes),
+              await Not3Format.importNoteBytes(bytes),
               notebookId: folder?.$1,
               notebookTitle: folder?.$2,
             ));

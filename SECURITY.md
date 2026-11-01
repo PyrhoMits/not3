@@ -15,7 +15,7 @@ You can expect an acknowledgement within about a week; this is a volunteer proje
 
 In scope: local storage, backup/import (zip handling, encryption), Google Drive sync, marketplace package installation. / Dentro del alcance: almacenamiento local, respaldo e importación (ZIP, cifrado), sincronización con Drive, instalación de paquetes del marketplace.
 
-Inklus has no analytics and no server of its own; see [`docs/privacy.md`](docs/privacy.md). / Inklus no tiene analítica ni servidor propio; ver `docs/privacy.md`.
+Not3 has no analytics and no server of its own; see [`docs/privacy.md`](docs/privacy.md). / Not3 no tiene analítica ni servidor propio; ver `docs/privacy.md`.
 
 ## Supported versions / Versiones soportadas
 

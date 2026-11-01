@@ -72,7 +72,7 @@ abstract final class ImportService {
     return files.isEmpty ? null : files.first;
   }
 
-  /// Detecta el tipo de archivo. Lanza [FormatException] si no es de Inklus.
+  /// Detecta el tipo de archivo. Lanza [FormatException] si no es de Not3.
   static Future<ImportKind> detect(Uint8List bytes) async {
     final names = await Isolate.run(() {
       try {
@@ -94,7 +94,7 @@ abstract final class ImportService {
     // format.json: manda la entrada de contenido.
     if (names.contains('notebook.json')) return ImportKind.notebook;
     if (names.contains('document.json')) return ImportKind.legacyDocument;
-    throw const AppError(AppErrorCode.notInklus);
+    throw const AppError(AppErrorCode.notNot3);
   }
 
   /// Importa [bytes] en la biblioteca y describe lo que se hizo.
@@ -111,7 +111,7 @@ abstract final class ImportService {
         return ImportResult(kind, count: count);
       case ImportKind.notebook:
       case ImportKind.legacyDocument:
-        final result = await InklusFormat.importAuto(bytes, extractTo: extractTo);
+        final result = await Not3Format.importAuto(bytes, extractTo: extractTo);
         if (result is Notebook) {
           await s.saveNotebook(result);
           return ImportResult(

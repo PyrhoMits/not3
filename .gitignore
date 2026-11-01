@@ -1,5 +1,5 @@
 # ===========================================================================
-# Inklus — .gitignore para open source
+# Not3 — .gitignore para open source
 # ===========================================================================
 
 # --- Dart / Flutter ---
@@ -169,3 +169,7 @@ client_secret*.json
 
 # graphify (salida local, cachés con mtimes que gitleaks toma por claves)
 graphify-out/
+.tmp_inkpkg
+opencode.json
+.flutter/
+docs/OCR_IMPROVEMENT.md

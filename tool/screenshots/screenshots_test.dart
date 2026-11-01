@@ -4,7 +4,7 @@
 // Útil para revisar el diseño y comparar antes/después.
 //
 //   flutter test tool/screenshots/screenshots_test.dart
-//   flutter test --dart-define=SHOT_LOCALE=de tool/screenshots/screenshots_test.dart
+//   flutter test tool/screenshots/screenshots_test.dart
 //
 // Salida: $INKLUS_SHOTS_DIR (por defecto build/screenshots). Está fuera de
 // test/ a propósito: no forma parte de la suite ni de la CI.
@@ -50,21 +50,36 @@ import 'package:shared_preferences/shared_preferences.dart';
 final out = Platform.environment['INKLUS_SHOTS_DIR'] ?? 'build/screenshots';
 
 Future<void> loadFonts() async {
-  final flutterRoot = Platform.environment['FLUTTER_ROOT'] ??
-      File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.parent.path;
+  final flutterRoot =
+      Platform.environment['FLUTTER_ROOT'] ??
+      File(
+        Platform.resolvedExecutable,
+      ).parent.parent.parent.parent.parent.parent.path;
   final base = '$flutterRoot/bin/cache/artifacts/material_fonts';
   final roboto = FontLoader('Roboto');
-  for (final f in ['Roboto-Regular.ttf', 'Roboto-Medium.ttf', 'Roboto-Bold.ttf']) {
-    roboto.addFont(Future.value(ByteData.view(File('$base/$f').readAsBytesSync().buffer)));
+  for (final f in [
+    'Roboto-Regular.ttf',
+    'Roboto-Medium.ttf',
+    'Roboto-Bold.ttf',
+  ]) {
+    roboto.addFont(
+      Future.value(ByteData.view(File('$base/$f').readAsBytesSync().buffer)),
+    );
   }
   await roboto.load();
   final icons = FontLoader('MaterialIcons')
-    ..addFont(Future.value(ByteData.view(File('$base/MaterialIcons-Regular.otf').readAsBytesSync().buffer)));
+    ..addFont(
+      Future.value(
+        ByteData.view(
+          File('$base/MaterialIcons-Regular.otf').readAsBytesSync().buffer,
+        ),
+      ),
+    );
   await icons.load();
 }
 
-/// Idioma de las capturas (por defecto el de la app; p. ej. `de` para textos largos).
-const Locale _shotLocale = Locale(String.fromEnvironment('SHOT_LOCALE', defaultValue: 'es'));
+/// English is the only published UI locale.
+const Locale _shotLocale = Locale('en');
 
 Future<void> shot(WidgetTester tester, String name) async {
   await tester.runAsync(() async {
@@ -77,7 +92,9 @@ Future<void> shot(WidgetTester tester, String name) async {
 
 Future<void> settle(WidgetTester tester) async {
   for (var i = 0; i < 20; i++) {
-    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+    await tester.runAsync(
+      () => Future.delayed(const Duration(milliseconds: 50)),
+    );
     await tester.pump(const Duration(milliseconds: 100));
   }
 }
@@ -98,8 +115,17 @@ void main() {
   Future<void> seed() async {
     final s = StorageService.instance;
     if ((await s.loadIndex()).isNotEmpty) return;
-    for (final (t, c) in [('Matemáticas', 0xFF1E88E5), ('Diario', 0xFFE53935), ('Física II', 0xFF43A047), ('Ideas', 0xFFFDD835)]) {
-      await s.createNotebook(title: t, colorValue: c, template: const PageTemplate(type: TemplateType.ruled));
+    for (final (t, c) in [
+      ('Matemáticas', 0xFF1E88E5),
+      ('Diario', 0xFFE53935),
+      ('Física II', 0xFF43A047),
+      ('Ideas', 0xFFFDD835),
+    ]) {
+      await s.createNotebook(
+        title: t,
+        colorValue: c,
+        template: const PageTemplate(type: TemplateType.ruled),
+      );
     }
   }
 
@@ -108,10 +134,11 @@ void main() {
     testWidgets('library $tag', (tester) async {
       tester.view.physicalSize = const Size(2560, 1600);
       tester.view.devicePixelRatio = 2;
-      tester.platformDispatcher.platformBrightnessTestValue =
-          dark ? Brightness.dark : Brightness.light;
+      tester.platformDispatcher.platformBrightnessTestValue = dark
+          ? Brightness.dark
+          : Brightness.light;
       await tester.runAsync(seed);
-      await tester.pumpWidget(const InklusApp());
+      await tester.pumpWidget(const Not3App());
       await settle(tester);
       await shot(tester, 'library_$tag');
     });
@@ -123,32 +150,47 @@ void main() {
         await seed();
         return StorageService.instance.loadIndex();
       });
-      final nb = await tester.runAsync(() => StorageService.instance.loadNotebook(metas!.first.id));
+      final nb = await tester.runAsync(
+        () => StorageService.instance.loadNotebook(metas!.first.id),
+      );
       final note = nb!.notes.first;
       final page = note.pages.first;
       page.strokes.clear();
       for (var i = 0; i < 6; i++) {
-        page.strokes.add(Stroke(
-          id: 's$i',
-          points: [for (var x = 0; x < 60; x++) StrokePoint(80.0 + x * 6, 120.0 + i * 40 + 12 * (x % 7 == 0 ? 1 : 0), 0.5)],
-          tool: ToolType.pen,
-          colorValue: 0xFF1A237E,
-          size: 3,
-        ));
+        page.strokes.add(
+          Stroke(
+            id: 's$i',
+            points: [
+              for (var x = 0; x < 60; x++)
+                StrokePoint(
+                  80.0 + x * 6,
+                  120.0 + i * 40 + 12 * (x % 7 == 0 ? 1 : 0),
+                  0.5,
+                ),
+            ],
+            tool: ToolType.pen,
+            colorValue: 0xFF1A237E,
+            size: 3,
+          ),
+        );
       }
-      await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: _shotLocale,
-        debugShowCheckedModeBanner: false,
-        theme: dark ? AppTheme.dark() : AppTheme.light(),
-        home: HomeScreen(note: note, notebookId: nb.id),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: _shotLocale,
+          debugShowCheckedModeBanner: false,
+          theme: dark ? AppTheme.dark() : AppTheme.light(),
+          home: HomeScreen(note: note, notebookId: nb.id),
+        ),
+      );
       await settle(tester);
       await shot(tester, 'editor_$tag');
       if (!dark) {
         // Tocar la pluma activa abre su popover de opciones.
-        final l10n = AppLocalizations.of(tester.element(find.byType(HomeScreen)));
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(HomeScreen)),
+        );
         await tester.tap(find.byTooltip(l10n.tbPenSlot(l10n.toolPen, 1)));
         await settle(tester);
         await shot(tester, 'editor_pen_popover');
@@ -160,15 +202,20 @@ void main() {
     testWidgets('ruler $proto', (tester) async {
       tester.view.physicalSize = const Size(2000, 1300);
       tester.view.devicePixelRatio = 2;
-      final c = CanvasController(StorageService.instance)..setHapticEnabled(false);
+      final c = CanvasController(StorageService.instance)
+        ..setHapticEnabled(false);
       c.setTemplate(const PageTemplate(type: TemplateType.sheet));
-      await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: _shotLocale,
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(body: DrawingCanvas(controller: c, imageService: ImageService())),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: _shotLocale,
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            body: DrawingCanvas(controller: c, imageService: ImageService()),
+          ),
+        ),
+      );
       await settle(tester);
       c.fitView(c.viewportSize);
       c.cycleRuler();
@@ -187,42 +234,57 @@ void main() {
       client: MockClient((_) async => throw const SocketException('sin red')),
       storage: StorageService.instance,
     );
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: _shotLocale,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      home: MarketplaceScreen(service: offline),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: _shotLocale,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        home: MarketplaceScreen(service: offline),
+      ),
+    );
     await settle(tester);
     await shot(tester, 'marketplace');
   });
 
   // --- Resto de pantallas y hojas (revisión del sistema de diseño) ---------
-  Future<void> app(WidgetTester tester, Widget home, {bool dark = false}) async {
+  Future<void> app(
+    WidgetTester tester,
+    Widget home, {
+    bool dark = false,
+  }) async {
     tester.view.physicalSize = const Size(2560, 1600);
     tester.view.devicePixelRatio = 2;
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: _shotLocale,
-      debugShowCheckedModeBanner: false,
-      theme: dark ? AppTheme.dark() : AppTheme.light(),
-      home: home,
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: _shotLocale,
+        debugShowCheckedModeBanner: false,
+        theme: dark ? AppTheme.dark() : AppTheme.light(),
+        home: home,
+      ),
+    );
     await settle(tester);
   }
 
   /// Pantalla con un botón que abre una hoja/diálogo; captura con ella abierta.
-  Future<void> sheet(WidgetTester tester, String name,
-      Future<void> Function(BuildContext) open, {bool dark = false}) async {
+  Future<void> sheet(
+    WidgetTester tester,
+    String name,
+    Future<void> Function(BuildContext) open, {
+    bool dark = false,
+  }) async {
     await app(
       tester,
       Scaffold(
         body: Builder(
           builder: (ctx) => Center(
-            child: FilledButton(onPressed: () => open(ctx), child: const Text('abrir')),
+            child: FilledButton(
+              onPressed: () => open(ctx),
+              child: const Text('abrir'),
+            ),
           ),
         ),
       ),
@@ -261,18 +323,31 @@ void main() {
       'finger_drawing_user_set': true,
     });
     Page sheet(String name, double y0) {
-      final p = Page.blank(name: name, template: const PageTemplate(type: TemplateType.sheet));
+      final p = Page.blank(
+        name: name,
+        template: const PageTemplate(type: TemplateType.sheet),
+      );
       for (var i = 0; i < 8; i++) {
-        p.strokes.add(Stroke(
-          id: '$name$i',
-          points: [for (var x = 0; x < 60; x++) StrokePoint(-400.0 + x * 10, y0 + i * 60 + 8 * (x % 5 == 0 ? 1 : 0), 0.5)],
-          tool: ToolType.pen,
-          colorValue: 0xFF1A237E,
-          size: 4,
-        ));
+        p.strokes.add(
+          Stroke(
+            id: '$name$i',
+            points: [
+              for (var x = 0; x < 60; x++)
+                StrokePoint(
+                  -400.0 + x * 10,
+                  y0 + i * 60 + 8 * (x % 5 == 0 ? 1 : 0),
+                  0.5,
+                ),
+            ],
+            tool: ToolType.pen,
+            colorValue: 0xFF1A237E,
+            size: 4,
+          ),
+        );
       }
       return p;
     }
+
     final note = Note(
       id: 'note_stack',
       title: 'Apuntes',
@@ -280,17 +355,22 @@ void main() {
       updatedAt: DateTime(2026),
       pages: [sheet('A', 300), sheet('B', -780)],
     );
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: _shotLocale,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      home: HomeScreen(note: note, notebookId: 'nb_stack'),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: _shotLocale,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        home: HomeScreen(note: note, notebookId: 'nb_stack'),
+      ),
+    );
     await settle(tester);
     final canvas = find.byType(DrawingCanvas);
-    final g = await tester.startGesture(tester.getCenter(canvas), kind: PointerDeviceKind.touch);
+    final g = await tester.startGesture(
+      tester.getCenter(canvas),
+      kind: PointerDeviceKind.touch,
+    );
     for (var i = 1; i <= 20; i++) {
       await g.moveBy(const Offset(0, -22));
       await tester.pump(const Duration(milliseconds: 16));
@@ -323,7 +403,8 @@ void main() {
       for (var i = 0; i < 30; i++) {
         final d = now.subtract(Duration(days: i));
         if (i % 7 == 5) continue; // algún día sin escribir
-        final key = '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+        final key =
+            '${d.year}-${d.month.toString().padLeft(2, '0')}-'
             '${d.day.toString().padLeft(2, '0')}';
         days[key] = {
           'date': d.toIso8601String(),
@@ -344,8 +425,10 @@ void main() {
 
   testWidgets('trash con cuadernos', (tester) async {
     await tester.runAsync(() async {
-      final nb = await StorageService.instance
-          .createNotebook(title: 'Apuntes viejos', colorValue: 0xFF8E24AA);
+      final nb = await StorageService.instance.createNotebook(
+        title: 'Apuntes viejos',
+        colorValue: 0xFF8E24AA,
+      );
       await StorageService.instance.deleteNotebook(nb.id);
     });
     await app(tester, TrashScreen(storage: StorageService.instance));
@@ -363,14 +446,17 @@ void main() {
   });
 
   testWidgets('template picker', (tester) async {
-    final c = CanvasController(StorageService.instance)..setHapticEnabled(false);
+    final c = CanvasController(StorageService.instance)
+      ..setHapticEnabled(false);
     await sheet(
       tester,
       'template_picker',
-      (ctx) => showTemplatePicker(ctx,
-          controller: c,
-          imageService: ImageService(),
-          templateLibrary: TemplateLibraryService()),
+      (ctx) => showTemplatePicker(
+        ctx,
+        controller: c,
+        imageService: ImageService(),
+        templateLibrary: TemplateLibraryService(),
+      ),
     );
   });
 
@@ -379,9 +465,10 @@ void main() {
       tester,
       'tag_editor',
       (ctx) => showTagEditor(
-          context: ctx,
-          currentTags: const ['clase', 'física'],
-          allAvailableTags: const ['clase', 'física', 'ideas', 'diario']),
+        context: ctx,
+        currentTags: const ['clase', 'física'],
+        allAvailableTags: const ['clase', 'física', 'ideas', 'diario'],
+      ),
     );
   });
 
@@ -393,19 +480,29 @@ void main() {
     await sheet(
       tester,
       'smart_folders',
-      (ctx) => showSmartFoldersSheet(context: ctx, metas: metas!, currentFolder: null),
+      (ctx) => showSmartFoldersSheet(
+        context: ctx,
+        metas: metas!,
+        currentFolder: null,
+      ),
     );
   });
 
   testWidgets('layers', (tester) async {
-    final c = CanvasController(StorageService.instance)..setHapticEnabled(false);
+    final c = CanvasController(StorageService.instance)
+      ..setHapticEnabled(false);
     await app(
       tester,
       Scaffold(
-        body: Row(children: [
-          const Expanded(child: SizedBox()),
-          SizedBox(width: 280, child: LayersSidebar(controller: c, onClose: () {})),
-        ]),
+        body: Row(
+          children: [
+            const Expanded(child: SizedBox()),
+            SizedBox(
+              width: 280,
+              child: LayersSidebar(controller: c, onClose: () {}),
+            ),
+          ],
+        ),
       ),
     );
     await shot(tester, 'layers');

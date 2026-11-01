@@ -245,7 +245,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
   @override
   Widget build(BuildContext context) {
     final count = _notebook.notes.length;
-    return InklusPage(
+    return Not3Page(
       title: _notebook.title,
       subtitle: context.l10n.noteCount(count),
       maxWidth: double.infinity,

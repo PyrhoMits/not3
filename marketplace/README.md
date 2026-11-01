@@ -1,6 +1,6 @@
-# 🛒 Marketplace de Inklus
+# 🛒 Marketplace de Not3
 
-Catálogo **comunitario y gratuito** de paquetes para [Inklus](https://github.com/Pedroj-64/inklus):
+Catálogo **comunitario y gratuito** de paquetes para [Not3](https://github.com/Pedroj-64/inklus):
 plantillas de página, paletas de color y stickers. Todo el contenido es de licencia libre.
 
 > Esta carpeta es la **plantilla** del repositorio `inklus-marketplace`. Para ponerlo en marcha:

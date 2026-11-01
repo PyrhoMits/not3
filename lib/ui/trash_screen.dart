@@ -75,7 +75,7 @@ class _TrashScreenState extends State<TrashScreen> {
   @override
   Widget build(BuildContext context) {
     final metas = _trashMetas;
-    return InklusPage(
+    return Not3Page(
       title: context.l10n.libTrash,
       subtitle: metas == null || metas.isEmpty
           ? context.l10n.trashSubtitleEmpty

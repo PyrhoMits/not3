@@ -15,7 +15,7 @@
   <rect width="1024" height="1024" fill="url(#fullbg)"/>
   <rect width="1024" height="1024" fill="url(#fullglow)"/>
     <g transform="translate(82 82) scale(0.84)">
-  <!-- Inklus: plumilla estilográfica escribiendo un trazo de tinta dorada. -->
+  <!-- Not3: plumilla estilográfica escribiendo un trazo de tinta dorada. -->
   <defs>
     <linearGradient id="nibL" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#FFFFFF"/>

@@ -141,7 +141,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
     final pending = _reminderService.pending;
     final fired = _reminderService.fired;
 
-    return InklusPage(
+    return Not3Page(
       title: context.l10n.remTitle,
       subtitle: context.l10n.remSubtitle,
       icon: Icons.alarm_outlined,

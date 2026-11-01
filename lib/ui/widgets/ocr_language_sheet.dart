@@ -8,22 +8,20 @@ import '../theme/tokens.dart';
 import 'dialogs.dart';
 import 'page_scaffold.dart';
 
-/// Resultado de elegir un idioma en [showOcrLanguageSheet].
+/// Result of selecting a language in [showOcrLanguageSheet].
 class OcrLanguageSelection {
   const OcrLanguageSelection(this.language, {required this.needsDownload});
 
   final OcrLanguage language;
 
-  /// true si el modelo aún no está en el dispositivo y el usuario aceptó
-  /// descargarlo.
+  /// Whether the model is missing and the user approved its download.
   final bool needsDownload;
 }
 
-/// Hoja para elegir el idioma del OCR de escritura a mano.
+/// Sheet for selecting the handwriting OCR language.
 ///
-/// No descarga nada: solo devuelve la elección. El caller es quien pide el
-/// modelo a ML Kit tras el consentimiento del usuario. Devuelve null si se
-/// cierra sin elegir.
+/// This only returns a selection; it does not download anything. The caller
+/// requests the ML Kit model after consent. Returns null when dismissed.
 Future<OcrLanguageSelection?> showOcrLanguageSheet(
   BuildContext context, {
   required String currentCode,
@@ -76,8 +74,9 @@ class _LanguageTile extends StatelessWidget {
           ? null
           : Text(
               l10n.ocrLanguageDownload,
-              style: context.text.bodySmall
-                  ?.copyWith(color: context.colors.onSurfaceVariant),
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
             ),
       trailing: selected
           ? Icon(Icons.check, color: context.colors.primary)

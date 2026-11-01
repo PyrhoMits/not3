@@ -9,21 +9,22 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('supportedOcrLanguages', () {
-    test('solo ofrece inglés, japonés y tailandés', () {
-      expect(
-        supportedOcrLanguages.map((l) => l.code).toList(),
-        ['en', 'ja', 'th'],
-      );
+    test('offers only English, Japanese, and Thai', () {
+      expect(supportedOcrLanguages.map((l) => l.code).toList(), [
+        'en',
+        'ja',
+        'th',
+      ]);
     });
 
-    test('mapea cada idioma a su script de fallback', () {
+    test('maps each language to its fallback script', () {
       expect(ocrLanguageByCode('en')!.script, TextRecognitionScript.latin);
       expect(ocrLanguageByCode('ja')!.script, TextRecognitionScript.japanese);
       expect(ocrLanguageByCode('th')!.script, isNull);
       expect(ocrLanguageByCode('th')!.hasBitmapFallback, isFalse);
     });
 
-    test('devuelve null para códigos no soportados', () {
+    test('returns null for unsupported codes', () {
       expect(ocrLanguageByCode('es'), isNull);
       expect(ocrLanguageByCode('zh-Hani'), isNull);
       expect(ocrLanguageByCode(null), isNull);
@@ -31,14 +32,14 @@ void main() {
   });
 
   group('defaultOcrLanguageForLocale', () {
-    test('usa tailandés y japonés cuando el sistema los usa', () {
+    test('uses Thai and Japanese for matching system locales', () {
       expect(defaultOcrLanguageForLocale(const Locale('th')).code, 'th');
       expect(defaultOcrLanguageForLocale(const Locale('th', 'TH')).code, 'th');
       expect(defaultOcrLanguageForLocale(const Locale('ja')).code, 'ja');
       expect(defaultOcrLanguageForLocale(const Locale('ja', 'JP')).code, 'ja');
     });
 
-    test('cae en inglés para el resto', () {
+    test('defaults to English for all other locales', () {
       expect(defaultOcrLanguageForLocale(const Locale('en', 'US')).code, 'en');
       expect(defaultOcrLanguageForLocale(const Locale('es')).code, 'en');
       expect(defaultOcrLanguageForLocale(const Locale('fr')).code, 'en');
@@ -49,19 +50,16 @@ void main() {
   group('OcrLanguageStore', () {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
-    test('guarda y recupera el último idioma', () async {
+    test('saves and restores the most recent language', () async {
       await OcrLanguageStore.save(ocrLanguageByCode('ja')!);
       expect((await OcrLanguageStore.load()).code, 'ja');
     });
 
-    test('ignora un código guardado que ya no se soporta', () async {
+    test('ignores a saved code that is no longer supported', () async {
       SharedPreferences.setMockInitialValues({'ocr_ink_language': 'es'});
       final loaded = await OcrLanguageStore.load();
       expect(loaded.code, isNot('es'));
-      expect(
-        supportedOcrLanguages.map((l) => l.code),
-        contains(loaded.code),
-      );
+      expect(supportedOcrLanguages.map((l) => l.code), contains(loaded.code));
     });
   });
 }

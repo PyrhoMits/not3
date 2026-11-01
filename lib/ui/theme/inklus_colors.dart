@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'package:flutter/material.dart';
 
-/// Colores propios de Inklus que no existen en [ColorScheme] (papel,
+/// Colores propios de Not3 que no existen en [ColorScheme] (papel,
 /// escritorio, selección de trazos…). Se leen con `context.inklus`.
 ///
 /// Es una [ThemeExtension]: cambia automáticamente entre claro y oscuro y
 /// se interpola en las transiciones de tema.
 @immutable
-class InklusColors extends ThemeExtension<InklusColors> {
-  const InklusColors({
+class Not3Colors extends ThemeExtension<Not3Colors> {
+  const Not3Colors({
     required this.paper,
     required this.ink,
     required this.desk,
@@ -43,7 +43,7 @@ class InklusColors extends ThemeExtension<InklusColors> {
   final Color warning;
   final Color shadow;
 
-  static const light = InklusColors(
+  static const light = Not3Colors(
     paper: Color(0xFFFEFDF9),
     ink: Color(0xFF26231F),
     desk: Color(0xFFE4E1DA),
@@ -56,7 +56,7 @@ class InklusColors extends ThemeExtension<InklusColors> {
     shadow: Color(0x1F000000),
   );
 
-  static const dark = InklusColors(
+  static const dark = Not3Colors(
     paper: Color(0xFFFEFDF9),
     ink: Color(0xFF26231F),
     desk: Color(0xFF16171A),
@@ -70,7 +70,7 @@ class InklusColors extends ThemeExtension<InklusColors> {
   );
 
   @override
-  InklusColors copyWith({
+  Not3Colors copyWith({
     Color? paper,
     Color? ink,
     Color? desk,
@@ -82,7 +82,7 @@ class InklusColors extends ThemeExtension<InklusColors> {
     Color? warning,
     Color? shadow,
   }) =>
-      InklusColors(
+      Not3Colors(
         paper: paper ?? this.paper,
         ink: ink ?? this.ink,
         desk: desk ?? this.desk,
@@ -96,10 +96,10 @@ class InklusColors extends ThemeExtension<InklusColors> {
       );
 
   @override
-  InklusColors lerp(InklusColors? other, double t) {
+  Not3Colors lerp(Not3Colors? other, double t) {
     if (other == null) return this;
     Color c(Color a, Color b) => Color.lerp(a, b, t)!;
-    return InklusColors(
+    return Not3Colors(
       paper: c(paper, other.paper),
       ink: c(ink, other.ink),
       desk: c(desk, other.desk),
@@ -116,13 +116,13 @@ class InklusColors extends ThemeExtension<InklusColors> {
 
 /// Acceso corto: `context.inklus.desk`, `context.colors.primary`,
 /// `context.text.titleMedium`.
-extension InklusThemeContext on BuildContext {
-  InklusColors get inklus =>
-      Theme.of(this).extension<InklusColors>() ??
+extension Not3ThemeContext on BuildContext {
+  Not3Colors get inklus =>
+      Theme.of(this).extension<Not3Colors>() ??
       // Sin extensión (p. ej. un MaterialApp de test): según el brillo.
       (Theme.of(this).brightness == Brightness.dark
-          ? InklusColors.dark
-          : InklusColors.light);
+          ? Not3Colors.dark
+          : Not3Colors.light);
   ColorScheme get colors => Theme.of(this).colorScheme;
   TextTheme get text => Theme.of(this).textTheme;
   bool get isDark => Theme.of(this).brightness == Brightness.dark;

@@ -15,7 +15,7 @@ import '../template_library_service.dart';
 import 'marketplace_models.dart';
 import '../app_errors.dart';
 
-/// Marketplace de Inklus: catálogo público de paquetes gratuitos
+/// Marketplace de Not3: catálogo público de paquetes gratuitos
 /// (plantillas, paletas, stickers) alojado en un repositorio de GitHub y
 /// servido por CDN. Ver `marketplace/README.md` para publicar paquetes.
 ///
@@ -302,7 +302,7 @@ class MarketplaceService extends ChangeNotifier {
       name: 'Cuadernos clásicos',
       description: 'Rayado ancho y estrecho, cuadrícula de 5 mm, puntos y pentagrama.',
       type: PackType.template,
-      author: 'Inklus',
+      author: 'Not3',
       license: 'CC0-1.0',
       version: '1.0.0',
       tags: ['estudio', 'básicos'],
@@ -319,7 +319,7 @@ class MarketplaceService extends ChangeNotifier {
       name: 'Papel técnico',
       description: 'Cuadrícula fina tipo milimetrado y agenda por columnas, en tonos suaves.',
       type: PackType.template,
-      author: 'Inklus',
+      author: 'Not3',
       license: 'CC0-1.0',
       version: '1.0.0',
       tags: ['ingeniería'],
@@ -333,7 +333,7 @@ class MarketplaceService extends ChangeNotifier {
       name: 'Paleta Estudio',
       description: 'Tinta azul y negra, rojo de corrección, verde y naranja para destacar.',
       type: PackType.palette,
-      author: 'Inklus',
+      author: 'Not3',
       license: 'CC0-1.0',
       version: '1.0.0',
       palette: [
@@ -346,7 +346,7 @@ class MarketplaceService extends ChangeNotifier {
       name: 'Paleta Pastel',
       description: 'Tonos suaves para apuntes bonitos y diagramas.',
       type: PackType.palette,
-      author: 'Inklus',
+      author: 'Not3',
       license: 'CC0-1.0',
       version: '1.0.0',
       palette: [
@@ -359,7 +359,7 @@ class MarketplaceService extends ChangeNotifier {
       name: 'Paleta Tierra',
       description: 'Ocres, oliva y terracota, con buen contraste sobre papel.',
       type: PackType.palette,
-      author: 'Inklus',
+      author: 'Not3',
       license: 'CC0-1.0',
       version: '1.0.0',
       palette: [

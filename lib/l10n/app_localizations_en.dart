@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -25,7 +24,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonGotIt => 'Got it';
 
   @override
-  String commonError(String error) {
+  String commonError(Object error) {
     return 'Error: $error';
   }
 
@@ -33,8 +32,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Settings';
 
   @override
-  String settingsSubtitle(String version) {
-    return 'Inklus $version · your notes are stored on this device';
+  String settingsSubtitle(Object version) {
+    return 'Not3 $version · your notes are stored on this device';
   }
 
   @override
@@ -126,7 +125,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsErrorLogEmpty => 'No errors recorded';
 
   @override
-  String settingsErrorLogCount(int count) {
+  String settingsErrorLogCount(num count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
@@ -146,12 +145,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsErrorLogCleared => 'Log cleared';
 
   @override
-  String settingsErrorLogSubject(String version) {
-    return 'Inklus $version error log';
+  String settingsErrorLogSubject(Object version) {
+    return 'Not3 $version error log';
   }
 
   @override
-  String settingsOpenFailed(String url) {
+  String settingsOpenFailed(Object url) {
     return 'Could not open $url';
   }
 
@@ -213,7 +212,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get driveAccount => 'Account';
 
   @override
-  String driveConnectedAs(String email) {
+  String driveConnectedAs(Object email) {
     return 'Connected as $email';
   }
 
@@ -231,7 +230,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get driveSignedOut => 'Signed out';
 
   @override
-  String driveUploaded(int count) {
+  String driveUploaded(num count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
@@ -247,7 +246,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Notes on this device are only replaced if the Drive copy is newer. Notes missing here go back to their notebook (or to a new \"Recovered from Drive\" one).';
 
   @override
-  String get backupSaveTitle => 'Save Inklus backup';
+  String get backupSaveTitle => 'Save Not3 backup';
 
   @override
   String get backupSaved => 'Backup saved';
@@ -262,7 +261,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get driveSignInHelpTitle => 'Could not sign in';
 
   @override
-  String driveSignInHelpBody(String details) {
+  String driveSignInHelpBody(Object details) {
     return 'If you just closed the account picker, nothing is wrong. If you chose an account and it did not connect, the app\'s signing key (SHA-1) is almost always not registered in Google Cloud for com.inklus.inklus.\n\nTechnical detail:\n$details';
   }
 
@@ -271,7 +270,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get driveNotebooksSubtitle =>
-      'Each notebook is saved in Drive → Inklus → its own folder. Choose which ones.';
+      'Each notebook is saved in Drive → Not3 → its own folder. Choose which ones.';
 
   @override
   String get driveNotebooksEmpty => 'No notebooks yet.';
@@ -1318,13 +1317,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ocrCopied => 'Text copied to the clipboard';
 
   @override
+  String get ocrEditResult => 'Edit';
+
+  @override
+  String get ocrTapLineToRetry => 'Tap a line to recognize it again';
+
+  @override
+  String get ocrRetryLine => 'Recognize this line again';
+
+  @override
   String get ocrLanguageTitle => 'Recognition language';
 
   @override
   String get ocrLanguageDownload => 'Download (~20 MB)';
 
   @override
-  String ocrLanguageDownloadTitle(String language) {
+  String ocrLanguageDownloadTitle(Object language) {
     return 'Download the $language model?';
   }
 
@@ -1333,7 +1341,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'About 20 MB will be downloaded from Google over Wi-Fi. It works offline afterwards.';
 
   @override
-  String ocrLanguageDownloadFailed(String language) {
+  String ocrLanguageDownloadFailed(Object language) {
     return 'Couldn\'t download the $language model. Connect to Wi-Fi and try again.';
   }
 
@@ -1353,7 +1361,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get edDriveVersions => 'View versions in Drive';
 
   @override
-  String get edUploadInklus => 'Upload .inklus file';
+  String get edUploadNot3 => 'Upload .inklus file';
 
   @override
   String get edSyncOnForNotebook => 'Sync: on for this notebook';
@@ -1465,7 +1473,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuPptx => 'Presentation (PowerPoint)';
 
   @override
-  String get menuInklusCopy => 'Copy as .inklus';
+  String get menuNot3Copy => 'Copy as .inklus';
 
   @override
   String get menuShareImage => 'Share image';
@@ -1474,7 +1482,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuSharePdf => 'Share PDF';
 
   @override
-  String get menuShareInklus => 'Share .inklus';
+  String get menuShareNot3 => 'Share .inklus';
 
   @override
   String get menuExportShare => 'Export and share';
@@ -1571,10 +1579,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get zoomIn => 'Zoom in';
 
   @override
-  String get shareTextPage => 'Inklus page';
+  String get shareTextPage => 'Not3 page';
 
   @override
-  String get shareTextNotebook => 'Inklus notebook';
+  String get shareTextNotebook => 'Not3 notebook';
 
   @override
   String edInsertImageFailed(String error) {
@@ -1877,7 +1885,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onb1Body =>
-      'Rest your hand without worry: Inklus recognizes the pen and ignores your palm. The pen\'s eraser end or side button erases.';
+      'Rest your hand without worry: Not3 recognizes the pen and ignores your palm. The pen\'s eraser end or side button erases.';
 
   @override
   String get onb2Body =>
@@ -1962,14 +1970,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get errNotInklus =>
-      'The file is not an .inklus notebook or an Inklus backup.';
+  String get errNotNot3 =>
+      'The file is not an .inklus notebook or an Not3 backup.';
 
   @override
-  String get errNotInklusFile => 'Not a valid .inklus notebook';
+  String get errNotNot3File => 'Not a valid .inklus notebook';
 
   @override
-  String get errNotInklusV2 => 'Not a valid .inklus v2 notebook';
+  String get errNotNot3V2 => 'Not a valid .inklus v2 notebook';
 
   @override
   String get errCatalogTooLarge => 'Catalog is too large';
@@ -2032,7 +2040,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get driveRestoreNone =>
-      'There are no Inklus copies in your Google Drive';
+      'There are no Not3 copies in your Google Drive';
 
   @override
   String get driveRestoreUpToDate =>

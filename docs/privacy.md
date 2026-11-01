@@ -1,13 +1,13 @@
-# Inklus Privacy Policy
+# Not3 Privacy Policy
 
 *Last updated: September 27, 2026*
 
-Inklus is a **free and open source** handwriting app (GPL-3.0 license). It has no accounts of its own, no ads, no analytics and no paid features. This policy explains what data the app handles and where it goes.
+Not3 is a **free and open source** handwriting app (GPL-3.0 license). It has no accounts of its own, no ads, no analytics and no paid features. This policy explains what data the app handles and where it goes.
 
 ## Summary
 
-- **Your notes are stored on your device.** Inklus has no servers and nobody but you can read them.
-- **Google Drive is optional.** If you connect your account, Inklus uploads a copy of your notes to **your** Drive. We have no access to it.
+- **Your notes are stored on your device.** Not3 has no servers and nobody but you can read them.
+- **Google Drive is optional.** If you connect your account, Not3 uploads a copy of your notes to **your** Drive. We have no access to it.
 - **No analytics, no ads, no tracking.** We don't sell or share data with anyone.
 
 ## Data stored on the device
@@ -19,11 +19,11 @@ Notebooks, notes, pages, strokes, images you insert, templates, tags, reminders,
 Only if you tap "Connect" in Settings:
 
 - **Google sign-in**: the app receives your account email only to show you which account you're connected with. It is not stored on any server.
-- **`drive.file` permission**: Inklus **can only see and modify the files it creates itself** (an "Inklus" folder with one `.inklus` file per note). It cannot read the rest of your Drive.
+- **`drive.file` permission**: Not3 **can only see and modify the files it creates itself** (an "Not3" folder with one `.inklus` file per note). It cannot read the rest of your Drive.
 - Backups can be **encrypted with a password** (AES-256-GCM) before being uploaded. The password never leaves the device.
-- Google handles those files according to [Google's privacy policy](https://policies.google.com/privacy). You can disconnect the account in Settings and delete the "Inklus" folder from your Drive whenever you want.
+- Google handles those files according to [Google's privacy policy](https://policies.google.com/privacy). You can disconnect the account in Settings and delete the "Not3" folder from your Drive whenever you want.
 
-Inklus' use and transfer to any other app of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
+Not3' use and transfer to any other app of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
 
 ## Handwriting recognition (ML Kit)
 
@@ -44,7 +44,7 @@ If the app fails, the error is stored **only on your device** (Settings → "Err
 
 ## Minors
 
-Inklus does not collect personal data, so it is suitable for any age. Google sign-in is subject to Google's age requirements.
+Not3 does not collect personal data, so it is suitable for any age. Google sign-in is subject to Google's age requirements.
 
 ## Changes and contact
 

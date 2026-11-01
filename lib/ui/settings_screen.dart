@@ -51,7 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return InklusPage(
+    return Not3Page(
       title: context.l10n.settingsTitle,
       subtitle: context.l10n.settingsSubtitle(kAppVersion),
       maxWidth: 820,
@@ -118,7 +118,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 SettingsTile(
                   icon: Icons.edit_outlined,
-                  title: 'Inklus $kAppVersion',
+                  title: 'Not3 $kAppVersion',
                   subtitle: context.l10n.settingsAppTagline,
                 ),
                 SettingsTile(

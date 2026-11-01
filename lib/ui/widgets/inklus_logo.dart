@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'package:flutter/material.dart';
 
-/// Marca de Inklus: una plumilla estilizada sobre una gota de tinta.
+/// Marca de Not3: una plumilla estilizada sobre una gota de tinta.
 /// Vectorial (CustomPainter): nítida a cualquier tamaño y sin dependencias.
-class InklusLogo extends StatelessWidget {
-  const InklusLogo({super.key, this.size = 32});
+class Not3Logo extends StatelessWidget {
+  const Not3Logo({super.key, this.size = 32});
 
   final double size;
 
@@ -12,7 +12,7 @@ class InklusLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
-      label: 'Inklus',
+      label: 'Not3',
       child: CustomPaint(
         size: Size.square(size),
         painter: _LogoPainter(ink: scheme.primary, nib: scheme.onPrimary),

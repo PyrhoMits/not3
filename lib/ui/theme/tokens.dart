@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'package:flutter/widgets.dart';
 
-/// Tokens de diseño de Inklus: **la única fuente** de espaciados, radios,
+/// Tokens de diseño de Not3: **la única fuente** de espaciados, radios,
 /// duraciones y tamaños. No escribir números mágicos en los widgets: si
 /// falta un valor, se añade aquí con un nombre que explique su intención.
 ///

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../logic/canvas_controller.dart';
 import '../../logic/pen_presets.dart';
 import '../../models/stroke.dart';
+import '../../services/ocr_correction_store.dart';
 import '../../services/ocr_language.dart';
 import '../../services/ocr_service.dart';
 import '../theme/inklus_colors.dart';
@@ -175,6 +176,9 @@ class SelectionBar extends StatelessWidget {
           canvas.selectedStrokes,
           sheetSize: canvas.sheetSize,
           languageCode: language.code,
+          // A lasso selection is already one recognition unit. Avoid page
+          // segmentation and normalize it as a compact writing area.
+          segmentLines: false,
         ),
       );
       if (!context.mounted) return;
@@ -182,7 +186,7 @@ class SelectionBar extends StatelessWidget {
         onMessage(context.l10n.selNoText);
         return;
       }
-      // Permitir corregir antes de sustituir la escritura.
+      // Allow correction before replacing the handwriting.
       final text = await showTextPrompt(
         context,
         title: context.l10n.selToText,
@@ -190,7 +194,17 @@ class SelectionBar extends StatelessWidget {
         confirmLabel: context.l10n.selConvert,
         multiline: true,
       );
-      if (text != null) canvas.convertSelectionToText(text);
+      if (text != null) {
+        // Learn the correction so future recognition applies it automatically.
+        if (text.trim() != result.text.trim()) {
+          await OcrCorrectionStore.record(
+            languageCode: language.code,
+            recognized: result.text,
+            corrected: text,
+          );
+        }
+        canvas.convertSelectionToText(text);
+      }
     } on OcrModelUnavailableError catch (e) {
       if (!context.mounted) return;
       onMessage(l10n.ocrLanguageDownloadFailed(e.language.label));

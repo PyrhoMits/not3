@@ -1,4 +1,4 @@
-name: CI — Inklus
+name: CI — Not3
 
 on:
   push:
@@ -176,11 +176,11 @@ jobs:
           | Android (casi todas las tablets y teléfonos) | `app-arm64-v8a-release.apk` |
           | Android antiguos de 32 bits | `app-armeabi-v7a-release.apk` |
           | Android x86_64 / emuladores | `app-x86_64-release.apk` |
-          | Linux (portable) | `Inklus-x86_64.AppImage` |
+          | Linux (portable) | `Not3-x86_64.AppImage` |
           | Linux (carpeta) | `inklus-linux-x64.tar.gz` |
 
           **Android:** abre el APK; Android pedirá permiso para instalar apps de origen desconocido. Se instala encima de la versión anterior sin perder las notas.
-          **Linux:** `chmod +x Inklus-x86_64.AppImage && ./Inklus-x86_64.AppImage`.
+          **Linux:** `chmod +x Not3-x86_64.AppImage && ./Not3-x86_64.AppImage`.
           NOTES
 
       - name: Build APK + AAB (release)
@@ -202,7 +202,7 @@ jobs:
           cat > AppDir/inklus.desktop <<'DESKTOP'
           [Desktop Entry]
           Type=Application
-          Name=Inklus
+          Name=Not3
           Comment=Notas manuscritas con stylus
           Exec=inklus
           Icon=inklus
@@ -212,14 +212,14 @@ jobs:
           chmod +x AppDir/AppRun
           curl -fsSL -o appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool
-          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool AppDir Inklus-x86_64.AppImage
+          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool AppDir Not3-x86_64.AppImage
 
       - uses: softprops/action-gh-release@v2
         with:
-          name: Inklus ${{ github.ref_name }}
+          name: Not3 ${{ github.ref_name }}
           body_path: release_notes.md
           files: |
             build/app/outputs/flutter-apk/*-release.apk
             build/app/outputs/bundle/release/app-release.aab
-            Inklus-x86_64.AppImage
+            Not3-x86_64.AppImage
             inklus-linux-x64.tar.gz
