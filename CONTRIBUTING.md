@@ -1,7 +1,5 @@
 # Contributing to Not3
 
-*[Leer en español](CONTRIBUTING.es.md)*
-
 Thanks for helping! Not3 is a free, open-source (GPL-3.0-or-later), offline-first handwriting app for stylus tablets. Everything stays free: no premium features, no paid dependencies.
 
 ## Quick start
@@ -21,7 +19,7 @@ Flutter 3.47 / Dart 3.13. Before touching the canvas, read [`docs/ARCHITECTURE.m
 - **Offline-first.** Nothing local may depend on the network or an account. Google Drive is an optional backup.
 - **UI follows the design system**: colors, spacing and text roles come from the theme, never literals. See [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md).
 - **All user-visible text goes through the ARB files** (`context.l10n.key`). See [`docs/TRANSLATING.md`](docs/TRANSLATING.md).
-- **Code comments and the in-app source language are Spanish** (`app_es.arb` is the source); English is fully supported in the UI. Write comments in Spanish unless you are not comfortable, in which case English is fine and a maintainer will help.
+- **English is the source language** for code comments, documentation, and the interface. `app_en.arb` is the single source of user-visible strings.
 - **Never commit secrets** (`android/key.properties`, `*.jks`, `client_secret*.json`). CI runs a secret scan.
 - Add or update tests for logic changes. Bug fixes should include a regression test.
 
@@ -35,7 +33,7 @@ Flutter 3.47 / Dart 3.13. Before touching the canvas, read [`docs/ARCHITECTURE.m
 
 ## Commit messages
 
-[Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, optionally with a scope (`fix(canvas): ...`). Spanish or English are both fine.
+[Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, optionally with a scope (`fix(canvas): ...`). Write commit messages in English.
 
 ## Sign-off (DCO)
 

@@ -7,7 +7,7 @@ Distribution without Google Play: **GitHub Releases** (APK/AAB signed by CI on `
 1. `flutter analyze` (0 issues), `flutter test`, `flutter test integration_test -d linux`.
 2. Test on a tablet with the script in [`testing.md`](testing.md).
 3. Bump the version in **`pubspec.yaml`** (`version: X.Y.Z+N`, `N` always increasing) and in **`lib/constants.dart`** (`kAppVersion`). `test/app_version_test.dart` checks that they match.
-4. Add the `## [X.Y.Z] — YYYY-MM-DD` section to `CHANGELOG.md`, **in Spanish and in English** (`### English` section): the workflow copies that whole section into the release notes.
+4. Add the `## [X.Y.Z] — YYYY-MM-DD` section to `CHANGELOG.md` in English. The workflow copies that section into the release notes.
 5. Update `ROADMAP.md` if the project status changes.
 
 ## Tagging

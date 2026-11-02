@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 
 import '../services/drive_sync_service.dart';
 import '../services/import_service.dart';
+import '../services/pdf_import_coordinator.dart';
 import '../services/storage_service.dart';
 import '../utils/date_utils.dart' as date_util;
 import 'note_list_screen.dart';
@@ -25,6 +26,7 @@ import 'widgets/dialogs.dart';
 import '../theme_controller.dart';
 import 'home_screen.dart';
 import 'widgets/search_sheet.dart';
+import 'widgets/pdf_import_progress.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -44,15 +46,22 @@ import '../models/text_layout.dart';
 /// editor ([HomeScreen]); al volver, se refresca la lista.
 class NotebookLibraryScreen extends StatefulWidget {
   final VoidCallback? onToggleTheme;
+  final StorageService? storage;
+  final PdfImportCoordinator pdfImporter;
 
-  const NotebookLibraryScreen({super.key, this.onToggleTheme});
+  const NotebookLibraryScreen({
+    super.key,
+    this.onToggleTheme,
+    this.storage,
+    this.pdfImporter = const PdfImportCoordinator(),
+  });
 
   @override
   State<NotebookLibraryScreen> createState() => _NotebookLibraryScreenState();
 }
 
 class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
-  final StorageService _storage = StorageService.instance;
+  late final StorageService _storage;
 
   /// null mientras carga el índice por primera vez.
   List<NotebookMeta>? _metas;
@@ -71,6 +80,7 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
 
   /// Vista en cuadrícula (portadas) o lista (compacta). Se recuerda.
   bool _listView = false;
+  bool _importingPdf = false;
   static const _prefListView = 'library_list_view';
 
   Future<void> _loadViewPref() async {
@@ -123,6 +133,7 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
   @override
   void initState() {
     super.initState();
+    _storage = widget.storage ?? StorageService.instance;
     _reload();
     _loadViewPref();
     // Restaura la sesión de Google (silenciosa).
@@ -240,7 +251,10 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
     final count = (_metas?.length ?? 0) + 1;
     final result = await Navigator.of(context).push<CreateNotebookResult>(
       MaterialPageRoute(
-        builder: (_) => CreateNotebookScreen(notebookCount: count),
+        builder: (_) => CreateNotebookScreen(
+          notebookCount: count,
+          pdfImporter: widget.pdfImporter,
+        ),
       ),
     );
     if (result == null) return;
@@ -263,6 +277,37 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
     if (!mounted) return;
     await _reload();
     await _openNotebookById(nb.id);
+  }
+
+  Future<void> _importPdf() async {
+    if (_importingPdf) return;
+    setState(() => _importingPdf = true);
+    try {
+      final result = await runPdfImportWithProgress(
+        context,
+        widget.pdfImporter,
+      );
+      if (result == null || !mounted) return;
+      final notebook = await _storage.createNotebook(
+        title: result.suggestedTitle,
+        pages: [
+          for (final (index, page) in result.pages.indexed)
+            models.Page.background(
+              name: '${index + 1}',
+              path: page.path,
+              width: page.width,
+              height: page.height,
+            ),
+        ],
+      );
+      if (!mounted) return;
+      await _reload();
+      await _openNotebookById(notebook.id);
+    } catch (error) {
+      if (mounted) _snack(pdfImportErrorMessage(context, error));
+    } finally {
+      if (mounted) setState(() => _importingPdf = false);
+    }
   }
 
   Future<void> _renameNotebook(NotebookMeta meta) async {
@@ -548,11 +593,6 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
       drawer: wide
           ? null
           : Drawer(child: SafeArea(child: _navList(inDrawer: true))),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createNotebook,
-        icon: const Icon(Icons.add),
-        label: Text(context.l10n.createTitle),
-      ),
       body: SafeArea(
         child: wide
             ? Row(
@@ -728,6 +768,26 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
               color: context.colors.onSurfaceVariant,
             ),
           ),
+          const SizedBox(height: Spacing.md),
+          Wrap(
+            spacing: Spacing.sm,
+            runSpacing: Spacing.sm,
+            children: [
+              FilledButton.icon(
+                onPressed: _createNotebook,
+                icon: const Icon(Icons.add),
+                label: Text(context.l10n.createTitle),
+              ),
+              OutlinedButton.icon(
+                onPressed:
+                    _importingPdf || !widget.pdfImporter.isSupported
+                    ? null
+                    : _importPdf,
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                label: Text(context.l10n.pdfImportAction),
+              ),
+            ],
+          ),
           const SizedBox(height: Spacing.lg),
           SearchBar(
             hintText: context.l10n.libSearchHint,
@@ -855,6 +915,14 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
                 onPressed: _createNotebook,
                 icon: const Icon(Icons.add),
                 label: Text(context.l10n.createAction),
+              ),
+              OutlinedButton.icon(
+                onPressed:
+                    _importingPdf || !widget.pdfImporter.isSupported
+                    ? null
+                    : _importPdf,
+                icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                label: Text(context.l10n.pdfImportAction),
               ),
               OutlinedButton.icon(
                 onPressed: _importNot3,

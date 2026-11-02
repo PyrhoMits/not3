@@ -714,6 +714,16 @@
   "edNotebookTitle": "Notebook title",
   "pdfUnsupported": "Importing PDFs is only available on Android/iOS for now",
   "pdfReadFailed": "Could not read the PDF",
+  "pdfImportAction": "Import PDF",
+  "pdfNoPages": "The PDF has no pages to import",
+  "pdfImportProgress": "{count, plural, =0{Preparing PDF…} =1{Importing page 1…} other{Importing page {count}…}}",
+  "@pdfImportProgress": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "verRestoreTitle": "Restore version",
   "verRestored": "Version restored",
   "verEncrypted": "Encrypted copy",

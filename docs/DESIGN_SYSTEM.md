@@ -37,5 +37,5 @@ Goal: every screen should feel like the same product, at the level of GoodNotes/
 ## Brand and icon
 
 - **Icon**: a white nib writing a golden stroke over a blue gradient (`#5B8CFF → #2A4FD6`, ink `#FFD66B → #FF9F43`). Vector source in `assets/icon/` (`icon_full.svg`, `icon_foreground.svg`, `icon_background.svg`); the `flutter_launcher_icons` PNGs come from there with `rsvg-convert`.
-- **README**: `docs/assets/icon-animated.svg` (the nib writes the stroke in a loop) and `docs/assets/anim/*.{en,es}.svg` (pressure, palm rejection, shapes, lasso). They are hand-written SVG/SMIL and **generated** by `tool/docs_assets/generate.py` (no dependencies; edit the script, not the SVGs).
-- A new animation = a `scene_*` function in the script, with its own background (it looks the same in light and dark theme) and en/es texts in `TXT`.
+- **README**: `docs/assets/icon-animated.svg` (the nib writes the stroke in a loop) and `docs/assets/anim/*.en.svg` (pressure, palm rejection, shapes, lasso). They are hand-written SVG/SMIL and **generated** by `tool/docs_assets/generate.py` (no dependencies; edit the script, not the SVGs).
+- A new animation is a `scene_*` function in the script with its own background, which must look correct in light and dark themes, and English text in `TXT`.

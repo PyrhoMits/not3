@@ -2578,6 +2578,24 @@ abstract class AppLocalizations {
   /// **'Could not read the PDF'**
   String get pdfReadFailed;
 
+  /// No description provided for @pdfImportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import PDF'**
+  String get pdfImportAction;
+
+  /// No description provided for @pdfNoPages.
+  ///
+  /// In en, this message translates to:
+  /// **'The PDF has no pages to import'**
+  String get pdfNoPages;
+
+  /// No description provided for @pdfImportProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Preparing PDF…} =1{Importing page 1…} other{Importing page {count}…}}'**
+  String pdfImportProgress(int count);
+
   /// No description provided for @verRestoreTitle.
   ///
   /// In en, this message translates to:

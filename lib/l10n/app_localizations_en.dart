@@ -1424,6 +1424,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pdfReadFailed => 'Could not read the PDF';
 
   @override
+  String get pdfImportAction => 'Import PDF';
+
+  @override
+  String get pdfNoPages => 'The PDF has no pages to import';
+
+  @override
+  String pdfImportProgress(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Importing page $count…',
+      one: 'Importing page 1…',
+      zero: 'Preparing PDF…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get verRestoreTitle => 'Restore version';
 
   @override

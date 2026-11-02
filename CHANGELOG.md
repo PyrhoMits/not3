@@ -1,204 +1,183 @@
 # Changelog
 
-Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones [SemVer](https://semver.org/lang/es/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
-Cada versión se escribe en español y en inglés (sección `### English`): el workflow de release copia la sección completa a las notas de GitHub.
+Each release is written in English. The release workflow copies the matching section into the GitHub release notes.
 
 ## [1.9.1] — 2026-10-20
 
-### Cambiado
-- **Borrador en vivo**: el trazo desaparece mientras pasas el borrador (un solo deshacer al soltar) y se interpola para no dejar huecos si el lápiz va rápido; los límites de la ruta se calculan una vez por movimiento, no por trazo.
-- APK universal (32+64 bits) en las releases para móviles con userland de 32 bits sobre CPU arm64.
+### Changed
 
-### Corregido
-- Un triángulo rectángulo ya no se endereza como rectángulo (se exigen las 4 esquinas).
-- El botón lateral del lápiz funciona como borrador aunque se reporte como primario o secundario.
-
-### English
-
-**Changed**
 - **Live eraser**: strokes vanish while you erase (a single undo on release), interpolated so fast pen movement leaves no gaps; the eraser path bounds are computed once per move instead of once per stroke.
-- Universal APK (32+64 bit) in releases for phones with a 32-bit userland on arm64 CPUs.
+- Universal APK (32-bit and 64-bit) in releases for phones with a 32-bit userland on ARM64 CPUs.
 
-**Fixed**
-- A right triangle is no longer straightened into a rectangle (all 4 corners are required).
-- The stylus side button works as an eraser whether reported as primary or secondary.
+### Fixed
+
+- A right triangle is no longer straightened into a rectangle; all four corners are required.
+- The stylus side button works as an eraser whether it is reported as primary or secondary.
 
 ## [1.9.0] — 2026-10-15
 
-### Añadido
-- **Portugués (Brasil), francés y alemán**: la app se traduce a cinco idiomas y sigue el del sistema (otro idioma → inglés).
-- **Borrador temporal**: tras borrar con la herramienta de la barra se vuelve a la herramienta anterior (ajustable en el popover del borrador).
-- Portadas con placa de título legible sobre cualquier color, barra del editor flotante, indicador de grosor en las plumas y respuesta táctil en las tarjetas.
-- Archivos de comunidad: guía de contribución, código de conducta, seguridad y plantillas de issues/PR.
+### Added
 
-### Cambiado
-- Enderezar figuras al mantener exige casi un segundo y un trazo largo: una pausa al escribir ya no se convierte en figura.
-- Deshacer con toque de dos dedos está apagado por defecto (menú ⋮ → Ver).
-- Interfaz sobre tokens de diseño (espaciados, radios, texto, sombras); objetivos táctiles de 48 dp y texto mínimo de 12 pt.
+- **Brazilian Portuguese, French, and German**: the app was translated into five languages and followed the system language, with English as the fallback.
+- **Temporary eraser**: after erasing with the toolbar tool, the app returns to the previous tool. This can be configured in the eraser popover.
+- Cover title plates readable on any color, a floating editor toolbar, a thickness indicator on pens, and touch feedback on cards.
+- Community files: contribution guide, code of conduct, security policy, and issue and pull request templates.
 
-### Corregido
-- Los últimos trazos ya no se pierden si la app pasa a segundo plano (se guarda al instante) y se avisa si el guardado falla (p. ej. disco lleno).
-- Las notas guardan una versión de esquema (`schemaVersion`) para futuras migraciones.
+### Changed
 
-### English
+- Shape straightening on hold requires almost a second and a long stroke, so pausing while writing no longer turns handwriting into a shape.
+- Two-finger-tap undo is disabled by default (⋮ menu → View).
+- The interface uses shared design tokens for spacing, radii, text, and shadows, with 48 dp touch targets and a 12 pt minimum text size.
 
-**Added**
-- **Brazilian Portuguese, French and German**: the app is translated into five languages and follows the system language (anything else falls back to English).
-- **Temporary eraser**: after erasing with the toolbar tool you go back to the previous tool (configurable in the eraser popover).
-- Cover title plates readable on any color, a floating editor toolbar, a thickness indicator on pens and touch feedback on cards.
-- Community files: contribution guide, code of conduct, security policy and issue/PR templates.
+### Fixed
 
-**Changed**
-- Shape straightening on hold needs almost a second and a long stroke: pausing while writing no longer turns it into a shape.
-- Two-finger-tap undo is off by default (⋮ menu → View).
-- UI built on design tokens (spacing, radii, text, shadows); 48 dp touch targets and a 12 pt minimum text size.
-
-**Fixed**
-- The latest strokes are no longer lost if the app goes to the background (saved immediately), and a warning shows when saving fails (e.g. disk full).
-- Notes now store a schema version (`schemaVersion`) for future migrations.
+- The latest strokes are no longer lost if the app moves to the background; changes are saved immediately, and a warning appears when saving fails, such as when the disk is full.
+- Notes store a schema version (`schemaVersion`) for future migrations.
 
 ## [1.8.0] — 2026-10-01
 
-### Añadido
-- **Texto enriquecido en las cajas de texto**: negrita, cursiva, subrayado, alineación y 8 fuentes empaquetadas (Lato, Lora, Caveat, Oswald, Playfair Display, Pacifico, Indie Flower, Source Code Pro; licencias OFL en `third_party_licenses/`). El formato se aplica a la selección o a toda la caja, y se ve igual en el lienzo, en el editor y en las exportaciones.
-- **Abrir `.inklus` desde fuera de la app (Android)**: desde Drive, Archivos o "Compartir", Not3 aparece como opción y el cuaderno o la nota se importan a la biblioteca.
-- **Toda la app en español e inglés**: todas las pantallas y los mensajes de error están traducidos y siguen el idioma del sistema.
-- **Figuras más precisas**: las rectas casi horizontales o verticales se ajustan al eje (±4°, resaltador ±8°) y el resaltador solo endereza rectas.
+### Added
 
-### Cambiado
-- Rediseño de la creación de cuadernos, las portadas, el Marketplace y la hoja de plantillas.
-- Errores visibles unificados (`AppError`): los servicios ya no devuelven texto de interfaz.
-- Mejoras en la sincronización con Google Drive y en la importación de respaldos.
+- **Rich text in text boxes**: bold, italic, underline, alignment, and eight bundled fonts (Lato, Lora, Caveat, Oswald, Playfair Display, Pacifico, Indie Flower, and Source Code Pro; OFL licenses are in `third_party_licenses/`). Formatting applies to the selection or the whole box and appears consistently on the canvas, in the editor, and in exports.
+- **Open `.inklus` files from outside the app on Android**: Not3 appears as an option from Drive, Files, or Share, then imports the notebook or note into the library.
+- **Fully localized interface**: every screen and error message follows the system language.
+- **More precise shapes**: nearly horizontal or vertical lines snap to the axis (±4°, or ±8° for the highlighter), and the highlighter straightens only lines.
 
-### Corregido
-- Tocar la barra de formato de una caja de texto ya no llega a la página de debajo.
-- Deshacer en cajas de texto: se registra una única acción por edición.
-- CI: el escaneo de secretos ya no marca los cachés locales de graphify (ahora ignorados en git).
+### Changed
 
-### English
+- Redesigned notebook creation, covers, the Marketplace, and the templates sheet.
+- Unified user-facing errors (`AppError`): services no longer return interface text.
+- Improved Google Drive synchronization and backup import.
 
-**Added**
-- **Rich text in text boxes**: bold, italic, underline, alignment and 8 bundled fonts (Lato, Lora, Caveat, Oswald, Playfair Display, Pacifico, Indie Flower, Source Code Pro; OFL licenses in `third_party_licenses/`). Formatting applies to the selection or the whole box and looks the same on the canvas, in the editor and in exports.
-- **Open `.inklus` files from outside the app (Android)**: from Drive, Files or "Share", Not3 shows up as an option and the notebook or note is imported into the library.
-- **Whole app in Spanish and English**: every screen and error message is translated and follows the system language.
-- **More precise shapes**: nearly horizontal or vertical lines snap to the axis (±4°, highlighter ±8°) and the highlighter only straightens lines.
+### Fixed
 
-**Changed**
-- Redesigned notebook creation, covers, the Marketplace and the templates sheet.
-- Unified user-facing errors (`AppError`): services no longer return UI text.
-- Improvements to Google Drive sync and backup import.
-
-**Fixed**
 - Tapping a text box's formatting bar no longer reaches the page underneath.
-- Undo in text boxes: a single action is recorded per edit.
-- CI: the secret scan no longer flags local graphify caches (now git-ignored).
+- Text-box editing records a single undo action per edit.
+- The secret scan no longer flags local Graphify caches, which are now ignored by Git.
 
 ## [1.7.0] — 2026-09-27
 
-### Añadido
-- **Desplazamiento continuo entre hojas**: las hojas fijas se apilan en vertical; al desplazarte pasas de una a otra sin saltos, y empezar a escribir en la de abajo la activa. Se puede desactivar en ⋮ → Ver.
-- **Deshacer por página**: cambiar de página ya no borra lo que se podía deshacer.
-- **Política de privacidad** (`docs/privacy.md`), enlazada desde Configuración junto al código fuente.
-- **Registro de errores local**: los fallos se guardan solo en el dispositivo; Configuración → "Registro de errores" permite compartirlos o borrarlos. Sin analítica ni servicios de terceros.
-- **Idiomas**: infraestructura de traducción (español/inglés). Los selectores de fecha y hora y los textos del sistema salen en español; Configuración ya está traducida (el resto de pantallas, en curso).
-- **Pruebas de integración** (bienvenida → cuaderno → lápiz → guardado), también en la CI; guion de pruebas en dispositivo (`docs/testing.md`).
-- **Releases**: las notas de cada release de GitHub salen del CHANGELOG y la CI comprueba que el tag coincide con la versión.
+### Added
 
-### Cambiado
-- `CanvasController` dividido en partes (vista, selección, capas) sin cambiar su API.
-- Rutas de datos en un único `AppPaths`; se quita el código de Drive y exportación del formato antiguo que ya no se usaba.
-- Los recordatorios creados desde el editor se vinculan al cuaderno, igual que los de la pantalla de recordatorios.
+- **Continuous scrolling between sheets**: fixed sheets stack vertically, scrolling moves smoothly between them, and writing on the next sheet activates it. This can be disabled under ⋮ → View.
+- **Per-page undo**: changing pages no longer clears the undo history for the previous page.
+- A [privacy policy](docs/privacy.md), linked from Settings next to the source-code link.
+- **Local error log**: failures are stored only on the device. Settings → Error log lets users share or clear them. No analytics or third-party logging services are used.
+- Localization infrastructure for multiple interface languages. System date and time pickers and Settings followed the selected locale while the remaining screens were still in progress.
+- Integration tests covering onboarding → notebook → pen → save, including CI execution, plus the on-device test guide in `docs/testing.md`.
+- GitHub release notes generated from this changelog, with CI validation that the tag matches the app version.
+
+### Changed
+
+- Split `CanvasController` into view, selection, and layer parts without changing its public API.
+- Centralized data paths in `AppPaths` and removed unused legacy Drive and export code.
+- Reminders created in the editor are linked to their notebook, matching reminders created from the reminders screen.
 
 ## [1.6.0] — 2026-09-27
 
-### Añadido
-- **Lazo completo**: escalar, rotar, copiar, pegar y duplicar también imágenes y cajas de texto (antes solo trazos), con una sola acción de deshacer.
-- **Revisiones de Google Drive en el historial de versiones**: la hoja "Historial de versiones" muestra las copias locales y las revisiones que Drive guarda de cada subida; se restauran igual (el estado actual se guarda antes). Las copias cifradas piden la contraseña.
-- **Papelera de notas**: una nota borrada vuelve a su cuaderno al restaurarla (o a uno nuevo con el mismo nombre si el cuaderno ya no existe). Cada elemento muestra qué es, de dónde viene y cuántos días le quedan.
+### Added
 
-### Cambiado
-- **Todas las pantallas con el mismo diseño**: papelera, recordatorios, estadísticas, lista de notas, bienvenida, etiquetas, carpetas inteligentes, opciones de trazo, capas y selector de plantillas usan los colores y medidas del tema (bien en claro y oscuro).
-- Estadísticas rediseñadas: totales en tarjetas, rachas y un gráfico que se adapta al ancho.
-- Bienvenida actualizada (un dedo desplaza en modo solo lápiz, herramientas arriba, notas locales).
+- **Complete lasso support**: scaling, rotating, copying, pasting, and duplicating also work with images and text boxes, not only strokes, with one undo action per operation.
+- **Google Drive revisions in version history**: the Version history sheet shows local copies and the revisions Drive retains for each upload. They can be restored in the same way, after the current state is saved. Encrypted copies request their password.
+- **Note trash**: restoring a deleted note returns it to its notebook, or to a newly created notebook with the same name if the original no longer exists. Each item shows its type, origin, and remaining retention time.
 
-### Corregido
-- **Papelera**: borrar un cuaderno creaba entradas fantasma "Sin título" (sus notas) con fecha 31/12/1969; borrarlo definitivamente dejaba sus notas en la papelera; la purga automática de 30 días que anunciaba la pantalla no existía.
-- **Recordatorios**: deslizar para borrar no borraba (y lanzaba un error de Flutter).
-- Las hojas inferiores mostraban dos asas de arrastre.
-- La rotación de una selección "derivaba" (el pivote se recalculaba en cada frame); asas de selección dibujadas y detectadas en el mismo sitio.
-- Carpetas inteligentes: nombres de color erróneos ("Otro"); la paleta de portadas es única en toda la app.
+### Changed
+
+- **Consistent design across every screen**: Trash, Reminders, Statistics, the note list, Onboarding, Tags, Smart folders, Stroke options, Layers, and the template picker use theme colors and measurements in both light and dark modes.
+- Redesigned Statistics with totals in cards, streaks, and a chart that adapts to the available width.
+- Updated onboarding to explain one-finger scrolling in stylus-only mode, the top toolbar, and local note storage.
+
+### Fixed
+
+- Deleting a notebook no longer creates ghost notes named “Untitled” with a date of December 31, 1969; permanently deleting it no longer leaves its notes in Trash; and the advertised automatic 30-day cleanup now runs.
+- Swipe-to-delete works for reminders without throwing a Flutter error.
+- Bottom sheets no longer display two drag handles.
+- Selection rotation no longer drifts because its pivot is stable between frames, and selection handles are drawn and detected at the same positions.
+- Smart folders use the correct color names, including “Other,” and cover colors now use one shared palette throughout the app.
 
 ## [1.5.0] — 2026-09-27
 
-### Rendimiento
-- **Desplazar y hacer zoom con páginas llenas**: durante el gesto el lienzo se dibuja desde una instantánea (un solo quad por frame) y solo se pintan en vivo las franjas que el gesto destapa; al soltar se repinta nítido. Antes se volvían a dibujar todos los trazos en cada frame.
-- **Fotos en el lienzo a resolución de pantalla** (máx. 2560 px por lado): una foto de 12 MP pasa de ~48 MB a ~20 MB en memoria. Las exportaciones de alta resolución decodifican las imágenes a su resolución, página a página.
+### Performance
 
-### Corregido
-- **Pan infinito en hoja fija**: la hoja ya no se puede perder de vista (sus bordes se detienen a 48 px del borde de la pantalla).
-- La exportación del cuaderno completo (PDF/PPTX) podía omitir imágenes de páginas no abiertas o desalojadas de la caché.
-- Carpetas inteligentes: el efecto de toque de las opciones no se veía (quedaba tapado por el fondo de la hoja).
+- **Panning and zooming on full pages**: during the gesture, the canvas draws from a snapshot and paints only newly exposed strips live. It repaints sharply when the gesture ends. Previously, every stroke was redrawn on every frame.
+- **Canvas photos at screen resolution** (up to 2560 px per side): a 12 MP photo uses about 20 MB instead of about 48 MB in memory. High-resolution exports decode images at their original resolution one page at a time.
 
-### Herramientas
-- `tool/stress/stress_note_test.dart` genera un cuaderno de estrés (5.100 trazos + 10 fotos de 12 MP) para medir en un dispositivo.
+### Fixed
+
+- **Infinite panning on a fixed sheet**: sheet edges now stop 48 px from the screen edge, so the sheet cannot be lost off-screen.
+- Full-notebook PDF and PPTX exports no longer omit images from unopened pages or pages evicted from the cache.
+- Touch feedback is now visible on Smart folder options instead of being hidden by the sheet background.
+
+### Tools
+
+- `tool/stress/stress_note_test.dart` creates a stress-test notebook with 5,100 strokes and ten 12 MP photos for on-device measurement.
 
 ## [1.4.3] — 2026-09-27
 
-### Corregido
-- **Fecha de guardado desfasada**: cada nota se escribía en disco con el `updatedAt` del guardado *anterior*, lo que podía hacer ganar a la copia equivocada en la sincronización con Drive. Las copias restauradas de Drive conservan su fecha original.
-- **Importar una nota suelta** (copias `.inklus` de Drive o "copia .inklus" del editor) fallaba con "No es un cuaderno .inklus v2 válido": el formato se detecta por su contenido (`notebook.json` / `document.json`).
-- **`.inklus` antiguo importado vacío**: la nota se guardaba fuera del cuaderno creado; ahora queda dentro, con un id nuevo.
+### Fixed
 
-### Rendimiento
-- Crear, renombrar, duplicar o borrar una nota, y cambiar título/color/etiquetas de un cuaderno, ya **no leen ni reescriben todas las notas del cuaderno**.
-- Las notas grandes (más de ~20.000 puntos) se codifican y escriben en otro isolate: el autoguardado no bloquea la escritura.
+- **Stale save timestamps**: notes were written with the `updatedAt` value from the previous save, which could let the wrong Drive copy win during synchronization. Copies restored from Drive retain their original timestamp.
+- **Importing a standalone note** from a Drive `.inklus` copy or the editor's `.inklus` copy failed with “Not a valid `.inklus` v2 notebook.” The format is now detected from its contents (`notebook.json` or `document.json`).
+- **Legacy `.inklus` imports appearing empty**: the note was saved outside the newly created notebook; it is now stored inside with a new ID.
+
+### Performance
+
+- Creating, renaming, duplicating, or deleting a note, and changing a notebook's title, color, or tags, no longer reads and rewrites every note in that notebook.
+- Large notes with more than about 20,000 points are encoded and written in another isolate, so autosave does not block writing.
 
 ## [1.4.2] — 2026-09-26
 
-### Añadido
-- **Restaurar desde Drive** (Configuración): trae la versión más reciente de cada nota (*last-write-wins*) y reúne las que no existen en el dispositivo en el cuaderno "Recuperado de Drive".
-- **Importación unificada**: un solo "Importar .inklus o respaldo" detecta el tipo por el contenido (cuaderno `.inklus` v1/v2 o respaldo completo `.zip`), incluidos los `.inklus` que Android renombra a `.zip`.
+### Added
 
-### Corregido
-- **Cierre al abrir la app (release)**: R8 eliminaba `WorkDatabase_Impl` de WorkManager (Room la crea por reflexión); reglas `-keep` en `proguard-rules.pro`.
-- **Inicio de sesión con Google** ("serverClientId must be provided"): `google_sign_in` 7 se inicializa una vez con el cliente web antes de cualquier llamada.
-- **Sincronización colgada**: las peticiones a Drive expiran a los 60 s en vez de dejar el ☁️ "sincronizando" para siempre.
-- **Pérdida de trabajo tras un cierre inesperado**: se elimina el intervalo de autoguardado configurable (hasta 30 min); cada cambio se guarda al instante.
+- **Restore from Drive** in Settings retrieves the newest version of every note using last-write-wins and places notes missing from the device in a “Recovered from Drive” notebook.
+- **Unified import**: one “Import `.inklus` or backup” action detects notebook `.inklus` v1/v2 and complete `.zip` backups by content, including `.inklus` files that Android renames to `.zip`.
 
-### Cambiado
-- **Nuevo icono**: plumilla estilográfica con trazo de tinta dorada sobre degradado azul (fuentes SVG en `assets/icon/`).
-- **Configuración rediseñada** con el sistema de diseño (componentes compartidos en `ui/widgets/page_scaffold.dart`) y versión visible de la app.
+### Fixed
+
+- **Release-mode startup crash**: R8 removed WorkManager's `WorkDatabase_Impl`, which Room creates through reflection; the required `-keep` rules are now in `proguard-rules.pro`.
+- **Google sign-in failure** (`serverClientId must be provided`): `google_sign_in` 7 is initialized once with the web client before any call.
+- **Synchronization hanging indefinitely**: Drive requests time out after 60 seconds instead of leaving the cloud indicator in a permanent synchronizing state.
+- **Work lost after an unexpected close**: the configurable autosave interval of up to 30 minutes was removed, and every change is saved immediately.
+
+### Changed
+
+- **New icon**: a fountain-pen nib with a gold ink stroke on a blue gradient; SVG sources are in `assets/icon/`.
+- **Redesigned Settings** using the design system, with shared components in `ui/widgets/page_scaffold.dart` and the app version displayed.
 
 ## [1.4.0] — 2026-09-26
 
-### Añadido
-- **Editor rediseñado**: barra superior única, opciones de cada herramienta en popovers, panel lateral de páginas, indicador de página y zoom compactos.
-- **Plumas favoritas** (3 + resaltador) con color y grosor propios y colores recientes.
-- **Rechazo de palma** completo: lápiz apoyado/cerca (hover), ventana de gracia, tamaño de contacto; modo *solo lápiz* automático y desplazamiento con un dedo; botón lateral del S-Pen = borrador.
-- **Regla y transportador** usables: tamaño fijo, cm/mm de la hoja, ángulo en vivo, arrastre y rotación con los dedos, trazo pegado al borde / arco.
-- **Lazo** para trazos, imágenes y textos: mover, eliminar, recolorear, cambiar grosor, duplicar y convertir a texto.
-- **Borrador** con modos parcial / trazo completo / solo resaltador.
-- **Figuras**: mantener para enderezar, triángulo y elipse.
-- **Puntero láser**, **lupa** que sigue al lápiz.
-- **Texto enriquecido**: negrita, cursiva, subrayado, alineación, familia, tamaño.
-- **Búsqueda** en todas las notas (texto y escritura reconocida), sin acentos, desde la biblioteca.
-- **Marcadores de página**, ir a página, atajos de teclado.
-- **Importar PDF para anotar** (una página de la nota por página del PDF).
-- **Historial de versiones local** y **modo nocturno de escritura**.
-- **Biblioteca** nueva: navegación lateral, favoritos, recientes, vista cuadrícula/lista.
-- **Marketplace** de paquetes gratuitos (plantillas, paletas, stickers) con verificación sha256.
-- Licencia **GPL-3.0-or-later**.
+### Added
 
-### Corregido
-- Exportaciones y miniaturas recortadas (solo salía un cuarto de la hoja).
-- Hoja fija desplazada al abrir y margen del rayado en el centro.
-- Pantalla que dejaba de responder al tacto tras mover una selección con el lápiz.
-- Doble toque con la goma del lápiz que borraba la página sin poder deshacer.
-- Rectángulos detectados abiertos (sin el cuarto lado) y óvalos forzados a círculo.
-- Pérdida de capa/figura/ajustes al pegar, transformar o rellenar; orden de trazos al deshacer.
-- Respaldo local que no incluía cuadernos ni notas; escrituras no atómicas; zip-slip.
+- **Redesigned editor**: one top bar, tool options in popovers, a page side panel, and compact page and zoom indicators.
+- **Favorite pens**: three pens and one highlighter, each with its own color and thickness, plus recent colors.
+- **Complete palm rejection**: stylus contact and hover detection, a grace period, and contact-size filtering; automatic stylus-only mode and one-finger scrolling; stylus side button as an eraser.
+- **Usable ruler and protractor**: fixed size, sheet centimeters and millimeters, live angle display, touch dragging and rotation, and strokes snapped to the edge or arc.
+- **Lasso for strokes, images, and text**: move, delete, recolor, change thickness, duplicate, and convert to text.
+- **Eraser** with partial, whole-stroke, and highlighter-only modes.
+- **Shapes**: hold to straighten, plus triangle and ellipse recognition.
+- **Laser pointer** and a **magnifier** that follows the stylus.
+- **Rich text**: bold, italic, underline, alignment, font family, and size.
+- **Search across all notes**, covering typed and recognized handwriting with accent-insensitive matching, from the library.
+- **Page bookmarks**, go to page, and keyboard shortcuts.
+- **Import PDF for annotation**, creating one note page per PDF page.
+- **Local version history** and **night writing mode**.
+- **New library** with side navigation, favorites, recent items, and grid and list views.
+- **Marketplace** for free template, palette, and sticker packs with SHA-256 verification.
+- **GPL-3.0-or-later** license.
 
-### Cambiado
-- Sistema de diseño central (tema, tokens, colores); tema claro/oscuro recordado.
-- Rendimiento del lienzo: culling, cachés por trazo, trazo activo O(1), nivel de detalle en plantillas.
+### Fixed
+
+- Cropped exports and thumbnails that displayed only one quarter of a sheet.
+- Fixed sheets opening offset and the ruled-paper margin appearing in the center.
+- Touch input becoming unresponsive after moving a selection with the stylus.
+- A double tap with the stylus eraser deleting the page without an undo option.
+- Rectangles being detected without a fourth side and ovals being forced into circles.
+- Layer, shape, and setting loss when pasting, transforming, or filling, plus incorrect stroke order after undo.
+- Local backups omitting notebooks and notes, non-atomic writes, and zip-slip exposure.
+
+### Changed
+
+- Centralized design system for theme, tokens, and colors, with remembered light and dark theme choice.
+- Canvas performance improvements including culling, per-stroke caches, O(1) active-stroke handling, and template levels of detail.

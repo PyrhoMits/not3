@@ -1,16 +1,16 @@
-## Qué cambia / What changes
+## What changes
 
-<!-- Resumen breve y el porqué. Enlaza el issue: Closes #123 -->
+<!-- Briefly explain what changed and why. Link the issue: Closes #123 -->
 
-## Cómo se probó / How it was tested
+## How it was tested
 
-- [ ] `flutter analyze` sin issues
-- [ ] `flutter test` en verde (tests nuevos o actualizados si hay lógica)
-- [ ] Probado a mano (dispositivo / `flutter run -d linux`)
+- [ ] `flutter analyze` reports no issues
+- [ ] `flutter test` passes, with new or updated tests for logic changes
+- [ ] Tested manually on a device or with `flutter run -d linux`
 
 ## Checklist
 
-- [ ] Texto nuevo en los ARB (`app_es.arb` y `app_en.arb`), sin literales en widgets
-- [ ] Colores, medidas y texto del tema (`docs/DESIGN_SYSTEM.md`)
-- [ ] Capturas (claro y oscuro) si cambia la interfaz
-- [ ] Commits firmados (`git commit -s`, DCO) y sin secretos
+- [ ] New text is in `app_en.arb`; widgets contain no user-visible literals
+- [ ] Colors, measurements, and text use the theme (`docs/DESIGN_SYSTEM.md`)
+- [ ] Light and dark screenshots are included for interface changes
+- [ ] Commits are signed off (`git commit -s`, DCO) and contain no secrets

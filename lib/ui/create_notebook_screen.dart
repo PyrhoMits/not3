@@ -9,9 +9,10 @@ import 'theme/inklus_colors.dart';
 import '../constants.dart';
 import '../models/template.dart';
 import '../services/image_service.dart';
-import '../services/pdf_import_service.dart';
+import '../services/pdf_import_coordinator.dart';
 import 'widgets/dialogs.dart';
 import 'widgets/notebook_covers.dart';
+import 'widgets/pdf_import_progress.dart';
 import '../l10n/l10n.dart';
 import 'theme/tokens.dart';
 
@@ -43,8 +44,13 @@ class CreateNotebookResult {
 /// - **Paso 2**: Plantilla (4 favoritas visibles + "Ver más" para expandir)
 class CreateNotebookScreen extends StatefulWidget {
   final int notebookCount;
+  final PdfImportCoordinator pdfImporter;
 
-  const CreateNotebookScreen({super.key, required this.notebookCount});
+  const CreateNotebookScreen({
+    super.key,
+    required this.notebookCount,
+    this.pdfImporter = const PdfImportCoordinator(),
+  });
 
   @override
   State<CreateNotebookScreen> createState() => _CreateNotebookScreenState();
@@ -196,30 +202,16 @@ class _CreateNotebookScreenState extends State<CreateNotebookScreen> {
 
   /// Cuaderno a partir de un PDF: una página por hoja del PDF.
   Future<void> _pickPdf() async {
-    if (!PdfImportService.isSupported) {
-      showSnack(context, context.l10n.pdfUnsupported);
-      return;
+    try {
+      final result = await runPdfImportWithProgress(
+        context,
+        widget.pdfImporter,
+      );
+      if (result == null || !mounted) return;
+      _setBackgrounds(result.backgroundPages, result.filename);
+    } catch (error) {
+      if (mounted) showSnack(context, pdfImportErrorMessage(context, error));
     }
-    final file = await FilePicker.pickFile(
-      type: FileType.custom,
-      allowedExtensions: ['pdf'],
-    );
-    final path = file?.path;
-    if (path == null || !mounted) return;
-    final l10n = context.l10n;
-    final pages = await runWithLoading(
-      context,
-      () async => [
-        await for (final p in PdfImportService.importPages(path))
-          (path: p.path, width: p.widthPx, height: p.heightPx),
-      ],
-    );
-    if (!mounted) return;
-    if (pages.isEmpty) {
-      showSnack(context, l10n.pdfReadFailed);
-      return;
-    }
-    _setBackgrounds(pages, file!.name);
   }
 
   /// Cuaderno a partir de imágenes: una página por imagen.
@@ -714,7 +706,7 @@ class _CreateNotebookScreenState extends State<CreateNotebookScreen> {
               runSpacing: 8,
               children: [
                 OutlinedButton.icon(
-                  onPressed: _pickPdf,
+                  onPressed: widget.pdfImporter.isSupported ? _pickPdf : null,
                   icon: const Icon(Icons.picture_as_pdf_outlined),
                   label: Text(context.l10n.createFromPdf),
                 ),

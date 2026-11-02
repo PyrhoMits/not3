@@ -317,6 +317,23 @@ void main() {
       );
     });
 
+    test(
+      'insertPdfPages: non-empty page inserts in PDF order after current',
+      () {
+        draw(0, 100, 0);
+
+        c.insertPdfPages([
+          (path: '/tmp/first.png', width: 100, height: 200),
+          (path: '/tmp/second.png', width: 200, height: 100),
+        ]);
+
+        expect(c.pageCount, 3);
+        expect(c.pageIndex, 1);
+        expect(c.pages[1].template.imagePath, '/tmp/first.png');
+        expect(c.pages[2].template.imagePath, '/tmp/second.png');
+      },
+    );
+
     test('los presets de tamaño afectan a la hoja', () {
       c.setTemplate(
         const PageTemplate(

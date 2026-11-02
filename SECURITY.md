@@ -1,22 +1,20 @@
-# Security policy / Política de seguridad
+# Security Policy
 
-## Reporting a vulnerability / Reportar una vulnerabilidad
+## Reporting a vulnerability
 
 **Please do not open a public issue.** Use GitHub's private reporting:
-[Security → Report a vulnerability](https://github.com/Pedroj-64/inklus/security/advisories/new).
+[Security → Report a vulnerability](https://github.com/PyrhoMits/not3/security/advisories/new).
 
-**No abras un issue público.** Usa el reporte privado de GitHub (enlace arriba).
+Include the affected version, steps to reproduce, and impact.
 
-Include / Incluye: affected version, steps to reproduce, impact. / versión afectada, pasos para reproducir, impacto.
+You can expect an acknowledgement within about a week. This is a volunteer project, so fixes are best-effort.
 
-You can expect an acknowledgement within about a week; this is a volunteer project, so fixes are best-effort. / Responderemos en aproximadamente una semana; es un proyecto voluntario, los arreglos son «mejor esfuerzo».
+## Scope
 
-## Scope / Alcance
+In scope: local storage, backup/import (ZIP handling and encryption), Google Drive sync, and marketplace package installation.
 
-In scope: local storage, backup/import (zip handling, encryption), Google Drive sync, marketplace package installation. / Dentro del alcance: almacenamiento local, respaldo e importación (ZIP, cifrado), sincronización con Drive, instalación de paquetes del marketplace.
+Not3 has no analytics and no server of its own; see [`docs/privacy.md`](docs/privacy.md).
 
-Not3 has no analytics and no server of its own; see [`docs/privacy.md`](docs/privacy.md). / Not3 no tiene analítica ni servidor propio; ver `docs/privacy.md`.
+## Supported versions
 
-## Supported versions / Versiones soportadas
-
-Only the latest release receives fixes. / Solo la última versión recibe arreglos.
+Only the latest release receives fixes.

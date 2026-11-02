@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/icon-animated.svg" width="168" alt="Not3">
+  <img src="docs/assets/icon.png" width="168" alt="Not3">
 </p>
 
 <h1 align="center">Not3</h1>
@@ -229,6 +229,7 @@ Not3 is free software: you can redistribute it and/or modify it under the terms 
 Software Foundation. See the [`LICENSE`](LICENSE) file.
 
 Copyright © 2026 [PyrhoMits](https://github.com/PyrhoMits) and Not3 contributors.
+
 Not3 is a fork of Inklus, originally created by Pedro ([@Pedroj-64](https://github.com/Pedroj-64)).
 
 Every source file carries the header `// SPDX-License-Identifier: GPL-3.0-or-later`.
