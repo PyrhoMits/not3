@@ -114,9 +114,8 @@ mixin _CanvasSelection on _CanvasCore {
     final lassoBounds = polygonBounds(lassoPolygon);
 
     _selectedStrokes = page.strokes.where((stroke) {
-      // Ignorar trazos en capas ocultas.
-      if (stroke.layerIndex < page.layers.length &&
-          !page.layers[stroke.layerIndex].visible) {
+      if (!_isLayerVisible(stroke.layerIndex) ||
+          _isLayerLocked(stroke.layerIndex)) {
         return false;
       }
       // Ignorar herramientas especiales.
@@ -125,6 +124,10 @@ mixin _CanvasSelection on _CanvasCore {
           stroke.tool == ToolType.lasso) {
         return false;
       }
+      final enabled = stroke.tool == ToolType.highlighter
+          ? lassoSelectionFilter.highlighter
+          : lassoSelectionFilter.handwriting;
+      if (!enabled) return false;
       return isStrokeInLasso(stroke, lassoPolygon, lassoBounds);
     }).toList();
 
@@ -134,13 +137,15 @@ mixin _CanvasSelection on _CanvasCore {
         _isLayerVisible(layer) && !_isLayerLocked(layer);
     _selectedImageIds = {
       for (final i in page.images)
-        if (selectable(i.layerIndex) &&
+        if (lassoSelectionFilter.images &&
+            selectable(i.layerIndex) &&
             pointInPolygon(Offset(i.x, i.y), lassoPolygon))
           i.id,
     };
     _selectedTextIds = {
       for (final t in page.textItems)
-        if (selectable(t.layerIndex) &&
+        if (lassoSelectionFilter.text &&
+            selectable(t.layerIndex) &&
             pointInPolygon(Offset(t.x, t.y), lassoPolygon))
           t.id,
     };

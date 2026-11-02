@@ -1762,6 +1762,30 @@ abstract class AppLocalizations {
   /// **'Highlighter'**
   String get popHighlighter;
 
+  /// No description provided for @lassoSelectContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Select content'**
+  String get lassoSelectContent;
+
+  /// No description provided for @lassoHandwriting.
+  ///
+  /// In en, this message translates to:
+  /// **'Handwriting and drawings'**
+  String get lassoHandwriting;
+
+  /// No description provided for @lassoImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Images'**
+  String get lassoImages;
+
+  /// No description provided for @lassoFilterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep at least one content type enabled.'**
+  String get lassoFilterHint;
+
   /// No description provided for @popEraseOff.
   ///
   /// In en, this message translates to:

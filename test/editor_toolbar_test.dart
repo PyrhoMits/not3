@@ -11,6 +11,7 @@ import 'package:not3/services/storage_service.dart';
 import 'package:not3/ui/editor/editor_toolbar.dart';
 import 'package:not3/ui/theme/app_theme.dart';
 import 'package:not3/ui/theme/tokens.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +21,7 @@ void main() {
   late PenPresetsController presets;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     temp = Directory.systemTemp.createTempSync('not3_editor_toolbar_');
     canvas = CanvasController(StorageService(baseDir: temp))
       ..setHapticEnabled(false);
@@ -104,6 +106,10 @@ void main() {
     expect(find.byTooltip('Redo'), findsOneWidget);
     expect(find.byTooltip('Laser pointer'), findsOneWidget);
     expect(find.byTooltip('Insert sticker'), findsOneWidget);
+    expect(find.byTooltip('Fill area'), findsOneWidget);
+    expect(find.byTooltip('Zoom writing'), findsOneWidget);
+    expect(find.byTooltip('Page template'), findsOneWidget);
+    expect(find.byTooltip('More tools'), findsNothing);
     expect(find.byTooltip('Hide drawing tools'), findsOneWidget);
     expect(find.byTooltip('Advanced stroke settings'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -276,6 +282,22 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('former overflow items are direct toolbar tools', (tester) async {
+    await pumpToolbar(tester, width: 1280);
+
+    expect(find.byTooltip('More tools'), findsNothing);
+    await tester.tap(find.byTooltip('Fill area'));
+    await tester.pump();
+    expect(canvas.tool, ToolType.bucket);
+
+    await tester.tap(find.byTooltip('Zoom writing'));
+    await tester.pump();
+    expect(canvas.magnifierEnabled, isTrue);
+    expect(find.byTooltip('Close zoom writing'), findsOneWidget);
+    expect(find.byTooltip('Page template'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('move and select is a direct document-row tool', (tester) async {
     await pumpToolbar(tester, width: 857);
 
@@ -336,6 +358,72 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('reserves at least 60 percent for tools in portrait', (
+    tester,
+  ) async {
+    await pumpToolbar(tester, width: 800);
+
+    final tools = tester.getRect(find.byKey(const Key('editor-tool-area')));
+    final controls = tester.getRect(
+      find.byKey(const Key('editor-inline-controls')),
+    );
+    final usableWidth = tools.width + controls.width;
+    expect(tools.width / usableWidth, greaterThanOrEqualTo(0.6));
+
+    final colorButtons = find.byWidgetPredicate(
+      (widget) =>
+          widget is Semantics &&
+          widget.properties.label?.startsWith('Color ') == true,
+    );
+    final sizeButtons = find.byWidgetPredicate(
+      (widget) =>
+          widget is Semantics &&
+          widget.properties.label?.startsWith('Size: ') == true,
+    );
+    expect(colorButtons, findsNWidgets(PenPresetsController.toolbarColorCount));
+    expect(sizeButtons, findsNWidgets(3));
+    expect(find.byTooltip('Lasso'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scrolls color and size controls independently in portrait', (
+    tester,
+  ) async {
+    await pumpToolbar(tester, width: 800);
+
+    final controlScroll = find.byKey(const Key('editor-inline-control-scroll'));
+    final toolArea = find.byKey(const Key('editor-tool-area'));
+    final colorButtons = find.byWidgetPredicate(
+      (widget) =>
+          widget is Semantics &&
+          widget.properties.label?.startsWith('Color ') == true,
+    );
+    final sizeButtons = find.byWidgetPredicate(
+      (widget) =>
+          widget is Semantics &&
+          widget.properties.label?.startsWith('Size: ') == true,
+    );
+    final firstColorBefore = tester.getRect(colorButtons.first);
+    final lastSizeBefore = tester.getRect(sizeButtons.last);
+    final toolAreaBefore = tester.getRect(toolArea);
+    final viewport = tester.getRect(controlScroll);
+    expect(lastSizeBefore.right, greaterThan(viewport.right));
+
+    await tester.drag(controlScroll, const Offset(-180, 0));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getRect(colorButtons.first).left,
+      lessThan(firstColorBefore.left),
+    );
+    expect(
+      tester.getRect(sizeButtons.last).left,
+      lessThan(lastSizeBefore.left),
+    );
+    expect(tester.getRect(toolArea), toolAreaBefore);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('left-aligns the complete tool group when it fits', (
     tester,
   ) async {
@@ -372,6 +460,60 @@ void main() {
       ),
       findsNothing,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('second lasso tap opens accessible content filters', (
+    tester,
+  ) async {
+    await pumpToolbar(tester, width: 800);
+
+    await tester.tap(find.byTooltip('Lasso'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Lasso'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select content'), findsOneWidget);
+    expect(find.byKey(const Key('lasso-filter-handwriting')), findsOneWidget);
+    expect(find.byKey(const Key('lasso-filter-highlighter')), findsOneWidget);
+    expect(find.byKey(const Key('lasso-filter-text')), findsOneWidget);
+    expect(find.byKey(const Key('lasso-filter-images')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('lasso-filter-images')));
+    await tester.pump();
+    expect(canvas.lassoSelectionFilter.images, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('last lasso filter remains enabled on a narrow phone', (
+    tester,
+  ) async {
+    await pumpToolbar(tester, width: 360);
+
+    await tester.ensureVisible(find.byTooltip('Lasso'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Lasso'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Lasso'));
+    await tester.pumpAndSettle();
+    for (final key in const [
+      Key('lasso-filter-highlighter'),
+      Key('lasso-filter-text'),
+      Key('lasso-filter-images'),
+    ]) {
+      await tester.tap(find.byKey(key));
+      await tester.pump();
+    }
+
+    final handwriting = tester.widget<SwitchListTile>(
+      find.descendant(
+        of: find.byKey(const Key('lasso-filter-handwriting')),
+        matching: find.byType(SwitchListTile),
+      ),
+    );
+    expect(canvas.lassoSelectionFilter.enabledCount, 1);
+    expect(canvas.lassoSelectionFilter.handwriting, isTrue);
+    expect(handwriting.onChanged, isNull);
     expect(tester.takeException(), isNull);
   });
 }

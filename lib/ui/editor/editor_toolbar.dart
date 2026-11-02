@@ -157,41 +157,52 @@ class EditorToolbar extends StatelessWidget {
                                         Breakpoints.compact;
                                     return Row(
                                       children: [
-                                        _UndoRedo(canvas: canvas),
-                                        const _Divider(),
                                         Expanded(
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: Spacing.xs,
-                                            ),
-                                            child: LayoutBuilder(
-                                              builder: (context, constraints) =>
-                                                  SingleChildScrollView(
-                                                    key: const Key(
-                                                      'editor-tool-scroll',
-                                                    ),
-                                                    scrollDirection:
-                                                        Axis.horizontal,
-                                                    child: ConstrainedBox(
-                                                      constraints:
-                                                          BoxConstraints(
-                                                            minWidth:
-                                                                constraints
-                                                                    .maxWidth,
-                                                          ),
-                                                      child: Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .start,
-                                                        children: _allTools(
-                                                          context,
-                                                          compact:
-                                                              compactControls,
-                                                        ),
+                                          key: const Key('editor-tool-area'),
+                                          child: Row(
+                                            children: [
+                                              _UndoRedo(canvas: canvas),
+                                              const _Divider(),
+                                              Expanded(
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: Spacing.xs,
                                                       ),
-                                                    ),
+                                                  child: LayoutBuilder(
+                                                    builder:
+                                                        (
+                                                          context,
+                                                          constraints,
+                                                        ) => SingleChildScrollView(
+                                                          key: const Key(
+                                                            'editor-tool-scroll',
+                                                          ),
+                                                          scrollDirection:
+                                                              Axis.horizontal,
+                                                          child: ConstrainedBox(
+                                                            constraints:
+                                                                BoxConstraints(
+                                                                  minWidth:
+                                                                      constraints
+                                                                          .maxWidth,
+                                                                ),
+                                                            child: Row(
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .start,
+                                                              children: _allTools(
+                                                                context,
+                                                                compact:
+                                                                    compactControls,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
                                                   ),
-                                            ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                         _InlineToolControls(
@@ -200,10 +211,8 @@ class EditorToolbar extends StatelessWidget {
                                           ),
                                           canvas: canvas,
                                           presets: presets,
-                                          maxColorSlots: compactControls
-                                              ? 1
-                                              : 5,
-                                          maxSizeSlots: compactControls ? 1 : 3,
+                                          maxWidth:
+                                              rowConstraints.maxWidth * 0.4,
                                         ),
                                       ],
                                     );
@@ -237,12 +246,10 @@ class EditorToolbar extends StatelessWidget {
         ToolType.eraser,
         (c) => EraserPopover(canvas: canvas),
       ),
-      _ToolbarButton(
-        icon: ToolVisuals.icon(ToolType.lasso),
-        toolIcon: ToolType.lasso,
-        label: ToolVisuals.label(context, ToolType.lasso),
-        selected: tool == ToolType.lasso,
-        onTap: () => canvas.setTool(ToolType.lasso),
+      _toolWithOptions(
+        context,
+        ToolType.lasso,
+        (c) => LassoPopover(canvas: canvas),
       ),
       _toolWithOptions(
         context,
@@ -279,7 +286,26 @@ class EditorToolbar extends StatelessWidget {
         label: context.l10n.tbInsertSticker,
         onTap: onInsertSticker,
       ),
-      _MoreToolsButton(canvas: canvas, onTemplates: onTemplates),
+      _ToolbarButton(
+        icon: ToolVisuals.icon(ToolType.bucket),
+        toolIcon: ToolType.bucket,
+        label: context.l10n.tbFill,
+        selected: tool == ToolType.bucket,
+        onTap: () => canvas.setTool(ToolType.bucket),
+      ),
+      _ToolbarButton(
+        icon: canvas.magnifierEnabled ? Icons.search_off : Icons.search,
+        label: canvas.magnifierEnabled
+            ? context.l10n.tbHideMagnifier
+            : context.l10n.tbMagnifier,
+        selected: canvas.magnifierEnabled,
+        onTap: canvas.toggleMagnifier,
+      ),
+      _ToolbarButton(
+        icon: Icons.dashboard_customize_outlined,
+        label: context.l10n.tbPageTemplate,
+        onTap: onTemplates,
+      ),
     ];
   }
 
@@ -343,51 +369,6 @@ class EditorToolbar extends StatelessWidget {
   }
 }
 
-/// "Más herramientas": rellenar, escritura ampliada y plantillas.
-class _MoreToolsButton extends StatelessWidget {
-  const _MoreToolsButton({required this.canvas, required this.onTemplates});
-
-  final CanvasController canvas;
-  final VoidCallback onTemplates;
-
-  @override
-  Widget build(BuildContext context) {
-    final extraSelected =
-        canvas.tool == ToolType.bucket || canvas.magnifierEnabled;
-    return MenuAnchor(
-      menuChildren: [
-        MenuItemButton(
-          leadingIcon: Icon(ToolVisuals.icon(ToolType.bucket)),
-          onPressed: () => canvas.setTool(ToolType.bucket),
-          child: Text(context.l10n.tbFill),
-        ),
-        MenuItemButton(
-          leadingIcon: Icon(
-            canvas.magnifierEnabled ? Icons.search_off : Icons.search,
-          ),
-          onPressed: canvas.toggleMagnifier,
-          child: Text(
-            canvas.magnifierEnabled
-                ? context.l10n.tbHideMagnifier
-                : context.l10n.tbMagnifier,
-          ),
-        ),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.dashboard_customize_outlined),
-          onPressed: onTemplates,
-          child: Text(context.l10n.tbPageTemplate),
-        ),
-      ],
-      builder: (context, menu, _) => _ToolbarButton(
-        icon: Icons.more_horiz,
-        label: context.l10n.tbMoreTools,
-        selected: extraSelected,
-        onTap: () => menu.isOpen ? menu.close() : menu.open(),
-      ),
-    );
-  }
-}
-
 /// Context-sensitive controls pinned to the right edge. Tools without color
 /// or size settings leave this area empty without affecting left alignment.
 class _InlineToolControls extends StatelessWidget {
@@ -395,14 +376,12 @@ class _InlineToolControls extends StatelessWidget {
     super.key,
     required this.canvas,
     required this.presets,
-    required this.maxColorSlots,
-    required this.maxSizeSlots,
+    required this.maxWidth,
   });
 
   final CanvasController canvas;
   final PenPresetsController presets;
-  final int maxColorSlots;
-  final int maxSizeSlots;
+  final double maxWidth;
 
   bool get _showsColors =>
       canvas.isInkTool ||
@@ -428,10 +407,7 @@ class _InlineToolControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!_showsColors && !_showsSizes) return const SizedBox.shrink();
-    final allSizes = _quickSizes;
-    final sizes = maxSizeSlots == 1
-        ? [canvas.toolSize]
-        : allSizes.take(maxSizeSlots).toList(growable: false);
+    final sizes = _quickSizes;
     var selectedSize = 0;
     for (var i = 1; i < sizes.length; i++) {
       if ((canvas.toolSize - sizes[i]).abs() <
@@ -439,34 +415,53 @@ class _InlineToolControls extends StatelessWidget {
         selectedSize = i;
       }
     }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const _Divider(),
-        if (_showsColors)
-          for (
-            var i = 0;
-            i < presets.toolbarColors.length && i < maxColorSlots;
-            i++
-          )
-            _QuickColorButton(
-              color: presets.toolbarColors[i],
-              selected: i == presets.activeToolbarColorSlot,
-              onTap: () => presets.activateToolbarColor(i, canvas),
+    final controlCount =
+        (_showsColors ? presets.toolbarColors.length : 0) +
+        (_showsSizes ? sizes.length : 0);
+    final innerDividerWidth = _showsColors && _showsSizes
+        ? _Divider.horizontalExtent
+        : 0.0;
+    final preferredWidth =
+        _Divider.horizontalExtent +
+        controlCount * Sizes.minTouch +
+        innerDividerWidth;
+    return SizedBox(
+      width: preferredWidth.clamp(0.0, maxWidth),
+      child: Row(
+        children: [
+          const _Divider(),
+          Expanded(
+            child: SingleChildScrollView(
+              key: const Key('editor-inline-control-scroll'),
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_showsColors)
+                    for (var i = 0; i < presets.toolbarColors.length; i++)
+                      _QuickColorButton(
+                        color: presets.toolbarColors[i],
+                        selected: i == presets.activeToolbarColorSlot,
+                        onTap: () => presets.activateToolbarColor(i, canvas),
+                      ),
+                  if (_showsColors && _showsSizes) const _Divider(),
+                  if (_showsSizes)
+                    for (var i = 0; i < sizes.length; i++)
+                      _QuickSizeButton(
+                        value: sizes[i],
+                        range: canvas.sizeRange,
+                        color: canvas.tool == ToolType.eraser
+                            ? context.colors.outline
+                            : canvas.color,
+                        selected: i == selectedSize,
+                        onTap: () => _pickSize(sizes[i]),
+                      ),
+                ],
+              ),
             ),
-        if (_showsColors && _showsSizes) const _Divider(),
-        if (_showsSizes)
-          for (var i = 0; i < sizes.length; i++)
-            _QuickSizeButton(
-              value: sizes[i],
-              range: canvas.sizeRange,
-              color: canvas.tool == ToolType.eraser
-                  ? context.colors.outline
-                  : canvas.color,
-              selected: i == selectedSize,
-              onTap: () => _pickSize(sizes[i]),
-            ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -751,6 +746,8 @@ class _ToolbarButton extends StatelessWidget {
 
 class _Divider extends StatelessWidget {
   const _Divider();
+
+  static const horizontalExtent = 1 + Spacing.xs * 2;
 
   @override
   Widget build(BuildContext context) => Container(
