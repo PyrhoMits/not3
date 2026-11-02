@@ -1,6 +1,6 @@
 # 🏗️ Not3 Architecture
 
-Technical guide for anyone who wants to contribute. Not3 is a handwriting app for tablets with a stylus (GoodNotes-style), **Flutter 3.47 / Dart 3.13**, Material 3, UI and comments in **Spanish**. Targets: **Android** (primary) + **Linux desktop** (development).
+Technical guide for anyone who wants to contribute. Not3 is a handwriting app for tablets with a stylus (GoodNotes-style), **Flutter 3.47 / Dart 3.13**, Material 3, with an English interface and English source comments. Targets: **Android** (primary) + **Linux desktop** (development).
 
 > How to contribute: [`CONTRIBUTING.md`](../CONTRIBUTING.md) · Design system: [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) · Translating: [`TRANSLATING.md`](TRANSLATING.md) · Publishing releases: [`RELEASING.md`](RELEASING.md) · Next steps: [`ROADMAP.md`](../ROADMAP.md)
 
@@ -82,8 +82,8 @@ ui/
                              search_sheet, custom_color_dialog, text_edit_overlay, inklus_logo,
                              page_scaffold (Not3Page, PageHeader, SectionCard, SettingsTile,
                              EmptyState, SheetHeader: base of secondary screens)…
-l10n/ (lib/l10n)           ARB (app_es = source, app_en) → AppLocalizations; `context.l10n.key`.
-                             New text → the ARBs (test/l10n_test.dart requires parity). The app follows the
+l10n/ (lib/l10n)           English ARB (`app_en`) → AppLocalizations; `context.l10n.key`.
+                             New text → the ARB. The app follows the
                              system language (`kAppLocale` only for screenshots/tests). Visible errors: throw
                              `AppError(code)` and show with `userError(l10n, e)`; services never return UI
                              text (use enums/`message(l10n)`). After `await`, in a State use `_l10n`.
