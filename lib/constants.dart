@@ -276,23 +276,17 @@ const double kRulerCenterThreshold = 40;
 const double kRulerMarkSpacing = 50;
 
 // ---------------------------------------------------------------------------
-// Lupa
+// Panel de escritura ampliada
 // ---------------------------------------------------------------------------
 
-/// Radio de la lupa en pantalla (px).
-const double kMagnifierRadius = 60;
-
-/// Zoom mínimo de la lupa.
+/// Zoom mínimo del panel de escritura ampliada.
 const double kMagnifierMinZoom = 1.5;
 
-/// Zoom máximo de la lupa.
+/// Zoom máximo del panel de escritura ampliada.
 const double kMagnifierMaxZoom = 8.0;
 
-/// Zoom por defecto de la lupa.
+/// Zoom por defecto del panel de escritura ampliada.
 const double kMagnifierDefaultZoom = 3.0;
-
-/// Margen de la lupa respecto a los bordes de la pantalla.
-const double kMagnifierMargin = 20;
 
 // ---------------------------------------------------------------------------
 // Snapping / Guías magnéticas

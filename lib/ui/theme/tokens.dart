@@ -46,8 +46,11 @@ abstract final class Sizes {
   /// Objetivo táctil mínimo (Material / WCAG): 48 dp.
   static const double minTouch = 48;
 
-  /// Alto de la barra superior del editor.
-  static const double editorToolbar = 56;
+  /// Document navigation row in the editor's two-row top bar.
+  static const double editorDocumentBar = 48;
+
+  /// Drawing tools and quick controls row in the editor's top bar.
+  static const double editorToolBar = 56;
 
   /// Icono estándar de herramienta.
   static const double toolIcon = 24;
@@ -60,6 +63,13 @@ abstract final class Sizes {
 
   /// Ancho máximo de popovers de herramienta.
   static const double popoverWidth = 340;
+
+  /// Header of the fixed zoom-writing board.
+  static const double zoomBoardHeader = 48;
+
+  /// Minimum and maximum height of the fixed zoom-writing board.
+  static const double zoomBoardMinHeight = 192;
+  static const double zoomBoardMaxHeight = 300;
 
   /// Ancho máximo del contenido de listados (biblioteca) en pantallas muy anchas.
   static const double contentMaxWidth = 1400;

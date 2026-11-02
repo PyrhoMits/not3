@@ -20,6 +20,7 @@ import '../editor/editor_shortcuts.dart';
 import '../widgets/text_edit_overlay.dart';
 import 'canvas_overlays.dart';
 import 'world_painter.dart';
+import 'zoom_writing_board.dart';
 
 // Paints reutilizados para la capa activa (evitan allocations por frame).
 final Paint _eraserCursorFillPaint = Paint()
@@ -306,9 +307,8 @@ class ViewSnapshot {
 /// ---------------------------------------------------------------------------
 class ActiveLayerPainter extends CustomPainter {
   final CanvasController controller;
-  final Map<String, ui.Image> imageCache;
 
-  ActiveLayerPainter({required this.controller, required this.imageCache});
+  ActiveLayerPainter({required this.controller});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -455,13 +455,6 @@ class ActiveLayerPainter extends CustomPainter {
       canvas.restore();
     }
 
-    // ---- Lupa (dibujada en espacio de pantalla, con su propio save/restore) ----
-    if (controller.magnifierEnabled && controller.isDrawing) {
-      canvas.save();
-      drawMagnifier(canvas, controller, size, imageCache);
-      canvas.restore();
-    }
-
     // ---- Cursor del borrador (espacio de pantalla, tamaño constante) ----
     if (eraserPath.isNotEmpty) {
       final last = eraserPath.last;
@@ -552,6 +545,10 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
 
   // Estado de punteros.
   int? _drawingPointer;
+
+  /// While zoom writing is open, a pointer on the main page moves its target
+  /// rectangle instead of drawing. Actual ink input happens in the board.
+  int? _magnifierPointer;
 
   /// Gesto de pan/zoom en curso. Es un notificador para que la capa
   /// confirmada cambie a la instantánea (y vuelva a nítido al soltar) sin
@@ -706,7 +703,6 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
                               size: Size.infinite,
                               painter: ActiveLayerPainter(
                                 controller: widget.controller,
-                                imageCache: widget.imageService.cache,
                               ),
                             ),
                           ),
@@ -717,6 +713,17 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
                 ), // GestureDetector
               ), // Listener
               ClipRect(child: TextEditOverlay(controller: widget.controller)),
+              ValueListenableBuilder<int>(
+                valueListenable: widget.controller.toolContextNotifier,
+                builder: (context, _, _) => widget.controller.magnifierEnabled
+                    ? ZoomWritingOverlay(
+                        controller: widget.controller,
+                        imageCache: widget.imageService.cache,
+                        viewportSize: _viewport,
+                        nightMode: widget.nightMode,
+                      )
+                    : const SizedBox.shrink(),
+              ),
             ],
           ), // Stack
         ); // Focus + return
@@ -768,6 +775,28 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     final kind = event.kind;
     final c = widget.controller;
     final world = c.viewportToWorld(event.localPosition, _viewport);
+
+    // The main page becomes the navigator for the fixed zoom-writing board.
+    // Dragging here moves its target; strokes are captured by the board only.
+    if (c.magnifierEnabled &&
+        (PalmRejection.isStylusKind(kind) ||
+            kind == PointerDeviceKind.mouse ||
+            kind == PointerDeviceKind.touch)) {
+      if (PalmRejection.isStylusKind(kind)) {
+        _palm.stylusDownEvent(event.pointer);
+        c.onStylusDetected();
+        _rejectPalmInProgress();
+      } else if (kind == PointerDeviceKind.touch &&
+          _palm.rejectTouch(radiusMajor: event.radiusMajor)) {
+        _rejectedPointers.add(event.pointer);
+        return;
+      }
+      if (_magnifierPointer == null) {
+        _magnifierPointer = event.pointer;
+        c.updateMagnifierPosition(world);
+      }
+      return;
+    }
 
     if (PalmRejection.isStylusKind(kind) || kind == PointerDeviceKind.mouse) {
       if (PalmRejection.isStylusKind(kind)) {
@@ -879,6 +908,12 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       _rotatingSelection;
 
   void _onPointerMove(PointerMoveEvent event) {
+    if (event.pointer == _magnifierPointer) {
+      widget.controller.updateMagnifierPosition(
+        widget.controller.viewportToWorld(event.localPosition, _viewport),
+      );
+      return;
+    }
     if (_rulerPointers.containsKey(event.pointer)) {
       _rulerPointers[event.pointer] = event.localPosition;
       _updateRulerGesture();
@@ -907,6 +942,10 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       _palm.stylusUpEvent(event.pointer);
     }
     _rejectedPointers.remove(event.pointer);
+    if (event.pointer == _magnifierPointer) {
+      _magnifierPointer = null;
+      return;
+    }
     if (_rulerPointers.remove(event.pointer) != null) {
       _restartRulerGesture();
       return;
@@ -951,6 +990,10 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       _palm.stylusUpEvent(event.pointer);
     }
     _rejectedPointers.remove(event.pointer);
+    if (event.pointer == _magnifierPointer) {
+      _magnifierPointer = null;
+      return;
+    }
     if (_rulerPointers.remove(event.pointer) != null) {
       _restartRulerGesture();
       return;

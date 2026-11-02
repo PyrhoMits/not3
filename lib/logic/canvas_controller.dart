@@ -142,7 +142,7 @@ class CanvasController extends _CanvasCore
   /// Borde/arco al que se engancha el trazo en curso (null = trazo libre).
   RulerSnap? _rulerSnap;
 
-  // ---- Lupa ----
+  // ---- Panel de escritura ampliada ----
   bool _magnifierEnabled = false;
   Offset _magnifierPosition = Offset.zero;
   double _magnifierZoom = kMagnifierDefaultZoom;
@@ -159,7 +159,7 @@ class CanvasController extends _CanvasCore
   // ---- Notificadores granulares ----
   // Permiten que la barra del editor y sus popovers solo se reconstruyan cuando
   // cambia lo que realmente les importa, en vez de en cada trazo.
-  /// Cambia cuando: tool, rulerEnabled, magnifierEnabled.
+  /// Cambia cuando: tool, rulerEnabled, magnifierEnabled, laserMode.
   final ValueNotifier<int> _toolContextNotifier = ValueNotifier<int>(0);
   ValueListenable<int> get toolContextNotifier => _toolContextNotifier;
 
@@ -198,6 +198,7 @@ class CanvasController extends _CanvasCore
       _rulerEnabled,
       _rulerType,
       _magnifierEnabled,
+      _laserMode,
     );
     if (toolKey != _lastToolKey) {
       _lastToolKey = toolKey;
@@ -462,11 +463,10 @@ class CanvasController extends _CanvasCore
     scale: _scale,
   );
 
-  // ---- Lupa ----
+  // ---- Panel de escritura ampliada ----
   bool get magnifierEnabled => _magnifierEnabled;
   Offset get magnifierPosition => _magnifierPosition;
   double get magnifierZoom => _magnifierZoom;
-  double get magnifierRadius => kMagnifierRadius;
 
   /// Radio (mundo) del círculo de borrado actual.
   double get eraserRadius => _toolSizes[ToolType.eraser]! / 2;
@@ -705,15 +705,21 @@ class CanvasController extends _CanvasCore
   bool hitsRuler(Offset worldPoint) =>
       _rulerEnabled && rulerGeometry.hitTest(worldPoint);
 
-  // ---- Lupa ----
+  // ---- Panel de escritura ampliada ----
 
   void toggleMagnifier() {
     _magnifierEnabled = !_magnifierEnabled;
+    if (_magnifierEnabled && !viewportSize.isEmpty) {
+      _magnifierPosition = viewportToWorld(
+        Offset(viewportSize.width / 2, viewportSize.height / 2),
+        viewportSize,
+      );
+    }
     _notifyToolContext();
     notifyListeners();
   }
 
-  /// Actualiza la posición de la lupa (llamado en cada frame del stylus).
+  /// Mueve el área que se muestra en el panel de escritura ampliada.
   void updateMagnifierPosition(Offset worldPoint) {
     _magnifierPosition = worldPoint;
     notifyListeners();
@@ -904,10 +910,6 @@ class CanvasController extends _CanvasCore
         for (var i = 1; i <= n; i++) Offset.lerp(last, worldPoint, i / n)!,
       ]);
     }
-    // Actualiza posición de la lupa si está activa.
-    if (_magnifierEnabled) {
-      _magnifierPosition = worldPoint;
-    }
     notifyListeners();
   }
 
@@ -1027,7 +1029,7 @@ class CanvasController extends _CanvasCore
     _undoStack.push(action);
   }
 
-  EraserMode _eraserMode = EraserMode.partial;
+  EraserMode _eraserMode = EraserMode.stroke;
   EraserMode get eraserMode => _eraserMode;
 
   void setEraserMode(EraserMode mode) {

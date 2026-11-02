@@ -187,10 +187,17 @@ void main() {
       await settle(tester);
       await shot(tester, 'editor_$tag');
       if (!dark) {
-        // Tocar la pluma activa abre su popover de opciones.
         final l10n = AppLocalizations.of(
           tester.element(find.byType(HomeScreen)),
         );
+        await shot(tester, 'editor_pen_selected');
+        await tester.tap(find.byTooltip(l10n.toolLasso));
+        await settle(tester);
+        await shot(tester, 'editor_lasso_selected');
+
+        // Reactivate the pen, then tap it again to open its options.
+        await tester.tap(find.byTooltip(l10n.tbPenSlot(l10n.toolPen, 1)));
+        await settle(tester);
         await tester.tap(find.byTooltip(l10n.tbPenSlot(l10n.toolPen, 1)));
         await settle(tester);
         await shot(tester, 'editor_pen_popover');

@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'dart:math';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart' hide Page;
 
 import '../../constants.dart';
 import '../../logic/canvas_controller.dart';
 import '../../logic/ruler.dart';
-import '../canvas/world_painter.dart';
 
 // ============================================================================
-// Overlays del canvas: Regla virtual, Lupa, Marching Ants
+// Overlays del canvas: Regla virtual y Marching Ants
 //
 // Extraídos de drawing_canvas.dart para reducir su tamaño y mejorar la
 // separación de responsabilidades. Estas funciones dibujan overlays visuales
@@ -51,8 +48,14 @@ final Paint _snapEdgePaint = Paint()
   ..strokeWidth = 3
   ..strokeCap = StrokeCap.round;
 
-void _drawLabel(Canvas canvas, String text, Offset center,
-    {double fontSize = 11, Color color = _rulerTick, FontWeight weight = FontWeight.w600}) {
+void _drawLabel(
+  Canvas canvas,
+  String text,
+  Offset center, {
+  double fontSize = 11,
+  Color color = _rulerTick,
+  FontWeight weight = FontWeight.w600,
+}) {
   final tp = TextPainter(
     text: TextSpan(
       text: text,
@@ -73,11 +76,19 @@ void _drawAnglePill(Canvas canvas, double angle) {
   final tp = TextPainter(
     text: TextSpan(
       text: text,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+      ),
     ),
     textDirection: TextDirection.ltr,
   )..layout();
-  final rect = Rect.fromCenter(center: Offset.zero, width: tp.width + 16, height: tp.height + 6);
+  final rect = Rect.fromCenter(
+    center: Offset.zero,
+    width: tp.width + 16,
+    height: tp.height + 6,
+  );
   canvas.drawRRect(
     RRect.fromRectAndRadius(rect, const Radius.circular(20)),
     Paint()..color = kAccentColor,
@@ -121,7 +132,11 @@ void _drawStraightRuler(Canvas canvas, CanvasController controller) {
     _tickPaint.color = isCm ? _rulerTick : _rulerTickMinor;
     // Marcas en ambos bordes (como una regla real).
     canvas.drawLine(Offset(x, -w / 2), Offset(x, -w / 2 + tick), _tickPaint);
-    canvas.drawLine(Offset(x, w / 2), Offset(x, w / 2 - tick * 0.6), _tickPaint);
+    canvas.drawLine(
+      Offset(x, w / 2),
+      Offset(x, w / 2 - tick * 0.6),
+      _tickPaint,
+    );
     final cm = i ~/ perCm;
     if (isCm && cm % labelEvery == 0) {
       _drawLabel(canvas, '$cm', Offset(x, -w / 2 + 26));
@@ -132,7 +147,11 @@ void _drawStraightRuler(Canvas canvas, CanvasController controller) {
   final snap = controller.activeRulerSnap;
   if (snap == RulerSnap.edgeTop || snap == RulerSnap.edgeBottom) {
     final y = snap == RulerSnap.edgeTop ? -w / 2 : w / 2;
-    canvas.drawLine(Offset(-len / 2 + 6, y), Offset(len / 2 - 6, y), _snapEdgePaint);
+    canvas.drawLine(
+      Offset(-len / 2 + 6, y),
+      Offset(len / 2 - 6, y),
+      _snapEdgePaint,
+    );
   }
 
   // Ángulo en el centro (legible: se endereza si la regla está invertida).
@@ -174,8 +193,14 @@ void _drawProtractor(Canvas canvas, CanvasController controller) {
       // Escala exterior 0→180 e interior 180→0, como un transportador real.
       _drawLabel(canvas, '${180 - deg}', dir * (r - 28), fontSize: 10);
       if (deg % 30 == 0) {
-        _drawLabel(canvas, '$deg', dir * (r - 48),
-            fontSize: 9, color: _rulerTickMinor, weight: FontWeight.w500);
+        _drawLabel(
+          canvas,
+          '$deg',
+          dir * (r - 48),
+          fontSize: 9,
+          color: _rulerTickMinor,
+          weight: FontWeight.w500,
+        );
       }
     }
   }
@@ -186,11 +211,16 @@ void _drawProtractor(Canvas canvas, CanvasController controller) {
 
   final snap = controller.activeRulerSnap;
   if (snap == RulerSnap.arc) {
-    canvas.drawArc(Rect.fromCircle(center: Offset.zero, radius: r), pi, pi, false,
-        Paint()
-          ..color = kAccentColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3);
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset.zero, radius: r),
+      pi,
+      pi,
+      false,
+      Paint()
+        ..color = kAccentColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
   } else if (snap == RulerSnap.baseline) {
     canvas.drawLine(const Offset(-r, 0), const Offset(r, 0), _snapEdgePaint);
   }
@@ -199,99 +229,6 @@ void _drawProtractor(Canvas canvas, CanvasController controller) {
   if (cos(g.angle) < 0) canvas.rotate(pi);
   _drawAnglePill(canvas, g.angle);
   canvas.restore();
-}
-
-/// Dibuja la lupa (vista magnificada circular) cerca del stylus.
-///
-/// Muestra una copia ampliada del contenido del mundo en la posición actual
-/// del trazo, para que el usuario pueda ver detalles mientras escribe.
-void drawMagnifier(
-  Canvas canvas,
-  CanvasController controller,
-  Size size,
-  Map<String, ui.Image> imageCache,
-) {
-  final worldPos = controller.magnifierPosition;
-  // Aumento RELATIVO a la vista actual (antes era absoluto: con zoom alto
-  // la "lupa" podía incluso mostrar el contenido más pequeño).
-  final zoom = controller.magnifierZoom * controller.scale;
-  final radius = controller.magnifierRadius * 1.5;
-
-  // La lupa sigue al lápiz: arriba a la izquierda de la punta (para no
-  // taparla con la mano de un diestro); si no cabe, se recoloca dentro.
-  final pen = worldPos * controller.scale + controller.translate;
-  var magnifierCenter = pen + Offset(-radius * 1.3, -radius * 1.5);
-  magnifierCenter = Offset(
-    magnifierCenter.dx.clamp(radius + kMagnifierMargin, size.width - radius - kMagnifierMargin),
-    magnifierCenter.dy.clamp(radius + kMagnifierMargin, size.height - radius - kMagnifierMargin),
-  );
-
-  // Dibuja el fondo circular.
-  canvas.save();
-  canvas.clipPath(
-    Path()..addOval(Rect.fromCircle(center: magnifierCenter, radius: radius)),
-  );
-
-  // Fondo de la lupa.
-  canvas.drawCircle(
-    magnifierCenter,
-    radius,
-    Paint()..color = kPaperColorLight,
-  );
-
-  // Renderiza el contenido del mundo en la lupa.
-  canvas.save();
-  canvas.translate(magnifierCenter.dx, magnifierCenter.dy);
-  canvas.scale(zoom);
-  canvas.translate(-worldPos.dx, -worldPos.dy);
-
-  // Dibuja un parche del mundo usando world_painter.
-  final patchSize = Size(radius * 2 / zoom, radius * 2 / zoom);
-  final patchRect = Rect.fromCenter(
-    center: worldPos,
-    width: patchSize.width,
-    height: patchSize.height,
-  );
-  paintWorld(
-    canvas,
-    visibleWorldRect: patchRect,
-    page: controller.page,
-    sheetSize: controller.sheetSize,
-    imageCache: imageCache,
-    viewScale: zoom,
-  );
-  // El trazo en curso también se ve ampliado.
-  final active = controller.activeStroke;
-  if (active != null) paintActiveStroke(canvas, active);
-  canvas.restore();
-  canvas.restore();
-
-  // Borde de la lupa.
-  canvas.drawCircle(
-    magnifierCenter,
-    radius,
-    Paint()
-      ..color = kAccentColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3,
-  );
-
-  // Cruz central (punto de referencia).
-  const crossSize = 8.0;
-  canvas.drawLine(
-    Offset(magnifierCenter.dx - crossSize, magnifierCenter.dy),
-    Offset(magnifierCenter.dx + crossSize, magnifierCenter.dy),
-    Paint()
-      ..color = kAccentColor.withAlpha(180)
-      ..strokeWidth = 1.5,
-  );
-  canvas.drawLine(
-    Offset(magnifierCenter.dx, magnifierCenter.dy - crossSize),
-    Offset(magnifierCenter.dx, magnifierCenter.dy + crossSize),
-    Paint()
-      ..color = kAccentColor.withAlpha(180)
-      ..strokeWidth = 1.5,
-  );
 }
 
 /// Dibuja un borde de "marching ants" (línea punteada animada).

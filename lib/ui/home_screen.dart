@@ -94,6 +94,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _syncing = false;
   bool _layersSidebarOpen = false;
 
+  /// The document row stays visible while the drawing-tools row can collapse.
+  bool _toolsCollapsed = false;
+  static const _prefToolsCollapsed = 'editor_tools_collapsed';
+
   /// Panel lateral de páginas: cerrado por defecto (más lienzo); se recuerda.
   bool _pagesOpen = false;
   static const _prefPagesPanel = 'pages_panel_open';
@@ -110,6 +114,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() => _pagesOpen = open);
     SharedPreferences.getInstance()
         .then((p) => p.setBool(_prefPagesPanel, open))
+        .catchError((_) => false);
+  }
+
+  Future<void> _loadToolsCollapsedPref() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final value = prefs.getBool(_prefToolsCollapsed) ?? false;
+      if (mounted && value != _toolsCollapsed) {
+        setState(() => _toolsCollapsed = value);
+      }
+    } catch (_) {}
+  }
+
+  void _setToolsCollapsed(bool collapsed) {
+    setState(() => _toolsCollapsed = collapsed);
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setBool(_prefToolsCollapsed, collapsed))
         .catchError((_) => false);
   }
 
@@ -173,6 +194,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _loadSyncEnabled();
     _loadNightMode();
     _loadPagesPanelPref();
+    _loadToolsCollapsedPref();
     if (widget.initialPage > 0) _controller.goToPage(widget.initialPage);
     // Plumas favoritas: al cargar, aplicar la activa al lienzo y desde ahí
     // mantenerlas sincronizadas con lo que el usuario cambie.
@@ -1293,11 +1315,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final controller = _controller;
     // Solo se reconstruye la estructura cuando cambia lo que la afecta (no en
     // cada punto del trazo). Cada barra escucha lo suyo por separado.
-    final screen = ControllerSelector<CanvasController, (bool, bool)>(
+    final screen = ControllerSelector<CanvasController, (bool, bool, bool)>(
       listenable: controller,
-      selector: (c) => (c.presentationMode, c.selectedImageId != null),
+      selector: (c) =>
+          (c.presentationMode, c.selectedImageId != null, c.magnifierEnabled),
       builder: (context, state) {
-        final (presentMode, hasSelectedImage) = state;
+        final (presentMode, hasSelectedImage, zoomWriting) = state;
         return Scaffold(
           backgroundColor: context.inklus.desk,
           body: SafeArea(
@@ -1318,6 +1341,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     onToggleLayers: () => setState(
                       () => _layersSidebarOpen = !_layersSidebarOpen,
                     ),
+                    toolsCollapsed: _toolsCollapsed,
+                    onToggleTools: () => _setToolsCollapsed(!_toolsCollapsed),
                     trailing: [
                       _buildCloudButton(),
                       // El menú muestra estados (marcador, vibración): se
@@ -1350,7 +1375,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 onGoToPage: _goToPageDialog,
                               ),
                             ),
-                            if (!presentMode)
+                            if (!presentMode && !zoomWriting)
                               Positioned(
                                 top: Spacing.md,
                                 left: 0,
@@ -1378,7 +1403,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   child: const Icon(Icons.delete_outline),
                                 ),
                               ),
-                            if (!presentMode)
+                            if (!presentMode && !zoomWriting)
                               Positioned(
                                 right: Spacing.lg,
                                 bottom: Spacing.lg,
