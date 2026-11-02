@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../constants.dart';
 import '../../logic/canvas_controller.dart';
+import '../../logic/lasso_selection_filter.dart';
 import '../../logic/pen_presets.dart';
 import '../../models/stroke.dart';
 import '../theme/inklus_colors.dart';
@@ -56,30 +57,38 @@ class PenPopover extends StatelessWidget {
             ColorGrid(canvas: canvas, presets: presets),
             const SizedBox(height: Spacing.lg),
             _SectionTitle(context.l10n.popThickness),
-            SizePicker(canvas: canvas, onChanged: () => presets.syncFrom(canvas)),
+            SizePicker(
+              canvas: canvas,
+              onChanged: () => presets.syncFrom(canvas),
+            ),
             const SizedBox(height: Spacing.sm),
             const SizedBox(height: Spacing.sm),
             _SectionTitle(context.l10n.popStraighten),
             SegmentedButton<ShapeMode>(
               showSelectedIcon: false,
               segments: [
-                ButtonSegment(value: ShapeMode.off, label: Text(context.l10n.popNo)),
-                ButtonSegment(value: ShapeMode.hold, label: Text(context.l10n.popOnHold)),
-                ButtonSegment(value: ShapeMode.always, label: Text(context.l10n.popAlways)),
+                ButtonSegment(
+                  value: ShapeMode.off,
+                  label: Text(context.l10n.popNo),
+                ),
+                ButtonSegment(
+                  value: ShapeMode.hold,
+                  label: Text(context.l10n.popOnHold),
+                ),
+                ButtonSegment(
+                  value: ShapeMode.always,
+                  label: Text(context.l10n.popAlways),
+                ),
               ],
               selected: {canvas.shapeMode},
               onSelectionChanged: (v) => canvas.setShapeMode(v.first),
             ),
             const SizedBox(height: Spacing.xs),
-            Text(
-              switch (canvas.shapeMode) {
-                ShapeMode.off => context.l10n.popShapeOffHint,
-                ShapeMode.hold =>
-                  context.l10n.popShapeHoldHint,
-                ShapeMode.always => context.l10n.popShapeAlwaysHint,
-              },
-              style: context.text.bodySmall,
-            ),
+            Text(switch (canvas.shapeMode) {
+              ShapeMode.off => context.l10n.popShapeOffHint,
+              ShapeMode.hold => context.l10n.popShapeHoldHint,
+              ShapeMode.always => context.l10n.popShapeAlwaysHint,
+            }, style: context.text.bodySmall),
             if (!isHighlighter)
               Align(
                 alignment: Alignment.centerLeft,
@@ -137,14 +146,11 @@ class EraserPopover extends StatelessWidget {
             onSelectionChanged: (s) => canvas.setEraserMode(s.first),
           ),
           const SizedBox(height: Spacing.sm),
-          Text(
-            switch (canvas.eraserMode) {
-              EraserMode.partial => context.l10n.popEraseOff,
-              EraserMode.stroke => context.l10n.popEraseStroke,
-              EraserMode.highlighterOnly => context.l10n.popEraseHighlighter,
-            },
-            style: context.text.bodySmall,
-          ),
+          Text(switch (canvas.eraserMode) {
+            EraserMode.partial => context.l10n.popEraseOff,
+            EraserMode.stroke => context.l10n.popEraseStroke,
+            EraserMode.highlighterOnly => context.l10n.popEraseHighlighter,
+          }, style: context.text.bodySmall),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: canvas.eraserAutoRevert,
@@ -160,6 +166,93 @@ class EraserPopover extends StatelessWidget {
   }
 }
 
+class LassoPopover extends StatelessWidget {
+  const LassoPopover({super.key, required this.canvas});
+
+  final CanvasController canvas;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+    valueListenable: canvas.toolContextNotifier,
+    builder: (context, _, _) {
+      final filter = canvas.lassoSelectionFilter;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _SectionTitle(context.l10n.lassoSelectContent),
+          _LassoFilterTile(
+            key: const Key('lasso-filter-handwriting'),
+            icon: Icons.draw_outlined,
+            label: context.l10n.lassoHandwriting,
+            type: LassoContentType.handwriting,
+            filter: filter,
+            canvas: canvas,
+          ),
+          _LassoFilterTile(
+            key: const Key('lasso-filter-highlighter'),
+            icon: Icons.border_color,
+            label: context.l10n.popHighlighter,
+            type: LassoContentType.highlighter,
+            filter: filter,
+            canvas: canvas,
+          ),
+          _LassoFilterTile(
+            key: const Key('lasso-filter-text'),
+            icon: Icons.text_fields,
+            label: context.l10n.toolText,
+            type: LassoContentType.text,
+            filter: filter,
+            canvas: canvas,
+          ),
+          _LassoFilterTile(
+            key: const Key('lasso-filter-images'),
+            icon: Icons.image_outlined,
+            label: context.l10n.lassoImages,
+            type: LassoContentType.images,
+            filter: filter,
+            canvas: canvas,
+          ),
+          const SizedBox(height: Spacing.xs),
+          Text(context.l10n.lassoFilterHint, style: context.text.bodySmall),
+        ],
+      );
+    },
+  );
+}
+
+class _LassoFilterTile extends StatelessWidget {
+  const _LassoFilterTile({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.type,
+    required this.filter,
+    required this.canvas,
+  });
+
+  final IconData icon;
+  final String label;
+  final LassoContentType type;
+  final LassoSelectionFilter filter;
+  final CanvasController canvas;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = filter.isEnabled(type);
+    final canChange = !enabled || filter.enabledCount > 1;
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      secondary: Icon(icon),
+      title: Text(label),
+      value: enabled,
+      onChanged: canChange
+          ? (value) => canvas.setLassoContentEnabled(type, value)
+          : null,
+    );
+  }
+}
+
 /// Solo color (texto, rellenar).
 class ColorPopover extends StatelessWidget {
   const ColorPopover({super.key, required this.canvas, required this.presets});
@@ -169,21 +262,26 @@ class ColorPopover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-        listenable: canvas,
-        builder: (context, _) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _SectionTitle(context.l10n.createColor),
-            ColorGrid(canvas: canvas, presets: presets),
-          ],
-        ),
-      );
+    listenable: canvas,
+    builder: (context, _) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _SectionTitle(context.l10n.createColor),
+        ColorGrid(canvas: canvas, presets: presets),
+      ],
+    ),
+  );
 }
 
 /// Rejilla de colores: paleta fija, recientes y selector personalizado.
 class ColorGrid extends StatelessWidget {
-  const ColorGrid({super.key, required this.canvas, required this.presets, this.onPick});
+  const ColorGrid({
+    super.key,
+    required this.canvas,
+    required this.presets,
+    this.onPick,
+  });
 
   final CanvasController canvas;
   final PenPresetsController presets;
@@ -220,15 +318,17 @@ class ColorGrid extends StatelessWidget {
                 selected: onPick == null && canvas.color == c,
                 onTap: () => _pick(c),
               ),
-            _CustomColorButton(onTap: () async {
-              await showCustomColorDialog(context, canvas);
-              presets.addRecentColor(canvas.color);
-              if (onPick != null) {
-                onPick!(canvas.color);
-              } else {
-                presets.syncFrom(canvas);
-              }
-            }),
+            _CustomColorButton(
+              onTap: () async {
+                await showCustomColorDialog(context, canvas);
+                presets.addRecentColor(canvas.color);
+                if (onPick != null) {
+                  onPick!(canvas.color);
+                } else {
+                  presets.syncFrom(canvas);
+                }
+              },
+            ),
           ],
         ),
         // Paletas instaladas desde el marketplace.
@@ -237,7 +337,9 @@ class ColorGrid extends StatelessWidget {
           builder: (context, snap) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final palette in snap.data ?? const <({String name, List<Color> colors})>[]) ...[
+              for (final palette
+                  in snap.data ??
+                      const <({String name, List<Color> colors})>[]) ...[
                 const SizedBox(height: Spacing.sm),
                 Text(palette.name, style: context.text.labelSmall),
                 const SizedBox(height: Spacing.xs),
@@ -294,12 +396,15 @@ class ColorSwatchButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = context.colors;
     // Check en blanco o negro según la luminancia del color.
-    final checkColor =
-        color.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
+    final checkColor = color.computeLuminance() > 0.5
+        ? Colors.black87
+        : Colors.white;
     return Semantics(
       button: true,
       selected: selected,
-      label: context.l10n.colorSemantics(color.toARGB32().toRadixString(16).substring(2).toUpperCase()),
+      label: context.l10n.colorSemantics(
+        color.toARGB32().toRadixString(16).substring(2).toUpperCase(),
+      ),
       child: InkResponse(
         onTap: onTap,
         radius: Sizes.minTouch / 2,
@@ -318,7 +423,9 @@ class ColorSwatchButton extends StatelessWidget {
                   width: selected ? 3 : 1,
                 ),
               ),
-              child: selected ? Icon(Icons.check, size: 18, color: checkColor) : null,
+              child: selected
+                  ? Icon(Icons.check, size: 18, color: checkColor)
+                  : null,
             ),
           ),
         ),
@@ -334,30 +441,37 @@ class _CustomColorButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Tooltip(
-        message: context.l10n.colorCustomTitle,
-        child: InkResponse(
-          onTap: onTap,
-          radius: Sizes.minTouch / 2,
-          child: SizedBox.square(
-            dimension: 40,
-            child: Center(
-              child: Container(
-                width: Sizes.swatch,
-                height: Sizes.swatch,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: context.colors.outlineVariant),
-                  gradient: const SweepGradient(colors: [
-                    Colors.red, Colors.yellow, Colors.green, Colors.cyan,
-                    Colors.blue, Colors.purple, Colors.red,
-                  ]),
-                ),
-                child: const Icon(Icons.add, size: 18, color: Colors.white),
+    message: context.l10n.colorCustomTitle,
+    child: InkResponse(
+      onTap: onTap,
+      radius: Sizes.minTouch / 2,
+      child: SizedBox.square(
+        dimension: 40,
+        child: Center(
+          child: Container(
+            width: Sizes.swatch,
+            height: Sizes.swatch,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: context.colors.outlineVariant),
+              gradient: const SweepGradient(
+                colors: [
+                  Colors.red,
+                  Colors.yellow,
+                  Colors.green,
+                  Colors.cyan,
+                  Colors.blue,
+                  Colors.purple,
+                  Colors.red,
+                ],
               ),
             ),
+            child: const Icon(Icons.add, size: 18, color: Colors.white),
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 /// Grosor: tres tamaños rápidos + slider fino, con vista previa real.
@@ -419,7 +533,12 @@ class SizePicker extends StatelessWidget {
 }
 
 class _SizeDot extends StatelessWidget {
-  const _SizeDot({required this.size, required this.color, required this.selected, required this.onTap});
+  const _SizeDot({
+    required this.size,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
 
   final double size;
   final Color color;
@@ -457,7 +576,7 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: Spacing.sm),
-        child: Text(text, style: context.text.titleSmall),
-      );
+    padding: const EdgeInsets.only(bottom: Spacing.sm),
+    child: Text(text, style: context.text.titleSmall),
+  );
 }

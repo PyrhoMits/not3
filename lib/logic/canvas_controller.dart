@@ -21,6 +21,7 @@ import '../services/storage_service.dart';
 import '../utils/geometry_utils.dart';
 import 'bucket_fill.dart';
 import 'eraser.dart';
+import 'lasso_selection_filter.dart';
 import 'lasso.dart';
 import 'ruler.dart';
 import 'shape_detector.dart';
@@ -53,6 +54,7 @@ abstract class _CanvasCore extends ChangeNotifier {
   int get _activeLayerIndex;
   bool _isLayerLocked(int layerIndex);
   bool _isLayerVisible(int layerIndex);
+  LassoSelectionFilter get lassoSelectionFilter;
 
   // De [_CanvasView].
   double get _scale;
@@ -91,6 +93,7 @@ class CanvasController extends _CanvasCore
   final Map<ToolType, double> _toolSizes = Map.of(kDefaultToolSizes);
   bool _fingerDrawingEnabled = true;
   ShapeMode _shapeMode = ShapeMode.hold;
+  LassoSelectionFilter _lassoSelectionFilter = const LassoSelectionFilter.all();
 
   // ---- Ajustes de presión / streamline por herramienta ----
   final Map<ToolType, double> _thinning = Map.of(kDefaultThinning);
@@ -246,10 +249,12 @@ class CanvasController extends _CanvasCore
 
   Timer? _saveTimer;
 
+  late final Future<void> inputPreferencesLoaded;
+
   CanvasController(this._storage, {Note? initial, String? notebookId})
     : _note = initial ?? Note.newBlank(),
       _notebookId = notebookId ?? '' {
-    _loadInputPrefs();
+    inputPreferencesLoaded = _loadInputPrefs();
   }
 
   /// Espera tras el último cambio antes de guardar en disco. Es corta a
@@ -428,6 +433,8 @@ class CanvasController extends _CanvasCore
   Color get color => _color;
   double get toolSize => _toolSizes[_tool] ?? kDefaultToolSizes[ToolType.pen]!;
   bool get fingerDrawingEnabled => _fingerDrawingEnabled;
+  @override
+  LassoSelectionFilter get lassoSelectionFilter => _lassoSelectionFilter;
 
   /// true si la herramienta actual escribe tinta (plumas; no resaltador).
   bool get isInkTool => const {
@@ -517,7 +524,28 @@ class CanvasController extends _CanvasCore
 
   static const _prefFingerDrawing = 'finger_drawing';
   static const _prefFingerDrawingUserSet = 'finger_drawing_user_set';
+  static const _prefLassoSelectionFilter = 'lasso_selection_filter_v1';
   bool _fingerDrawingUserSet = false;
+
+  bool setLassoContentEnabled(LassoContentType type, bool enabled) {
+    final next = _lassoSelectionFilter.withType(type, enabled);
+    if (!next.hasEnabledType) return false;
+    if (next == _lassoSelectionFilter) return true;
+    _lassoSelectionFilter = next;
+    _notifyToolContext();
+    unawaited(_saveLassoSelectionFilter());
+    return true;
+  }
+
+  Future<void> _saveLassoSelectionFilter() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _prefLassoSelectionFilter,
+        jsonEncode(_lassoSelectionFilter.toJson()),
+      );
+    } catch (_) {}
+  }
 
   /// Mensajes informativos para la UI (p. ej. "Lápiz detectado").
   void Function(ControllerNotice notice)? onNotice;
@@ -542,6 +570,19 @@ class CanvasController extends _CanvasCore
       _continuousScroll = prefs.getBool(_prefContinuousScroll) ?? true;
       _twoFingerUndo = prefs.getBool(_prefTwoFingerUndo) ?? false;
       _eraserAutoRevert = prefs.getBool(_prefEraserAutoRevert) ?? true;
+      final savedLassoFilter = prefs.getString(_prefLassoSelectionFilter);
+      if (savedLassoFilter != null) {
+        try {
+          final decoded = jsonDecode(savedLassoFilter);
+          final filter = LassoSelectionFilter.fromJson(decoded);
+          if (filter != null && filter != _lassoSelectionFilter && !_disposed) {
+            _lassoSelectionFilter = filter;
+            _notifyToolContext();
+          }
+        } catch (_) {
+          // Invalid or old values use the backwards-compatible all-on default.
+        }
+      }
       final saved = prefs.getBool(_prefFingerDrawing);
       if (saved != null && saved != _fingerDrawingEnabled && !_disposed) {
         _fingerDrawingEnabled = saved;

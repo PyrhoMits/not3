@@ -41,6 +41,7 @@ import 'package:not3/ui/widgets/smart_folders_sheet.dart';
 import 'package:not3/ui/widgets/layers_sidebar.dart';
 import 'package:not3/services/template_library_service.dart';
 import 'package:not3/ui/home_screen.dart';
+import 'package:not3/ui/editor/editor_toolbar.dart';
 import 'package:not3/ui/theme/app_theme.dart';
 import 'package:not3/logic/canvas_controller.dart';
 import 'package:not3/services/image_service.dart';
@@ -82,8 +83,12 @@ Future<void> loadFonts() async {
 const Locale _shotLocale = Locale('en');
 
 Future<void> shot(WidgetTester tester, String name) async {
+  await shotFinder(tester, find.byType(MaterialApp), name);
+}
+
+Future<void> shotFinder(WidgetTester tester, Finder finder, String name) async {
   await tester.runAsync(() async {
-    final element = find.byType(MaterialApp).evaluate().first;
+    final element = finder.evaluate().first;
     final image = await captureImage(element);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
     File('$out/$name.png').writeAsBytesSync(bytes!.buffer.asUint8List());
@@ -186,18 +191,32 @@ void main() {
       );
       await settle(tester);
       await shot(tester, 'editor_$tag');
-      if (!dark) {
-        final l10n = AppLocalizations.of(
-          tester.element(find.byType(HomeScreen)),
-        );
-        await shot(tester, 'editor_pen_selected');
-        await tester.tap(find.byTooltip(l10n.toolLasso));
-        await settle(tester);
-        await shot(tester, 'editor_lasso_selected');
+      final l10n = AppLocalizations.of(tester.element(find.byType(HomeScreen)));
+      if (!dark) await shot(tester, 'editor_pen_selected');
+      await tester.tap(find.byTooltip(l10n.toolLasso));
+      await settle(tester);
+      if (!dark) await shot(tester, 'editor_lasso_selected');
+      await tester.tap(find.byTooltip(l10n.toolLasso));
+      await settle(tester);
+      await shot(tester, 'editor_lasso_popover_$tag');
+      await tester.tapAt(const Offset(1200, 700));
+      await settle(tester);
 
-        // Reactivate the pen, then tap it again to open its options.
+      if (!dark) {
+        // Reactivate the pen and capture the adaptive 800 dp portrait toolbar.
         await tester.tap(find.byTooltip(l10n.tbPenSlot(l10n.toolPen, 1)));
         await settle(tester);
+        tester.view.physicalSize = const Size(1600, 2560);
+        await tester.pumpAndSettle();
+        await shotFinder(
+          tester,
+          find.byType(EditorToolbar),
+          'editor_toolbar_portrait',
+        );
+
+        // Restore the reference landscape before opening the pen options.
+        tester.view.physicalSize = const Size(2560, 1600);
+        await tester.pumpAndSettle();
         await tester.tap(find.byTooltip(l10n.tbPenSlot(l10n.toolPen, 1)));
         await settle(tester);
         await shot(tester, 'editor_pen_popover');

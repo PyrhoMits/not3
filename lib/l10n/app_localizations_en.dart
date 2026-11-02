@@ -962,6 +962,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get popHighlighter => 'Highlighter';
 
   @override
+  String get lassoSelectContent => 'Select content';
+
+  @override
+  String get lassoHandwriting => 'Handwriting and drawings';
+
+  @override
+  String get lassoImages => 'Images';
+
+  @override
+  String get lassoFilterHint => 'Keep at least one content type enabled.';
+
+  @override
   String get popEraseOff => 'Erases only what you touch, like a rubber.';
 
   @override
