@@ -24,11 +24,13 @@ class PagesPanel extends StatefulWidget {
     required this.canvas,
     required this.imageService,
     required this.onClose,
+    required this.onImportPdf,
   });
 
   final CanvasController canvas;
   final ImageService imageService;
   final VoidCallback onClose;
+  final VoidCallback? onImportPdf;
 
   @override
   State<PagesPanel> createState() => _PagesPanelState();
@@ -234,13 +236,21 @@ class _PagesPanelState extends State<PagesPanel> {
           ),
           Padding(
             padding: const EdgeInsets.all(Spacing.md),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton.tonalIcon(
-                icon: const Icon(Icons.add),
-                label: Text(context.l10n.pgNew),
-                onPressed: _c.addPage,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilledButton.tonalIcon(
+                  icon: const Icon(Icons.add),
+                  label: Text(context.l10n.pgNew),
+                  onPressed: _c.addPage,
+                ),
+                const SizedBox(height: Spacing.sm),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  label: Text(context.l10n.pdfImportAction),
+                  onPressed: widget.onImportPdf,
+                ),
+              ],
             ),
           ),
         ],

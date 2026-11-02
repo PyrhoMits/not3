@@ -21,7 +21,7 @@ import '../services/export_service.dart';
 import '../services/ocr_language.dart';
 import '../services/ocr_correction_store.dart';
 import '../services/ocr_service.dart';
-import '../services/pdf_import_service.dart';
+import '../services/pdf_import_coordinator.dart';
 import '../models/page.dart' as model show Page;
 import '../services/image_service.dart';
 import '../services/import_service.dart';
@@ -43,6 +43,7 @@ import 'theme/tokens.dart';
 import 'widgets/controller_selector.dart';
 import 'widgets/dialogs.dart';
 import 'widgets/layers_sidebar.dart';
+import 'widgets/pdf_import_progress.dart';
 import 'widgets/ocr_language_sheet.dart';
 import 'widgets/search_sheet.dart';
 import 'widgets/template_picker_sheet.dart';
@@ -64,6 +65,7 @@ class HomeScreen extends StatefulWidget {
     required this.note,
     required this.notebookId,
     this.initialPage = 0,
+    this.pdfImporter = const PdfImportCoordinator(),
   });
 
   final Note note;
@@ -71,6 +73,7 @@ class HomeScreen extends StatefulWidget {
 
   /// Página a mostrar al abrir (p. ej. desde un resultado de búsqueda).
   final int initialPage;
+  final PdfImportCoordinator pdfImporter;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -93,6 +96,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final PenPresetsController _presets = PenPresetsController();
   bool _syncing = false;
   bool _layersSidebarOpen = false;
+  bool _importingPdf = false;
 
   /// The document row stays visible while the drawing-tools row can collapse.
   bool _toolsCollapsed = false;
@@ -1022,34 +1026,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Cada página del PDF se convierte en una página de la nota (hoja fija
   /// con el PDF de fondo), como en GoodNotes/Notability.
   Future<void> _importPdfAsBackground() async {
-    if (!PdfImportService.isSupported) {
-      _snack(context.l10n.pdfUnsupported);
-      return;
-    }
+    if (_importingPdf) return;
+    setState(() => _importingPdf = true);
     try {
-      final result = await FilePicker.pickFile(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
+      final result = await runPdfImportWithProgress(
+        context,
+        widget.pdfImporter,
       );
-      if (result == null || result.path == null || !mounted) return;
-
-      final pages = await runWithLoading(context, () async {
-        final list = <({String path, int width, int height})>[];
-        await for (final p in PdfImportService.importPages(result.path!)) {
-          list.add((path: p.path, width: p.widthPx, height: p.heightPx));
-        }
-        return list;
-      });
-      if (!mounted) return;
-      if (pages.isEmpty) {
-        _snack(context.l10n.pdfReadFailed);
-        return;
-      }
-      _c.insertPdfPages(pages);
+      if (result == null || !mounted) return;
+      _c.insertPdfPages(result.backgroundPages);
       _c.fitView(_c.viewportSize);
-      _snack(_l10n.pdfImported(pages.length));
-    } catch (e) {
-      _snack(_l10n.pdfImportFailed('$e'));
+      _snack(_l10n.pdfImported(result.pages.length));
+    } catch (error) {
+      _snack(pdfImportErrorMessage(context, error));
+    } finally {
+      if (mounted) setState(() => _importingPdf = false);
     }
   }
 
@@ -1460,6 +1451,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           canvas: controller,
                           imageService: _imageService,
                           onClose: () => _setPagesOpen(false),
+                          onImportPdf: widget.pdfImporter.isSupported
+                              ? _importPdfAsBackground
+                              : null,
                         ),
                     ],
                   ),
@@ -1715,6 +1709,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               'importPdf',
               Icons.picture_as_pdf_outlined,
               context.l10n.menuImportPdf,
+              enabled: widget.pdfImporter.isSupported,
             ),
             item(
               'clear',

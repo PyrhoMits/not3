@@ -20,11 +20,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:not3/models/page.dart';
 import 'package:not3/models/note.dart';
 import 'package:flutter/gestures.dart';
-import 'package:not3/app.dart';
 import 'package:not3/l10n/l10n.dart';
 import 'package:not3/models/stroke.dart';
 import 'package:not3/models/template.dart';
 import 'package:not3/services/storage_service.dart';
+import 'package:not3/services/pdf_import_coordinator.dart';
 import 'package:http/testing.dart';
 import 'package:not3/services/marketplace/marketplace_service.dart';
 import 'package:not3/ui/marketplace_screen.dart';
@@ -41,6 +41,7 @@ import 'package:not3/ui/widgets/smart_folders_sheet.dart';
 import 'package:not3/ui/widgets/layers_sidebar.dart';
 import 'package:not3/services/template_library_service.dart';
 import 'package:not3/ui/home_screen.dart';
+import 'package:not3/ui/notebook_library.dart';
 import 'package:not3/ui/editor/editor_toolbar.dart';
 import 'package:not3/ui/theme/app_theme.dart';
 import 'package:not3/logic/canvas_controller.dart';
@@ -143,7 +144,18 @@ void main() {
           ? Brightness.dark
           : Brightness.light;
       await tester.runAsync(seed);
-      await tester.pumpWidget(const Not3App());
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: _shotLocale,
+          debugShowCheckedModeBanner: false,
+          theme: dark ? AppTheme.dark() : AppTheme.light(),
+          home: const NotebookLibraryScreen(
+            pdfImporter: PdfImportCoordinator(supported: true),
+          ),
+        ),
+      );
       await settle(tester);
       await shot(tester, 'library_$tag');
     });
@@ -186,13 +198,24 @@ void main() {
           locale: _shotLocale,
           debugShowCheckedModeBanner: false,
           theme: dark ? AppTheme.dark() : AppTheme.light(),
-          home: HomeScreen(note: note, notebookId: nb.id),
+          home: HomeScreen(
+            note: note,
+            notebookId: nb.id,
+            pdfImporter: const PdfImportCoordinator(supported: true),
+          ),
         ),
       );
       await settle(tester);
       await shot(tester, 'editor_$tag');
       final l10n = AppLocalizations.of(tester.element(find.byType(HomeScreen)));
-      if (!dark) await shot(tester, 'editor_pen_selected');
+      if (!dark) {
+        await shot(tester, 'editor_pen_selected');
+        await tester.tap(find.byTooltip(l10n.tbPages));
+        await settle(tester);
+        await shot(tester, 'editor_pages_pdf_import');
+        await tester.tap(find.byTooltip(l10n.tbHidePages));
+        await settle(tester);
+      }
       await tester.tap(find.byTooltip(l10n.toolLasso));
       await settle(tester);
       if (!dark) await shot(tester, 'editor_lasso_selected');
