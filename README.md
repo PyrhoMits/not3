@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/icon-animated.svg" width="168" alt="Not3">
+  <img src="docs/assets/icon.png" width="168" alt="Not3">
 </p>
 
 <h1 align="center">Not3</h1>
