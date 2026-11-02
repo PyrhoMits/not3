@@ -16,7 +16,8 @@ void main() {
 
   setUp(() {
     tmp = Directory.systemTemp.createTempSync('inklus_presets_');
-    canvas = CanvasController(StorageService(baseDir: tmp))..setHapticEnabled(false);
+    canvas = CanvasController(StorageService(baseDir: tmp))
+      ..setHapticEnabled(false);
     presets = PenPresetsController(persist: false);
     canvas.bottomBarContextNotifier.addListener(() => presets.syncFrom(canvas));
   });
@@ -30,8 +31,11 @@ void main() {
     presets.activate(0, canvas);
     canvas.setColor(const Color(0xFF00AA00));
     presets.activate(1, canvas);
-    expect(canvas.color, PenPresetsController.defaultPens[1].color,
-        reason: 'activar otra pluma no arrastra el color anterior');
+    expect(
+      canvas.color,
+      PenPresetsController.defaultPens[1].color,
+      reason: 'activar otra pluma no arrastra el color anterior',
+    );
     presets.activate(0, canvas);
     expect(canvas.color, const Color(0xFF00AA00));
   });
@@ -58,5 +62,27 @@ void main() {
     presets.addRecentColor(const Color(0xFF000005));
     expect(presets.recentColors.length, PenPresetsController.maxRecent);
     expect(presets.recentColors.first, const Color(0xFF000005));
+  });
+
+  test('toolbar colors stay in place when selected', () {
+    final before = presets.toolbarColors;
+
+    presets.activateToolbarColor(2, canvas);
+
+    expect(presets.activeToolbarColorSlot, 2);
+    expect(presets.toolbarColors, before);
+    expect(canvas.color, before[2]);
+  });
+
+  test('changing color replaces only the active toolbar slot', () {
+    presets.activateToolbarColor(3, canvas);
+    final before = presets.toolbarColors;
+
+    canvas.setColor(const Color(0xFF12AB34));
+    presets.syncFrom(canvas);
+
+    expect(presets.toolbarColors[3], const Color(0xFF12AB34));
+    expect(presets.toolbarColors.take(3), before.take(3));
+    expect(presets.toolbarColors[4], before[4]);
   });
 }

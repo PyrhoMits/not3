@@ -1810,6 +1810,18 @@ abstract class AppLocalizations {
   /// **'Hide layers'**
   String get tbHideLayers;
 
+  /// No description provided for @tbShowTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Show drawing tools'**
+  String get tbShowTools;
+
+  /// No description provided for @tbHideTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide drawing tools'**
+  String get tbHideTools;
+
   /// No description provided for @tbLayers.
   ///
   /// In en, this message translates to:
@@ -1855,13 +1867,13 @@ abstract class AppLocalizations {
   /// No description provided for @tbHideMagnifier.
   ///
   /// In en, this message translates to:
-  /// **'Hide magnifier'**
+  /// **'Close zoom writing'**
   String get tbHideMagnifier;
 
   /// No description provided for @tbMagnifier.
   ///
   /// In en, this message translates to:
-  /// **'Magnifier'**
+  /// **'Zoom writing'**
   String get tbMagnifier;
 
   /// No description provided for @tbLaserOff.

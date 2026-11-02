@@ -987,6 +987,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tbHideLayers => 'Hide layers';
 
   @override
+  String get tbShowTools => 'Show drawing tools';
+
+  @override
+  String get tbHideTools => 'Hide drawing tools';
+
+  @override
   String get tbLayers => 'Layers';
 
   @override
@@ -1008,10 +1014,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tbFill => 'Fill area';
 
   @override
-  String get tbHideMagnifier => 'Hide magnifier';
+  String get tbHideMagnifier => 'Close zoom writing';
 
   @override
-  String get tbMagnifier => 'Magnifier';
+  String get tbMagnifier => 'Zoom writing';
 
   @override
   String get tbLaserOff => 'Turn off laser pointer';

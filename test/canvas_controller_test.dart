@@ -77,6 +77,37 @@ void main() {
     expect(c.twoFingerUndo, isFalse);
   });
 
+  test('el borrador elimina trazos completos por defecto', () {
+    expect(c.eraserMode, EraserMode.stroke);
+  });
+
+  group('Zoom writing', () {
+    const viewport = Size(800, 600);
+
+    setUp(() {
+      c.viewportSize = viewport;
+      c.setView(2, const Offset(100, 50));
+    });
+
+    test('opens on the center of the visible canvas', () {
+      c.toggleMagnifier();
+
+      expect(c.magnifierEnabled, isTrue);
+      expect(c.magnifierPosition, const Offset(150, 125));
+    });
+
+    test('drawing no longer moves the selected zoom area', () {
+      c.toggleMagnifier();
+      c.updateMagnifierPosition(const Offset(24, 36));
+
+      c.beginStroke(const Offset(10, 10), 0.5, tool: ToolType.pen);
+      c.addStrokePoint(const Offset(40, 10), 0.5);
+      c.endStroke();
+
+      expect(c.magnifierPosition, const Offset(24, 36));
+    });
+  });
+
   group('Capas', () {
     setUp(() {
       c.addLayer(); // capa 1 activa
@@ -92,7 +123,11 @@ void main() {
     test('pegar conserva atributos y usa la capa activa', () {
       final s = draw(0, 100, 50);
       c.beginLasso(const Offset(-20, 20));
-      for (final p in const [Offset(150, 20), Offset(150, 80), Offset(-20, 80)]) {
+      for (final p in const [
+        Offset(150, 20),
+        Offset(150, 80),
+        Offset(-20, 80),
+      ]) {
         c.addLassoPoint(p);
       }
       c.endLasso();
@@ -109,7 +144,11 @@ void main() {
       c.setShapeDetection(true);
       draw(0, 300, 50);
       c.beginLasso(const Offset(-20, 0));
-      for (final p in const [Offset(350, 0), Offset(350, 100), Offset(-20, 100)]) {
+      for (final p in const [
+        Offset(350, 0),
+        Offset(350, 100),
+        Offset(-20, 100),
+      ]) {
         c.addLassoPoint(p);
       }
       c.endLasso();
@@ -132,6 +171,7 @@ void main() {
       final original = ids();
 
       // Borra el centro del trazo b.
+      c.setEraserMode(EraserMode.partial);
       c.beginStroke(const Offset(50, 100), 0.5, tool: ToolType.eraser);
       c.endStroke();
 
@@ -154,8 +194,11 @@ void main() {
       c.toggleLayerLocked(0);
       c.beginStroke(const Offset(50, 0), 0.5, tool: ToolType.eraser);
       c.endStroke();
-      expect(c.page.strokes.first.id, a.id,
-          reason: 'el trazo bloqueado sigue siendo el primero');
+      expect(
+        c.page.strokes.first.id,
+        a.id,
+        reason: 'el trazo bloqueado sigue siendo el primero',
+      );
     });
 
     test('deshacer un movimiento devuelve el trazo a su posición', () {
@@ -196,8 +239,10 @@ void main() {
 
     test('el trazo confirmado es inmutable', () {
       final s = draw(0, 100, 0);
-      expect(() => s.points.add(const StrokePoint(0, 0, 0.5)),
-          throwsUnsupportedError);
+      expect(
+        () => s.points.add(const StrokePoint(0, 0, 0.5)),
+        throwsUnsupportedError,
+      );
     });
   });
 
@@ -265,13 +310,21 @@ void main() {
       final t = c.pages.first.template;
       expect(t.isFinite, isTrue, reason: 'el PDF no se repite infinitamente');
       expect(t.sheetSize.width, 1191);
-      expect(c.pages[1].template.sheetSize.height, lessThan(1191),
-          reason: 'página apaisada conserva su proporción');
+      expect(
+        c.pages[1].template.sheetSize.height,
+        lessThan(1191),
+        reason: 'página apaisada conserva su proporción',
+      );
     });
 
     test('los presets de tamaño afectan a la hoja', () {
-      c.setTemplate(const PageTemplate(
-          type: TemplateType.sheet, customWidth: 1275, customHeight: 1650));
+      c.setTemplate(
+        const PageTemplate(
+          type: TemplateType.sheet,
+          customWidth: 1275,
+          customHeight: 1650,
+        ),
+      );
       expect(c.sheetSize, const Size(1275, 1650));
     });
   });
@@ -310,9 +363,8 @@ void main() {
   });
 
   group('Borrador: modos', () {
-    test('trazo completo borra el trazo entero', () {
+    test('el modo por defecto borra el trazo entero', () {
       draw(0, 200, 0);
-      c.setEraserMode(EraserMode.stroke);
       c.beginStroke(const Offset(100, 0), 0.5, tool: ToolType.eraser);
       c.endStroke();
       expect(c.page.strokes, isEmpty);
@@ -325,8 +377,12 @@ void main() {
       c.beginStroke(const Offset(100, 0), 0.5, tool: ToolType.eraser);
       c.endStroke();
       expect(c.page.strokes.where((s) => s.tool == ToolType.pen).length, 1);
-      expect(c.page.strokes.any((s) =>
-          s.tool == ToolType.highlighter && s.points.length > 30), isFalse);
+      expect(
+        c.page.strokes.any(
+          (s) => s.tool == ToolType.highlighter && s.points.length > 30,
+        ),
+        isFalse,
+      );
     });
   });
 
@@ -392,9 +448,19 @@ void main() {
 
     setUp(() {
       draw(0, 100, 0);
-      c.addImage(ImageItem(
-          id: 'img', localPath: '/tmp/x.png', x: 50, y: 60, width: 40, height: 40));
-      c.page.textItems.add(TextItem(id: 'txt', x: 50, y: 120, width: 80, text: 'Hola'));
+      c.addImage(
+        ImageItem(
+          id: 'img',
+          localPath: '/tmp/x.png',
+          x: 50,
+          y: 60,
+          width: 40,
+          height: 40,
+        ),
+      );
+      c.page.textItems.add(
+        TextItem(id: 'txt', x: 50, y: 120, width: 80, text: 'Hola'),
+      );
       c.setTool(ToolType.lasso);
       lassoAround(const Rect.fromLTRB(-20, -20, 200, 160));
     });
@@ -427,29 +493,44 @@ void main() {
       expect(c.page.textItems.single.id, 'txt');
     });
 
-    test('escalar ×2 agranda imagen y texto y deshacer lo revierte en un paso', () {
-      final before = List.of(c.selectedStrokes);
-      const pivot = Offset(50, 60); // centro de la imagen
-      c.transformSelectedStrokes(scaleFactor: 2, rotationAngle: 0, pivotPoint: pivot);
-      c.commitTransformSelection(before);
+    test(
+      'escalar ×2 agranda imagen y texto y deshacer lo revierte en un paso',
+      () {
+        final before = List.of(c.selectedStrokes);
+        const pivot = Offset(50, 60); // centro de la imagen
+        c.transformSelectedStrokes(
+          scaleFactor: 2,
+          rotationAngle: 0,
+          pivotPoint: pivot,
+        );
+        c.commitTransformSelection(before);
 
-      final img = c.page.images.single;
-      expect((img.x, img.y, img.width, img.height), (50.0, 60.0, 80.0, 80.0));
-      final txt = c.page.textItems.single;
-      expect(txt.y, 60 + (120 - 60) * 2);
-      expect(txt.width, 160);
-      expect(txt.fontSize, greaterThan(TextItem(id: 'x', x: 0, y: 0, width: 1, text: '').fontSize));
+        final img = c.page.images.single;
+        expect((img.x, img.y, img.width, img.height), (50.0, 60.0, 80.0, 80.0));
+        final txt = c.page.textItems.single;
+        expect(txt.y, 60 + (120 - 60) * 2);
+        expect(txt.width, 160);
+        expect(
+          txt.fontSize,
+          greaterThan(
+            TextItem(id: 'x', x: 0, y: 0, width: 1, text: '').fontSize,
+          ),
+        );
 
-      c.undo();
-      expect(c.page.images.single.width, 40);
-      expect(c.page.textItems.single.width, 80);
-      expect(c.page.textItems.single.y, 120);
-    });
+        c.undo();
+        expect(c.page.images.single.width, 40);
+        expect(c.page.textItems.single.width, 80);
+        expect(c.page.textItems.single.y, 120);
+      },
+    );
 
     test('rotar 90° gira la imagen y mueve el texto sin inclinarlo', () {
       final before = List.of(c.selectedStrokes);
       c.transformSelectedStrokes(
-          scaleFactor: 1, rotationAngle: pi / 2, pivotPoint: const Offset(50, 60));
+        scaleFactor: 1,
+        rotationAngle: pi / 2,
+        pivotPoint: const Offset(50, 60),
+      );
       c.commitTransformSelection(before);
       expect(c.page.images.single.rotation, closeTo(pi / 2, 1e-9));
       final txt = c.page.textItems.single;
@@ -458,19 +539,22 @@ void main() {
       expect(txt.y, closeTo(60, 1e-9));
     });
 
-    test('copiar y pegar incluye imágenes y textos (ids nuevos, seleccionados)', () {
-      c.copySelectedStrokes();
-      c.pasteStrokes();
-      expect(c.page.strokes.length, 2);
-      expect(c.page.images.length, 2);
-      expect(c.page.textItems.length, 2);
-      expect(c.page.images.map((i) => i.id).toSet().length, 2);
-      expect(c.selectedImages.single.id, isNot('img'));
-      expect(c.selectedTexts.single.x, 50 + kPasteOffset);
-      c.undo();
-      expect(c.page.images.single.id, 'img');
-      expect(c.page.textItems.single.id, 'txt');
-    });
+    test(
+      'copiar y pegar incluye imágenes y textos (ids nuevos, seleccionados)',
+      () {
+        c.copySelectedStrokes();
+        c.pasteStrokes();
+        expect(c.page.strokes.length, 2);
+        expect(c.page.images.length, 2);
+        expect(c.page.textItems.length, 2);
+        expect(c.page.images.map((i) => i.id).toSet().length, 2);
+        expect(c.selectedImages.single.id, isNot('img'));
+        expect(c.selectedTexts.single.x, 50 + kPasteOffset);
+        c.undo();
+        expect(c.page.images.single.id, 'img');
+        expect(c.page.textItems.single.id, 'txt');
+      },
+    );
 
     test('duplicar no pisa el portapapeles', () {
       c.clearLassoSelection();
@@ -486,22 +570,37 @@ void main() {
     const viewport = Size(800, 1000);
     const sheet = Size(600, 800);
 
-    test('una hoja más grande que la pantalla no deja ver más que el margen', () {
-      // Escala 2: la hoja ocupa 1200×1600 px.
-      final t = CanvasController.clampSheetTranslate(
-          const Offset(5000, -5000), 2, sheet, viewport);
-      // Borde izquierdo a 48 px como mucho; borde inferior a 48 px del final.
-      expect(t.dx - 600, 48);
-      expect(t.dy + 800, 1000 - 48);
-    });
+    test(
+      'una hoja más grande que la pantalla no deja ver más que el margen',
+      () {
+        // Escala 2: la hoja ocupa 1200×1600 px.
+        final t = CanvasController.clampSheetTranslate(
+          const Offset(5000, -5000),
+          2,
+          sheet,
+          viewport,
+        );
+        // Borde izquierdo a 48 px como mucho; borde inferior a 48 px del final.
+        expect(t.dx - 600, 48);
+        expect(t.dy + 800, 1000 - 48);
+      },
+    );
 
     test('una hoja más pequeña se mueve pero no sale de la pantalla', () {
       // Escala 0.5: la hoja ocupa 300×400 px.
       final inside = CanvasController.clampSheetTranslate(
-          const Offset(400, 500), 0.5, sheet, viewport);
+        const Offset(400, 500),
+        0.5,
+        sheet,
+        viewport,
+      );
       expect(inside, const Offset(400, 500));
       final out = CanvasController.clampSheetTranslate(
-          const Offset(-900, 3000), 0.5, sheet, viewport);
+        const Offset(-900, 3000),
+        0.5,
+        sheet,
+        viewport,
+      );
       expect(out.dx - 150, 48);
       expect(out.dy + 200, 1000 - 48);
     });
@@ -512,7 +611,9 @@ void main() {
       c.fitView(viewport);
       c.panBy(const Offset(100000, 100000));
       final sheetRight = c.worldToViewport(
-          Offset(-c.sheetSize.width / 2, 0), viewport);
+        Offset(-c.sheetSize.width / 2, 0),
+        viewport,
+      );
       expect(sheetRight.dx, lessThanOrEqualTo(viewport.width));
 
       c.setTemplate(const PageTemplate(type: TemplateType.blank));
@@ -536,7 +637,9 @@ void main() {
 
     /// Punto del mundo (de la página actual) que está en el centro.
     Offset centerWorld() => c.viewportToWorld(
-        Offset(viewport.width / 2, viewport.height / 2), viewport);
+      Offset(viewport.width / 2, viewport.height / 2),
+      viewport,
+    );
 
     test('al bajar se pasa a la hoja siguiente sin saltos', () {
       twoSheets();
@@ -557,16 +660,25 @@ void main() {
       twoSheets();
       c.panBy(const Offset(0, -1e6));
       expect(c.pageIndex, 1);
-      final bottomOfLast = c.worldToViewport(Offset(0, c.sheetSize.height / 2), viewport);
-      expect(bottomOfLast.dy, greaterThanOrEqualTo(viewport.height - 48 - 1e-6));
+      final bottomOfLast = c.worldToViewport(
+        Offset(0, c.sheetSize.height / 2),
+        viewport,
+      );
+      expect(
+        bottomOfLast.dy,
+        greaterThanOrEqualTo(viewport.height - 48 - 1e-6),
+      );
     });
 
     test('empezar a escribir en la hoja de abajo la hace la actual', () {
       twoSheets();
       final sheetH = c.sheetSize.height;
       // Punto dentro de la hoja 2, en coordenadas de la hoja 1.
-      c.beginStroke(Offset(0, sheetH + CanvasController.pageGap), 0.5,
-          tool: ToolType.pen);
+      c.beginStroke(
+        Offset(0, sheetH + CanvasController.pageGap),
+        0.5,
+        tool: ToolType.pen,
+      );
       c.addStrokePoint(Offset(40, sheetH + CanvasController.pageGap), 0.5);
       c.endStroke();
       expect(c.pageIndex, 1);

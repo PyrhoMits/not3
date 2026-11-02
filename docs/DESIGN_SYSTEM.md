@@ -18,7 +18,9 @@ Goal: every screen should feel like the same product, at the level of GoodNotes/
 2. **Measurements** only from `Spacing`, `Radii`, `Sizes`, `Motion`. Touch target **≥ 48 dp**.
 3. **Text** with the roles from `context.text` (tablet-adjusted scale). Nothing below **12 pt**; respect the system `textScaler`.
 4. **Secondary screens** with `Not3Page` + `SectionCard`/`SettingsTile`/`EmptyState`. Bottom sheets with `SheetHeader` (the handle is added by the theme). Confirmations with `showConfirmDialog`.
-5. **Tool options** in anchored popovers (`showAnchoredPopover`), not in fixed bars.
+5. **Tool options**: common drawing controls (recent colors and quick stroke sizes) may live in
+   the editor tool row; complete palettes, sliders and advanced settings stay in anchored popovers
+   (`showAnchoredPopover`).
 6. **Rebuilds**: widgets that depend on the controller use `ControllerSelector` with the minimum value they display (the controller notifies on every stroke point).
 7. **Visible text** always through l10n (`context.l10n`); see [`TRANSLATING.md`](TRANSLATING.md). Long text must not overflow: flexible cells, `Flexible`/`maxLines` + ellipsis.
 8. **Accessibility**: `Semantics`/`tooltip` on icons without text, swatches, covers and thumbnails; enough contrast in light and dark.
