@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 
 import '../../constants.dart';
 import '../../logic/canvas_controller.dart';
+import '../../logic/editor_performance_recorder.dart';
 import '../../logic/palm_rejection.dart';
 import '../../logic/snap_guides.dart';
 import '../../logic/stroke_engine.dart';
@@ -335,7 +336,7 @@ class ActiveLayerPainter extends CustomPainter {
 
     // Trazo en progreso.
     if (active != null) {
-      paintActiveStroke(canvas, active);
+      paintActiveStroke(canvas, active, viewScale: scale);
     }
 
     // Puntero láser: estela roja que se desvanece (no se guarda).
@@ -664,7 +665,9 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
                           RepaintBoundary(
                             child: ListenableBuilder(
                               listenable: Listenable.merge([
-                                widget.controller,
+                                widget.controller.renderContentNotifier,
+                                widget.controller.viewportNotifier,
+                                widget.controller.pageMetadataNotifier,
                                 _viewGesture,
                               ]),
                               builder: (context, _) {
@@ -698,7 +701,11 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
                         // Capa activa (trazo en curso, cursor, selección).
                         _nightFilter(
                           ListenableBuilder(
-                            listenable: widget.controller,
+                            listenable: Listenable.merge([
+                              widget.controller.activeOverlayNotifier,
+                              widget.controller.renderContentNotifier,
+                              widget.controller.viewportNotifier,
+                            ]),
                             builder: (context, _) => CustomPaint(
                               size: Size.infinite,
                               painter: ActiveLayerPainter(
@@ -772,6 +779,10 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
   }
 
   void _onPointerDown(PointerDownEvent event) {
+    EditorPerformanceRecorder.instance.mark(
+      'pointer_down',
+      data: {'kind': event.kind.name, 'tool': widget.controller.tool.name},
+    );
     final kind = event.kind;
     final c = widget.controller;
     final world = c.viewportToWorld(event.localPosition, _viewport);
@@ -936,6 +947,13 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
   }
 
   void _onPointerUp(PointerUpEvent event) {
+    EditorPerformanceRecorder.instance.mark(
+      'pointer_up',
+      data: {
+        'tool': widget.controller.tool.name,
+        'points': widget.controller.activeStroke?.points.length ?? 0,
+      },
+    );
     // Siempre, antes de cualquier return: si no, el estado "lápiz apoyado"
     // se quedaba atascado y la pantalla dejaba de responder al tacto.
     if (PalmRejection.isStylusKind(event.kind)) {

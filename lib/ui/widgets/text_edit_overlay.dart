@@ -60,9 +60,21 @@ class RichTextController extends TextEditingController {
     required bool withComposing,
   }) {
     final it = item;
-    if (it == null) return super.buildTextSpan(context: context, style: style, withComposing: withComposing);
-    return buildTextItemSpan(it, text, runs, style ?? const TextStyle(),
-        composing: value.composing, markComposing: withComposing);
+    if (it == null) {
+      return super.buildTextSpan(
+        context: context,
+        style: style,
+        withComposing: withComposing,
+      );
+    }
+    return buildTextItemSpan(
+      it,
+      text,
+      runs,
+      style ?? const TextStyle(),
+      composing: value.composing,
+      markComposing: withComposing,
+    );
   }
 }
 
@@ -146,7 +158,10 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
 
   /// Cambia el formato del rango. [run] actúa sobre los tramos; [whole]
   /// (solo si no hay selección) también sobre el formato de la caja.
-  void _format(TextRun Function(TextRun) run, [TextItem Function(TextItem)? whole]) {
+  void _format(
+    TextRun Function(TextRun) run, [
+    TextItem Function(TextItem)? whole,
+  ]) {
     final item = _currentItem();
     if (item == null) return;
     final (a, b, all) = _range;
@@ -183,7 +198,7 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _c,
+      listenable: Listenable.merge([_c.textEditNotifier, _c.viewportNotifier]),
       builder: (context, _) {
         final item = _currentItem();
         if (item == null) {
@@ -212,8 +227,11 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
         final viewport = _c.viewportSize;
         // La barra va encima de la caja; si no cabe, debajo.
         final above = topLeft.dy > 120;
-        final style = textItemStyle(item, scale: scale)
-            .copyWith(inherit: false, letterSpacing: 0, textBaseline: TextBaseline.alphabetic);
+        final style = textItemStyle(item, scale: scale).copyWith(
+          inherit: false,
+          letterSpacing: 0,
+          textBaseline: TextBaseline.alphabetic,
+        );
 
         return Stack(
           clipBehavior: Clip.none,
@@ -223,14 +241,19 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
               left: Spacing.sm,
               right: Spacing.sm,
               top: above ? null : topLeft.dy + boxHeight + Spacing.md + _pad,
-              bottom: above ? viewport.height - topLeft.dy + Spacing.md + _pad : null,
+              bottom: above
+                  ? viewport.height - topLeft.dy + Spacing.md + _pad
+                  : null,
               child: Align(
                 alignment: Alignment.topLeft,
                 child: Transform.translate(
                   offset: Offset(
                     (topLeft.dx - Spacing.sm).clamp(
                       0.0,
-                      (viewport.width - 2 * Spacing.sm - 360).clamp(0.0, double.infinity),
+                      (viewport.width - 2 * Spacing.sm - 360).clamp(
+                        0.0,
+                        double.infinity,
+                      ),
                     ),
                     0,
                   ),
@@ -273,33 +296,36 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
                 child: Padding(
                   padding: const EdgeInsets.all(_pad),
                   child: MediaQuery(
-                    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(textScaler: TextScaler.noScaling),
                     child: TextField(
-                    controller: _tc,
-                    focusNode: _focus,
-                    style: style,
-                    textAlign: textItemAlign(item),
-                    maxLines: null,
-                    keyboardType: TextInputType.multiline,
-                    textInputAction: TextInputAction.newline,
-                    autofocus: true,
-                    cursorColor: context.colors.primary,
-                    decoration: InputDecoration(
-                      isCollapsed: true,
-                      filled: false,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                      hintText: context.l10n.textEditHint,
-                      hintStyle: style.copyWith(color: Colors.black38),
+                      controller: _tc,
+                      focusNode: _focus,
+                      style: style,
+                      textAlign: textItemAlign(item),
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.newline,
+                      autofocus: true,
+                      cursorColor: context.colors.primary,
+                      decoration: InputDecoration(
+                        isCollapsed: true,
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                        hintText: context.l10n.textEditHint,
+                        hintStyle: style.copyWith(color: Colors.black38),
+                      ),
+                      onChanged: (_) {
+                        final cur = _currentItem();
+                        if (cur != null) _push(cur);
+                      },
+                      onTapOutside: (_) => _c.commitEditingText(),
                     ),
-                    onChanged: (_) {
-                      final cur = _currentItem();
-                      if (cur != null) _push(cur);
-                    },
-                    onTapOutside: (_) => _c.commitEditingText(),
-                  )),
+                  ),
                 ),
               ),
             ),
@@ -332,7 +358,9 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
                     if (cur == null) return;
                     final w = (cur.width + d.dx / scale).clamp(60.0, 4000.0);
                     // El borde izquierdo no se mueve: solo crece hacia la derecha.
-                    _push(cur.copyWith(x: cur.x + (w - cur.width) / 2, width: w));
+                    _push(
+                      cur.copyWith(x: cur.x + (w - cur.width) / 2, width: w),
+                    );
                   },
                 ),
               ),
@@ -377,44 +405,98 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
                 onPressed: () => _togglePanel(_Panel.font),
                 child: Text(
                   textFontLabel(fontId),
-                  style: TextStyle(fontFamily: textFontFamily(fontId), fontSize: 15),
+                  style: TextStyle(
+                    fontFamily: textFontFamily(fontId),
+                    fontSize: 15,
+                  ),
                 ),
               ),
               const _Divider(),
               // Tamaño
-              _barButton(Icons.remove, context.l10n.textEditSmaller, false,
-                  () => _setSize(item, item.fontSize - 2)),
+              _barButton(
+                Icons.remove,
+                context.l10n.textEditSmaller,
+                false,
+                () => _setSize(item, item.fontSize - 2),
+              ),
               SizedBox(
                 width: 32,
-                child: Text('${item.fontSize.round()}',
-                    textAlign: TextAlign.center, style: context.text.labelLarge),
+                child: Text(
+                  '${item.fontSize.round()}',
+                  textAlign: TextAlign.center,
+                  style: context.text.labelLarge,
+                ),
               ),
-              _barButton(Icons.add, context.l10n.textEditLarger, false,
-                  () => _setSize(item, item.fontSize + 2)),
+              _barButton(
+                Icons.add,
+                context.l10n.textEditLarger,
+                false,
+                () => _setSize(item, item.fontSize + 2),
+              ),
               const _Divider(),
               // B I U S
-              _barButton(Icons.format_bold, context.l10n.textEditBold, bold,
-                  () => _toggle((t) => t.bold, (r) => r.bold,
-                      (r, v) => r.copyStyle(bold: v), (t, v) => t.copyWith(bold: v))),
-              _barButton(Icons.format_italic, context.l10n.textEditItalic, italic,
-                  () => _toggle((t) => t.italic, (r) => r.italic,
-                      (r, v) => r.copyStyle(italic: v), (t, v) => t.copyWith(italic: v))),
-              _barButton(Icons.format_underlined, context.l10n.textEditUnderline, under,
-                  () => _toggle((t) => t.underline, (r) => r.underline,
-                      (r, v) => r.copyStyle(underline: v), (t, v) => t.copyWith(underline: v))),
-              _barButton(Icons.strikethrough_s, context.l10n.textEditStrike, strike,
-                  () => _toggle((t) => t.strike, (r) => r.strike,
-                      (r, v) => r.copyStyle(strike: v), (t, v) => t.copyWith(strike: v))),
+              _barButton(
+                Icons.format_bold,
+                context.l10n.textEditBold,
+                bold,
+                () => _toggle(
+                  (t) => t.bold,
+                  (r) => r.bold,
+                  (r, v) => r.copyStyle(bold: v),
+                  (t, v) => t.copyWith(bold: v),
+                ),
+              ),
+              _barButton(
+                Icons.format_italic,
+                context.l10n.textEditItalic,
+                italic,
+                () => _toggle(
+                  (t) => t.italic,
+                  (r) => r.italic,
+                  (r, v) => r.copyStyle(italic: v),
+                  (t, v) => t.copyWith(italic: v),
+                ),
+              ),
+              _barButton(
+                Icons.format_underlined,
+                context.l10n.textEditUnderline,
+                under,
+                () => _toggle(
+                  (t) => t.underline,
+                  (r) => r.underline,
+                  (r, v) => r.copyStyle(underline: v),
+                  (t, v) => t.copyWith(underline: v),
+                ),
+              ),
+              _barButton(
+                Icons.strikethrough_s,
+                context.l10n.textEditStrike,
+                strike,
+                () => _toggle(
+                  (t) => t.strike,
+                  (r) => r.strike,
+                  (r, v) => r.copyStyle(strike: v),
+                  (t, v) => t.copyWith(strike: v),
+                ),
+              ),
               const _Divider(),
               // Colores
-              _colorButton(Icons.format_color_text, context.l10n.textEditColor, textColor,
-                  _panel == _Panel.color, () => _togglePanel(_Panel.color)),
               _colorButton(
-                  Icons.border_color,
-                  context.l10n.textEditHighlight,
-                  at.highlight != null ? Color(at.highlight!) : _kHighlights.first,
-                  _panel == _Panel.highlight,
-                  () => _togglePanel(_Panel.highlight)),
+                Icons.format_color_text,
+                context.l10n.textEditColor,
+                textColor,
+                _panel == _Panel.color,
+                () => _togglePanel(_Panel.color),
+              ),
+              _colorButton(
+                Icons.border_color,
+                context.l10n.textEditHighlight,
+                at.highlight != null
+                    ? Color(at.highlight!)
+                    : _kHighlights.first,
+                _panel == _Panel.highlight,
+                () => _togglePanel(_Panel.highlight),
+              ),
               const _Divider(),
               // Párrafo
               _barButton(
@@ -426,29 +508,51 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
                 context.l10n.textEditAlign,
                 false,
                 () {
-                  final next = TextItem.alignments[
-                      (TextItem.alignments.indexOf(item.align) + 1) %
+                  final next =
+                      TextItem.alignments[(TextItem.alignments.indexOf(
+                                item.align,
+                              ) +
+                              1) %
                           TextItem.alignments.length];
                   _push(item.copyWith(align: next));
                 },
               ),
-              _barButton(Icons.format_line_spacing, context.l10n.textEditSpacing, _panel == _Panel.spacing,
-                  () => _togglePanel(_Panel.spacing)),
+              _barButton(
+                Icons.format_line_spacing,
+                context.l10n.textEditSpacing,
+                _panel == _Panel.spacing,
+                () => _togglePanel(_Panel.spacing),
+              ),
               const _Divider(),
               _barButton(
-                  Icons.link,
-                  item.linkToPageId != null ? context.l10n.textEditLinkActive : context.l10n.textEditLink,
-                  item.linkToPageId != null,
-                  () => _showLinkPicker(item)),
-              _barButton(Icons.delete_outline, context.l10n.textEditDelete, false,
-                  () => _c.removeTextItem(item),
-                  color: context.inklus.danger),
-              _barButton(Icons.check, context.l10n.textEditDone, false, _c.commitEditingText,
-                  color: scheme.primary),
+                Icons.link,
+                item.linkToPageId != null
+                    ? context.l10n.textEditLinkActive
+                    : context.l10n.textEditLink,
+                item.linkToPageId != null,
+                () => _showLinkPicker(item),
+              ),
+              _barButton(
+                Icons.delete_outline,
+                context.l10n.textEditDelete,
+                false,
+                () => _c.removeTextItem(item),
+                color: context.inklus.danger,
+              ),
+              _barButton(
+                Icons.check,
+                context.l10n.textEditDone,
+                false,
+                _c.commitEditingText,
+                color: scheme.primary,
+              ),
               if (!hasSel)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: Spacing.sm),
-                  child: Text(context.l10n.textEditWholeBox, style: context.text.labelSmall),
+                  child: Text(
+                    context.l10n.textEditWholeBox,
+                    style: context.text.labelSmall,
+                  ),
                 ),
             ],
           ),
@@ -457,20 +561,28 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
     );
   }
 
-  void _togglePanel(_Panel p) => setState(() => _panel = _panel == p ? _Panel.none : p);
+  void _togglePanel(_Panel p) =>
+      setState(() => _panel = _panel == p ? _Panel.none : p);
 
   void _setSize(TextItem item, double size) {
     _push(item.copyWith(fontSize: size.clamp(8.0, 200.0)));
     _focus.requestFocus();
   }
 
-  Widget _barButton(IconData icon, String tooltip, bool on, VoidCallback onTap,
-      {Color? color}) {
+  Widget _barButton(
+    IconData icon,
+    String tooltip,
+    bool on,
+    VoidCallback onTap, {
+    Color? color,
+  }) {
     return IconButton(
       tooltip: tooltip,
       isSelected: on,
       style: on
-          ? IconButton.styleFrom(backgroundColor: context.colors.primaryContainer)
+          ? IconButton.styleFrom(
+              backgroundColor: context.colors.primaryContainer,
+            )
           : null,
       icon: Icon(icon, color: color),
       onPressed: onTap,
@@ -479,12 +591,19 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
 
   /// Botón con una barrita del color actual debajo del icono (como Docs).
   Widget _colorButton(
-      IconData icon, String tooltip, Color color, bool open, VoidCallback onTap) {
+    IconData icon,
+    String tooltip,
+    Color color,
+    bool open,
+    VoidCallback onTap,
+  ) {
     return IconButton(
       tooltip: tooltip,
       isSelected: open,
       style: open
-          ? IconButton.styleFrom(backgroundColor: context.colors.primaryContainer)
+          ? IconButton.styleFrom(
+              backgroundColor: context.colors.primaryContainer,
+            )
           : null,
       onPressed: onTap,
       icon: Column(
@@ -497,7 +616,10 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
             decoration: BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(2),
-              border: Border.all(color: context.colors.outlineVariant, width: 0.5),
+              border: Border.all(
+                color: context.colors.outlineVariant,
+                width: 0.5,
+              ),
             ),
           ),
         ],
@@ -514,32 +636,33 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
     final child = switch (_panel) {
       _Panel.font => _fontList(item),
       _Panel.color => _swatches(
-          colors: kDefaultPalette,
-          onPick: (c) => _format(
-              (r) => r.copyStyle(color: c.toARGB32()),
-              (t) => t.copyWith(colorValue: c.toARGB32())),
-          onClear: null,
+        colors: kDefaultPalette,
+        onPick: (c) => _format(
+          (r) => r.copyStyle(color: c.toARGB32()),
+          (t) => t.copyWith(colorValue: c.toARGB32()),
         ),
+        onClear: null,
+      ),
       _Panel.highlight => _swatches(
-          colors: _kHighlights,
-          onPick: (c) => _format((r) => r.copyStyle(highlight: c.toARGB32())),
-          onClear: () => _format((r) => r.copyStyle(clearHighlight: true)),
-          clearLabel: context.l10n.textEditNoHighlight,
-        ),
+        colors: _kHighlights,
+        onPick: (c) => _format((r) => r.copyStyle(highlight: c.toARGB32())),
+        onClear: () => _format((r) => r.copyStyle(clearHighlight: true)),
+        clearLabel: context.l10n.textEditNoHighlight,
+      ),
       _Panel.spacing => Wrap(
-          spacing: Spacing.sm,
-          children: [
-            for (final h in _kLineHeights)
-              ChoiceChip(
-                label: Text(h.toString()),
-                selected: (item.lineHeight - h).abs() < 0.01,
-                onSelected: (_) {
-                  _push(item.copyWith(lineHeight: h));
-                  setState(() => _panel = _Panel.none);
-                },
-              ),
-          ],
-        ),
+        spacing: Spacing.sm,
+        children: [
+          for (final h in _kLineHeights)
+            ChoiceChip(
+              label: Text(h.toString()),
+              selected: (item.lineHeight - h).abs() < 0.01,
+              onSelected: (_) {
+                _push(item.copyWith(lineHeight: h));
+                setState(() => _panel = _Panel.none);
+              },
+            ),
+        ],
+      ),
       _Panel.none => const SizedBox.shrink(),
     };
     return ConstrainedBox(
@@ -548,10 +671,7 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
         color: scheme.surfaceContainerHigh,
         elevation: Elevations.bar,
         borderRadius: Radii.lgAll,
-        child: Padding(
-          padding: const EdgeInsets.all(Spacing.md),
-          child: child,
-        ),
+        child: Padding(padding: const EdgeInsets.all(Spacing.md), child: child),
       ),
     );
   }
@@ -569,11 +689,18 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
               selected: id == current,
               selectedTileColor: context.colors.primaryContainer,
               shape: const RoundedRectangleBorder(borderRadius: Radii.smAll),
-              title: Text(textFontLabel(id),
-                  style: TextStyle(fontFamily: textFontFamily(id), fontSize: 18)),
-              trailing: id == current ? const Icon(Icons.check, size: 18) : null,
+              title: Text(
+                textFontLabel(id),
+                style: TextStyle(fontFamily: textFontFamily(id), fontSize: 18),
+              ),
+              trailing: id == current
+                  ? const Icon(Icons.check, size: 18)
+                  : null,
               onTap: () {
-                _format((r) => r.copyStyle(font: id), (t) => t.copyWith(fontFamily: id));
+                _format(
+                  (r) => r.copyStyle(font: id),
+                  (t) => t.copyWith(fontFamily: id),
+                );
                 setState(() => _panel = _Panel.none);
               },
             ),
@@ -644,7 +771,10 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: Text(context.l10n.textEditLink, style: context.text.titleMedium),
+                title: Text(
+                  context.l10n.textEditLink,
+                  style: context.text.titleMedium,
+                ),
               ),
               if (item.linkToPageId != null)
                 ListTile(
@@ -663,7 +793,9 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
                     final page = pages[index];
                     final linked = item.linkToPageId == page.id;
                     return ListTile(
-                      leading: Icon(linked ? Icons.link : Icons.description_outlined),
+                      leading: Icon(
+                        linked ? Icons.link : Icons.description_outlined,
+                      ),
                       title: Text(page.name),
                       subtitle: Text(context.l10n.commonPageN(index + 1)),
                       selected: linked,
@@ -685,7 +817,11 @@ class _TextEditOverlayState extends State<TextEditOverlay> {
 
 /// Asa redonda que se arrastra (mover / ensanchar la caja).
 class _Handle extends StatelessWidget {
-  const _Handle({required this.icon, required this.tooltip, required this.onDrag});
+  const _Handle({
+    required this.icon,
+    required this.tooltip,
+    required this.onDrag,
+  });
 
   final IconData icon;
   final String tooltip;
@@ -725,7 +861,10 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 24,
-        child: VerticalDivider(width: Spacing.md, color: context.colors.outlineVariant),
-      );
+    height: 24,
+    child: VerticalDivider(
+      width: Spacing.md,
+      color: context.colors.outlineVariant,
+    ),
+  );
 }

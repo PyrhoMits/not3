@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart' hide Page;
 
@@ -39,8 +40,7 @@ class PagesPanel extends StatefulWidget {
 class _PagesPanelState extends State<PagesPanel> {
   /// Miniatura por página, con la versión de contenido con la que se hizo.
   final Map<String, ({int version, Future<Uint8List> png})> _thumbs = {};
-  Timer? _refresh;
-  int _seenVersion = -1;
+  final Map<String, Timer> _refreshTimers = {};
 
   /// Mostrar solo las páginas marcadas.
   bool _onlyBookmarked = false;
@@ -50,64 +50,119 @@ class _PagesPanelState extends State<PagesPanel> {
   @override
   void initState() {
     super.initState();
-    _c.addListener(_onCanvasChanged);
+    _c.pageMetadataNotifier.addListener(_onPageMetadataChanged);
+    _c.persistedContentNotifier.addListener(_onPersistedContentChanged);
   }
 
   @override
   void dispose() {
-    _c.removeListener(_onCanvasChanged);
-    _refresh?.cancel();
+    _c.pageMetadataNotifier.removeListener(_onPageMetadataChanged);
+    _c.persistedContentNotifier.removeListener(_onPersistedContentChanged);
+    for (final timer in _refreshTimers.values) {
+      timer.cancel();
+    }
     super.dispose();
   }
 
-  void _onCanvasChanged() {
-    if (_c.contentVersion == _seenVersion) {
-      // Cambio de página/selección: solo repintar la lista.
-      if (mounted) setState(() {});
-      return;
+  void _onPageMetadataChanged() {
+    final pageIds = {for (final page in _c.pages) page.id};
+    _thumbs.removeWhere((id, _) => !pageIds.contains(id));
+    final removedTimers = _refreshTimers.keys
+        .where((id) => !pageIds.contains(id))
+        .toList();
+    for (final id in removedTimers) {
+      _refreshTimers.remove(id)?.cancel();
     }
-    _seenVersion = _c.contentVersion;
-    _refresh?.cancel();
-    _refresh = Timer(const Duration(milliseconds: 900), () {
+    if (mounted) setState(() {});
+  }
+
+  void _onPersistedContentChanged() {
+    final change = _c.persistedContentNotifier.value;
+    if (change == null) return;
+    final pageId = change.pageId;
+    _refreshTimers.remove(pageId)?.cancel();
+    _refreshTimers[pageId] = Timer(const Duration(milliseconds: 900), () {
+      _refreshTimers.remove(pageId);
       if (!mounted) return;
-      // Solo la página actual cambia al escribir.
-      _thumbs.remove(_c.page.id);
+      final cached = _thumbs[pageId];
+      if (cached != null && cached.version >= change.revision) return;
+      _thumbs.remove(pageId);
       setState(() {});
     });
   }
 
   Future<Uint8List> _render(Page page) async {
-    for (final item in page.images) {
-      await widget.imageService.ensureCached(item.localPath);
+    final images = <String, ui.Image>{};
+    final paths = <String>{
+      for (final item in page.images) item.localPath,
+      ?page.template.imagePath,
+    };
+    for (final path in paths) {
+      try {
+        images[path] = await widget.imageService.decode(path, maxSide: 640);
+      } catch (_) {
+        // A missing image should not prevent the rest of the thumbnail.
+      }
     }
-    final tpl = page.template.imagePath;
-    if (tpl != null) await widget.imageService.ensureCached(tpl);
-    return ExportService.renderPagePng(
-      page,
-      sheetSize: page.template.sheetSize,
-      imageCache: widget.imageService.cache,
-      options: const ExportOptions(maxDimension: 320),
-    );
+    try {
+      return await ExportService.renderPagePng(
+        page,
+        sheetSize: page.template.sheetSize,
+        imageCache: images,
+        options: const ExportOptions(maxDimension: 320),
+      );
+    } finally {
+      for (final image in images.values) {
+        image.dispose();
+      }
+    }
   }
 
   Future<Uint8List> _thumbFor(Page page) {
     final cached = _thumbs[page.id];
     if (cached != null) return cached.png;
+    final version = _c.persistedPageVersion(page.id);
     final png = _render(page);
-    _thumbs[page.id] = (version: _c.contentVersion, png: png);
+    _thumbs[page.id] = (version: version, png: png);
+    unawaited(
+      png.then<void>((_) {
+        if (!mounted || _c.persistedPageVersion(page.id) == version) return;
+        final current = _thumbs[page.id];
+        if (current != null && identical(current.png, png)) {
+          _thumbs.remove(page.id);
+          setState(() {});
+        }
+      }, onError: (Object _, StackTrace _) {}),
+    );
     return png;
   }
 
-  Future<void> _pageMenu(BuildContext context, int index, Offset position) async {
+  Future<void> _pageMenu(
+    BuildContext context,
+    int index,
+    Offset position,
+  ) async {
     final choice = await showMenu<String>(
       context: context,
-      position: RelativeRect.fromLTRB(position.dx, position.dy, position.dx, position.dy),
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx,
+        position.dy,
+      ),
       items: [
         PopupMenuItem(
           value: 'bookmark',
-          child: Text(_c.pages[index].bookmarked ? context.l10n.pgUnbookmark : context.l10n.pgBookmark),
+          child: Text(
+            _c.pages[index].bookmarked
+                ? context.l10n.pgUnbookmark
+                : context.l10n.pgBookmark,
+          ),
         ),
-        PopupMenuItem(value: 'duplicate', child: Text(context.l10n.pgDuplicate)),
+        PopupMenuItem(
+          value: 'duplicate',
+          child: Text(context.l10n.pgDuplicate),
+        ),
         PopupMenuItem(value: 'delete', child: Text(context.l10n.pgDelete)),
       ],
     );
@@ -136,18 +191,29 @@ class _PagesPanelState extends State<PagesPanel> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.sm, Spacing.xs, 0),
+            padding: const EdgeInsets.fromLTRB(
+              Spacing.lg,
+              Spacing.sm,
+              Spacing.xs,
+              0,
+            ),
             child: Row(
               children: [
                 Expanded(
-                  child: Text(context.l10n.pgPagesCount(pages.length), style: context.text.titleSmall),
+                  child: Text(
+                    context.l10n.pgPagesCount(pages.length),
+                    style: context.text.titleSmall,
+                  ),
                 ),
                 IconButton(
-                  tooltip: _onlyBookmarked ? context.l10n.pgShowAll : context.l10n.pgOnlyBookmarked,
+                  tooltip: _onlyBookmarked
+                      ? context.l10n.pgShowAll
+                      : context.l10n.pgOnlyBookmarked,
                   isSelected: _onlyBookmarked,
                   icon: const Icon(Icons.bookmark_border),
                   selectedIcon: const Icon(Icons.bookmark),
-                  onPressed: () => setState(() => _onlyBookmarked = !_onlyBookmarked),
+                  onPressed: () =>
+                      setState(() => _onlyBookmarked = !_onlyBookmarked),
                 ),
                 IconButton(
                   tooltip: context.l10n.commonClose,
@@ -159,7 +225,10 @@ class _PagesPanelState extends State<PagesPanel> {
           ),
           Expanded(
             child: ReorderableListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.sm),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Spacing.md,
+                vertical: Spacing.sm,
+              ),
               buildDefaultDragHandles: false,
               itemCount: pages.length,
               // onReorderItem ya ajusta el índice destino tras quitar el origen.
@@ -177,7 +246,8 @@ class _PagesPanelState extends State<PagesPanel> {
                     padding: const EdgeInsets.only(bottom: Spacing.md),
                     child: GestureDetector(
                       onTap: () => _c.goToPage(i),
-                      onSecondaryTapDown: (d) => _pageMenu(context, i, d.globalPosition),
+                      onSecondaryTapDown: (d) =>
+                          _pageMenu(context, i, d.globalPosition),
                       child: Column(
                         children: [
                           AspectRatio(
@@ -190,7 +260,9 @@ class _PagesPanelState extends State<PagesPanel> {
                                 color: context.inklus.paper,
                                 borderRadius: Radii.smAll,
                                 border: Border.all(
-                                  color: selected ? scheme.primary : scheme.outlineVariant,
+                                  color: selected
+                                      ? scheme.primary
+                                      : scheme.outlineVariant,
                                   width: selected ? 3 : 1,
                                 ),
                               ),
@@ -198,7 +270,11 @@ class _PagesPanelState extends State<PagesPanel> {
                               child: FutureBuilder<Uint8List>(
                                 future: _thumbFor(page),
                                 builder: (context, snap) => snap.hasData
-                                    ? Image.memory(snap.data!, fit: BoxFit.contain, gaplessPlayback: true)
+                                    ? Image.memory(
+                                        snap.data!,
+                                        fit: BoxFit.contain,
+                                        gaplessPlayback: true,
+                                      )
                                     : const SizedBox.expand(),
                               ),
                             ),
@@ -208,19 +284,30 @@ class _PagesPanelState extends State<PagesPanel> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               if (page.bookmarked)
-                                Icon(Icons.bookmark, size: 14, color: scheme.primary),
-                              Text('${i + 1}',
-                                  style: context.text.labelMedium?.copyWith(
-                                    color: selected ? scheme.primary : null,
-                                  )),
+                                Icon(
+                                  Icons.bookmark,
+                                  size: 14,
+                                  color: scheme.primary,
+                                ),
+                              Text(
+                                '${i + 1}',
+                                style: context.text.labelMedium?.copyWith(
+                                  color: selected ? scheme.primary : null,
+                                ),
+                              ),
                               Builder(
                                 builder: (btn) => IconButton(
                                   visualDensity: VisualDensity.compact,
                                   tooltip: context.l10n.pgOptions,
                                   icon: const Icon(Icons.more_horiz, size: 18),
                                   onPressed: () {
-                                    final box = btn.findRenderObject() as RenderBox;
-                                    _pageMenu(context, i, box.localToGlobal(Offset.zero));
+                                    final box =
+                                        btn.findRenderObject() as RenderBox;
+                                    _pageMenu(
+                                      context,
+                                      i,
+                                      box.localToGlobal(Offset.zero),
+                                    );
                                   },
                                 ),
                               ),

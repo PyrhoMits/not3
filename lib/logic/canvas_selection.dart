@@ -56,15 +56,19 @@ mixin _CanvasSelection on _CanvasCore {
     _selectedTextIds = {};
     _moveImagesBefore = null;
     _moveTextsBefore = null;
+    _moveStrokePositions = null;
+    _transformStrokePositions = null;
   }
 
   /// Estado de imágenes/textos al empezar a mover la selección.
   List<ImageItem>? _moveImagesBefore;
   List<TextItem>? _moveTextsBefore;
+  Map<String, int>? _moveStrokePositions;
 
   /// Estado de imágenes/textos al empezar a escalar/rotar la selección.
   List<ImageItem>? _transformImagesBefore;
   List<TextItem>? _transformTextsBefore;
+  Map<String, int>? _transformStrokePositions;
 
   /// Asas del recuadro de selección en coordenadas de mundo: escala (esquina
   /// inferior derecha) y rotación (sobre el centro superior). **Única
@@ -88,12 +92,18 @@ mixin _CanvasSelection on _CanvasCore {
   void beginLasso(Offset worldPoint) {
     _lassoPath = [worldPoint];
     _selectedStrokes = [];
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
   void addLassoPoint(Offset worldPoint) {
     if (_lassoPath.isEmpty) return;
+    final previous = _lassoPath.last;
+    if ((worldPoint - previous).distance * _scale < 1) {
+      return;
+    }
     _lassoPath.add(worldPoint);
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -107,6 +117,7 @@ mixin _CanvasSelection on _CanvasCore {
   void endLasso() {
     if (_lassoPath.length < 3) {
       _lassoPath = [];
+      _notifyActiveOverlay();
       notifyListeners();
       return;
     }
@@ -157,6 +168,7 @@ mixin _CanvasSelection on _CanvasCore {
     }
     _notifyToolContext();
     _notifyBottomBarContext();
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -164,6 +176,8 @@ mixin _CanvasSelection on _CanvasCore {
     _selectedStrokes = [];
     _clearItemSelection();
     _lassoPath = [];
+    _notifyActiveOverlay();
+    _notifyBottomBarContext();
     notifyListeners();
   }
 
@@ -189,7 +203,9 @@ mixin _CanvasSelection on _CanvasCore {
     }
     _moveImagesBefore = null;
     _moveTextsBefore = null;
-    _touch();
+    _moveStrokePositions = null;
+    _notifyActiveOverlay();
+    _touchLive();
   }
 
   /// Elimina los trazos seleccionados con el lazo (deshacer possible).
@@ -418,8 +434,15 @@ mixin _CanvasSelection on _CanvasCore {
       );
     }
 
-    for (final original in List<Stroke>.from(_selectedStrokes)) {
-      if (_isLayerLocked(original.layerIndex)) continue;
+    _transformStrokePositions ??= {
+      for (var i = 0; i < page.strokes.length; i++) page.strokes[i].id: i,
+    };
+    final nextSelection = <Stroke>[];
+    for (final original in _selectedStrokes) {
+      if (_isLayerLocked(original.layerIndex)) {
+        nextSelection.add(original);
+        continue;
+      }
       final newPoints = [
         for (final p in original.points)
           StrokePoint.fromOffset(map(p.x, p.y), p.pressure, t: p.t),
@@ -430,11 +453,11 @@ mixin _CanvasSelection on _CanvasCore {
         size: original.size * scaleFactor,
       );
       // Reemplaza el trazo en la página (misma posición = mismo z-order).
-      final idx = page.strokes.indexWhere((s) => s.id == original.id);
-      if (idx >= 0) page.strokes[idx] = newStroke;
-      final selIdx = _selectedStrokes.indexOf(original);
-      if (selIdx >= 0) _selectedStrokes[selIdx] = newStroke;
+      final idx = _transformStrokePositions![original.id];
+      if (idx != null) page.strokes[idx] = newStroke;
+      nextSelection.add(newStroke);
     }
+    _selectedStrokes = nextSelection;
 
     _transformImagesBefore ??= selectedImages
         .where((i) => !_isLayerLocked(i.layerIndex))
@@ -477,6 +500,7 @@ mixin _CanvasSelection on _CanvasCore {
     final textsBefore = _transformTextsBefore ?? const <TextItem>[];
     _transformImagesBefore = null;
     _transformTextsBefore = null;
+    _transformStrokePositions = null;
     if (!hasLassoSelection) return;
     final imageIds = {for (final i in imagesBefore) i.id};
     final textIds = {for (final t in textsBefore) t.id};
@@ -517,7 +541,9 @@ mixin _CanvasSelection on _CanvasCore {
     } else {
       _selectedStrokes = [hit];
     }
-    _touch();
+    _notifyActiveOverlay();
+    _notifyBottomBarContext();
+    notifyListeners();
     return true;
   }
 
@@ -563,7 +589,7 @@ mixin _CanvasSelection on _CanvasCore {
       return;
     }
     // Índice por id de la página (una pasada, no indexWhere por trazo).
-    final positions = <String, int>{
+    _moveStrokePositions ??= {
       for (var i = 0; i < page.strokes.length; i++) page.strokes[i].id: i,
     };
     _selectedStrokes = [];
@@ -571,7 +597,7 @@ mixin _CanvasSelection on _CanvasCore {
       final newStroke = original.translated(delta);
       // Buscar por id (no por identidad) — después del primer frame,
       // el objeto original ya no está en page.strokes.
-      final idx = positions[original.id];
+      final idx = _moveStrokePositions![original.id];
       if (idx != null) page.strokes[idx] = newStroke;
       _selectedStrokes.add(newStroke);
     }
@@ -603,6 +629,7 @@ mixin _CanvasSelection on _CanvasCore {
     );
     _moveImagesBefore = null;
     _moveTextsBefore = null;
+    _moveStrokePositions = null;
     _touch();
   }
 }

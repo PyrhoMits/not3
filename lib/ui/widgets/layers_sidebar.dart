@@ -26,7 +26,7 @@ class LayersSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: controller,
+      listenable: controller.layerMetadataNotifier,
       builder: (context, _) {
         final layers = controller.page.layers;
         final activeIdx = controller.activeLayerIndex;
@@ -36,16 +36,19 @@ class LayersSidebar extends StatelessWidget {
           decoration: BoxDecoration(
             color: context.colors.surfaceContainerLow,
             border: Border(
-              right: BorderSide(
-                color: context.colors.outlineVariant,
-              ),
+              right: BorderSide(color: context.colors.outlineVariant),
             ),
           ),
           child: Column(
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.sm, Spacing.xs, Spacing.xs),
+                padding: const EdgeInsets.fromLTRB(
+                  Spacing.md,
+                  Spacing.sm,
+                  Spacing.xs,
+                  Spacing.xs,
+                ),
                 child: Row(
                   children: [
                     Icon(Icons.layers, size: 18, color: context.colors.primary),
@@ -53,7 +56,9 @@ class LayersSidebar extends StatelessWidget {
                     Expanded(
                       child: Text(
                         context.l10n.tbLayers,
-                        style: context.text.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                        style: context.text.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -73,7 +78,10 @@ class LayersSidebar extends StatelessWidget {
               // Lista de capas
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: Spacing.xs, horizontal: Spacing.sm),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: Spacing.xs,
+                    horizontal: Spacing.sm,
+                  ),
                   itemCount: layers.length,
                   itemBuilder: (context, i) {
                     final layer = layers[i];
@@ -91,8 +99,7 @@ class LayersSidebar extends StatelessWidget {
                       onDelete: layers.length > 1 && i != 0
                           ? () => controller.removeLayer(i)
                           : null,
-                      onOpacityChanged: (v) =>
-                          controller.setLayerOpacity(i, v),
+                      onOpacityChanged: (v) => controller.setLayerOpacity(i, v),
                     );
                   },
                 ),
@@ -182,7 +189,12 @@ class _LayerTile extends StatelessWidget {
                     child: Center(
                       child: Text(
                         '${index + 1}',
-                        style: context.text.labelSmall?.copyWith(fontWeight: FontWeight.bold, color: isActive ? context.colors.onPrimary : context.colors.onSurfaceVariant),
+                        style: context.text.labelSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isActive
+                              ? context.colors.onPrimary
+                              : context.colors.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),
@@ -193,7 +205,11 @@ class _LayerTile extends StatelessWidget {
                       layer.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.text.labelMedium?.copyWith(fontWeight: isActive ? FontWeight.bold : FontWeight.w500),
+                      style: context.text.labelMedium?.copyWith(
+                        fontWeight: isActive
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                      ),
                     ),
                   ),
                   // Visibilidad
@@ -214,7 +230,9 @@ class _LayerTile extends StatelessWidget {
                     child: Icon(
                       layer.locked ? Icons.lock : Icons.lock_open,
                       size: 18,
-                      color: layer.locked ? context.inklus.warning : context.colors.onSurfaceVariant,
+                      color: layer.locked
+                          ? context.inklus.warning
+                          : context.colors.onSurfaceVariant,
                     ),
                   ),
                   // Eliminar
@@ -266,7 +284,9 @@ class _LayerTile extends StatelessWidget {
                         width: 32,
                         child: Text(
                           '${(layer.opacity * 100).round()}%',
-                          style: context.text.labelSmall?.copyWith(color: context.colors.onSurfaceVariant),
+                          style: context.text.labelSmall?.copyWith(
+                            color: context.colors.onSurfaceVariant,
+                          ),
                           textAlign: TextAlign.right,
                         ),
                       ),

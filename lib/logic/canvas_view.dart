@@ -25,27 +25,42 @@ mixin _CanvasView on _CanvasCore {
     _scale = scale.clamp(kMinZoom, kMaxZoom);
     if (!page.template.isFinite || viewportSize.isEmpty) {
       _translate = translate;
+      _notifyViewport();
       notifyListeners();
       return;
     }
     // Hoja fija: la vista no se sale de la hoja… ni de sus vecinas apiladas
     // (desplazamiento continuo).
     var world = Rect.fromCenter(
-        center: Offset.zero, width: sheetSize.width, height: sheetSize.height);
+      center: Offset.zero,
+      width: sheetSize.width,
+      height: sheetSize.height,
+    );
     final prev = _neighbor(-1), next = _neighbor(1);
     if (prev != null) {
-      world = world.expandToInclude(Rect.fromCenter(
+      world = world.expandToInclude(
+        Rect.fromCenter(
           center: Offset(0, prev.dy),
           width: prev.page.template.sheetSize.width,
-          height: prev.page.template.sheetSize.height));
+          height: prev.page.template.sheetSize.height,
+        ),
+      );
     }
     if (next != null) {
-      world = world.expandToInclude(Rect.fromCenter(
+      world = world.expandToInclude(
+        Rect.fromCenter(
           center: Offset(0, next.dy),
           width: next.page.template.sheetSize.width,
-          height: next.page.template.sheetSize.height));
+          height: next.page.template.sheetSize.height,
+        ),
+      );
     }
-    _translate = CanvasController.clampToWorldRect(translate, _scale, world, viewportSize);
+    _translate = CanvasController.clampToWorldRect(
+      translate,
+      _scale,
+      world,
+      viewportSize,
+    );
     // Si el centro de la pantalla ya está en una vecina, pasa a ser la actual.
     final centerY = (viewportSize.height / 2 - _translate.dy) / _scale;
     final half = sheetSize.height / 2 + CanvasController.pageGap / 2;
@@ -54,6 +69,7 @@ mixin _CanvasView on _CanvasCore {
     } else if (prev != null && centerY < -half) {
       _enterNeighborPage(-1);
     }
+    _notifyViewport();
     notifyListeners();
   }
 
@@ -91,10 +107,7 @@ mixin _CanvasView on _CanvasCore {
       // Rect.fromCenter(center: Offset.zero)), así que el origen debe caer en
       // el centro del viewport. (Antes se trataba como si la esquina superior
       // izquierda estuviera en el origen y la hoja salía desplazada.)
-      _setView(
-        scale,
-        Offset(viewportSize.width / 2, viewportSize.height / 2),
-      );
+      _setView(scale, Offset(viewportSize.width / 2, viewportSize.height / 2));
     } else {
       _setView(1.0, Offset.zero);
     }
