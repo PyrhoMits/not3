@@ -496,6 +496,53 @@ void _drawSprayParticles(Canvas canvas, Stroke stroke) {
 }
 
 final Paint _fillPaint = Paint()..style = PaintingStyle.fill;
+final Paint _recognizedShapeStrokePaint = Paint()
+  ..style = PaintingStyle.stroke
+  ..strokeCap = StrokeCap.round
+  ..strokeJoin = StrokeJoin.round;
+final Expando<Path> _recognizedClosedShapePathCache = Expando<Path>(
+  'recognized closed shape path',
+);
+
+bool _isRecognizedClosedShape(Stroke stroke) =>
+    stroke.shapeType == 'rectangle' ||
+    stroke.shapeType == 'triangle' ||
+    stroke.shapeType == 'circle';
+
+/// Builds the geometric centerline of a recognized closed shape.
+///
+/// `perfect_freehand` treats the first and last centerline samples as two
+/// capped ends. For a closed polygon that can leave a diagonal seam at the
+/// recognition start point, making a four-corner rectangle look like a
+/// pentagon after release. Painting one explicitly closed path gives both
+/// ends one shared join instead.
+Path _recognizedClosedShapePath(Stroke stroke) {
+  final cached = _recognizedClosedShapePathCache[stroke];
+  if (cached != null) return cached;
+  final points = [for (final point in stroke.points) point.offset];
+  final path = Path();
+  if (points.isNotEmpty) {
+    path.moveTo(points.first.dx, points.first.dy);
+    for (var i = 1; i < points.length; i++) {
+      path.lineTo(points[i].dx, points[i].dy);
+    }
+    path.close();
+  }
+  _recognizedClosedShapePathCache[stroke] = path;
+  return path;
+}
+
+void _paintRecognizedClosedShape(Canvas canvas, Stroke stroke) {
+  final path = _recognizedClosedShapePath(stroke);
+  if (stroke.fillColorValue != null) {
+    _fillPaint.color = Color(stroke.fillColorValue!);
+    canvas.drawPath(path, _fillPaint);
+  }
+  _recognizedShapeStrokePaint
+    ..color = StrokeEngine.paintColor(stroke)
+    ..strokeWidth = stroke.size;
+  canvas.drawPath(path, _recognizedShapeStrokePaint);
+}
 
 /// Pinta un trazo confirmado (usa Paths/Pictures cacheados).
 void paintStroke(Canvas canvas, Stroke stroke) {
@@ -510,6 +557,10 @@ void paintStroke(Canvas canvas, Stroke stroke) {
       _sprayCache[stroke] = picture;
     }
     canvas.drawPicture(picture);
+    return;
+  }
+  if (_isRecognizedClosedShape(stroke)) {
+    _paintRecognizedClosedShape(canvas, stroke);
     return;
   }
   if (StrokeEngine.outlineFor(stroke).length < 3) return;
@@ -538,6 +589,10 @@ void paintActiveStroke(
   if (stroke.points.length < 2) return;
   if (stroke.tool == ToolType.spray) {
     _drawSprayParticles(canvas, stroke);
+    return;
+  }
+  if (_isRecognizedClosedShape(stroke)) {
+    _paintRecognizedClosedShape(canvas, stroke);
     return;
   }
   final displayPoints = StrokeEngine.pointsForActiveDisplay(

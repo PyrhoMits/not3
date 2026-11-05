@@ -4,6 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Each release is written in English. The release workflow copies the matching section into the GitHub release notes.
 
+## Unreleased
+
+### Fixed
+
+- Recognized rectangles, triangles, and ellipses now keep a seamless closed edge after release; a rectangle no longer gains a clipped fifth corner at its starting point.
+- Dragging two shape-edit handles close together no longer changes a rectangle into a triangle.
+
 ## [1.9.1] — 2026-10-20
 
 ### Changed

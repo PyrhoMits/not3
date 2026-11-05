@@ -12,6 +12,7 @@
 // como cajas porque el entorno de test no tiene fuente por defecto.
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart' hide Page;
@@ -46,6 +47,7 @@ import 'package:not3/ui/editor/editor_toolbar.dart';
 import 'package:not3/ui/theme/app_theme.dart';
 import 'package:not3/logic/canvas_controller.dart';
 import 'package:not3/logic/pen_presets.dart';
+import 'package:not3/logic/shape_detector.dart';
 import 'package:not3/services/image_service.dart';
 import 'package:not3/ui/canvas/drawing_canvas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -276,6 +278,81 @@ void main() {
       await tester.runAsync(c.flush);
     });
   }
+
+  testWidgets('shape point editing reference', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 2;
+    final canvas = CanvasController(StorageService(baseDir: tmp))
+      ..setHapticEnabled(false);
+    addTearDown(canvas.dispose);
+    const anchors = [
+      Offset(150, 110),
+      Offset(450, 145),
+      Offset(420, 380),
+      Offset(125, 350),
+    ];
+    final stroke = Stroke(
+      id: 'shape-reference',
+      points: ShapeDetector.pointsFromAnchors(ShapeType.rectangle, anchors),
+      tool: ToolType.pen,
+      colorValue: 0xFFB3261E,
+      size: 12,
+      shapeType: ShapeType.rectangle.name,
+      shapeAnchors: anchors,
+    );
+    canvas.page.strokes.add(stroke);
+    canvas.activateShapeEditing(stroke);
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: _shotLocale,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: DrawingCanvas(controller: canvas, imageService: ImageService()),
+        ),
+      ),
+    );
+    await settle(tester);
+    await shot(tester, 'shape_point_editing_reference');
+  });
+
+  testWidgets('laser trail reference', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 2;
+    final canvas = CanvasController(StorageService(baseDir: tmp))
+      ..setHapticEnabled(false)
+      ..setLaserDuration(CanvasController.maxLaserDuration);
+    addTearDown(canvas.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: DrawingCanvas(controller: canvas, imageService: ImageService()),
+        ),
+      ),
+    );
+    await settle(tester);
+    canvas
+      ..setLaserColor(CanvasController.defaultLaserColor)
+      ..setLaserThickness(CanvasController.defaultLaserThickness)
+      ..setLaserEnabled(true)
+      ..beginStroke(const Offset(110, 310), 0.5, tool: ToolType.pen);
+    for (var i = 1; i <= 42; i++) {
+      final t = i / 42;
+      canvas.addStrokePoint(
+        Offset(110 + 520 * t, 310 - 185 * sin(t * pi)),
+        0.5,
+      );
+    }
+    canvas.endStroke();
+    await tester.pump();
+    await shot(tester, 'laser_trail_reference');
+    canvas.setLaserEnabled(false);
+    await tester.pump();
+  });
 
   testWidgets('marketplace', (tester) async {
     tester.view.physicalSize = const Size(2560, 1600);

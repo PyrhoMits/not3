@@ -1966,12 +1966,6 @@ abstract class AppLocalizations {
   /// **'Laser pointer on'**
   String get laserOn;
 
-  /// No description provided for @laserEnabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Laser pointer'**
-  String get laserEnabled;
-
   /// No description provided for @laserMode.
   ///
   /// In en, this message translates to:

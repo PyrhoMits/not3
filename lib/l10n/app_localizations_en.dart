@@ -1083,9 +1083,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get laserOn => 'Laser pointer on';
 
   @override
-  String get laserEnabled => 'Laser pointer';
-
-  @override
   String get laserMode => 'Display mode';
 
   @override

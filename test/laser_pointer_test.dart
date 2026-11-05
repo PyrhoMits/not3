@@ -68,7 +68,7 @@ void main() {
     second.dispose();
   });
 
-  test('lines and dot remain ephemeral and dot retains one sample', () async {
+  test('laser is ephemeral and selecting another tool disables it', () async {
     final canvas = controller();
     await canvas.inputPreferencesLoaded;
     canvas.setLaserEnabled(true);
@@ -91,14 +91,10 @@ void main() {
     expect(canvas.page.strokes, isEmpty);
     expect(canvas.canUndo, isFalse);
 
-    canvas
-      ..setLaserPointerMode(LaserPointerMode.lines)
-      ..setTool(ToolType.lasso)
-      ..beginStroke(const Offset(50, 50), 0.5, tool: ToolType.lasso)
-      ..addStrokePoint(const Offset(60, 60), 0.5)
-      ..endStroke();
-    expect(canvas.lassoPath, isEmpty);
-    expect(canvas.laserTrail.length, 2);
+    canvas.setLaserPointerMode(LaserPointerMode.lines);
+    canvas.setTool(ToolType.lasso);
+    expect(canvas.laserMode, isFalse);
+    expect(canvas.laserTrail, isEmpty);
     expect(canvas.page.strokes, isEmpty);
     canvas.dispose();
   });
@@ -151,7 +147,7 @@ void main() {
       ..addStrokePoint(const Offset(100, 40), 0.5)
       ..endStroke();
 
-    Future<int> coreHeight(double scale) async {
+    Future<({int coreHeight, Color center})> sample(double scale) async {
       canvas.setView(scale, Offset.zero);
       final recorder = ui.PictureRecorder();
       final drawing = Canvas(recorder);
@@ -166,11 +162,19 @@ void main() {
       image.dispose();
       picture.dispose();
       final x = (60 * scale).round();
+      final centerY = (40 * scale).round();
+      final centerOffset = (centerY * size.width.toInt() + x) * 4;
+      final center = Color.fromARGB(
+        bytes!.getUint8(centerOffset + 3),
+        bytes.getUint8(centerOffset),
+        bytes.getUint8(centerOffset + 1),
+        bytes.getUint8(centerOffset + 2),
+      );
       var first = size.height.toInt();
       var last = -1;
       for (var y = 0; y < size.height; y++) {
         final offset = (y.toInt() * size.width.toInt() + x) * 4;
-        final red = bytes!.getUint8(offset);
+        final red = bytes.getUint8(offset);
         final green = bytes.getUint8(offset + 1);
         final blue = bytes.getUint8(offset + 2);
         final alpha = bytes.getUint8(offset + 3);
@@ -179,13 +183,26 @@ void main() {
           last = last > y ? last : y.toInt();
         }
       }
-      return last < first ? 0 : last - first + 1;
+      return (coreHeight: last < first ? 0 : last - first + 1, center: center);
     }
 
-    final atOne = await tester.runAsync(() => coreHeight(1));
-    final atTwo = await tester.runAsync(() => coreHeight(2));
-    expect(atOne, inInclusiveRange(9, 11));
-    expect(atTwo, inInclusiveRange(9, 11));
+    final atOne = (await tester.runAsync(() => sample(1)))!;
+    final atTwo = (await tester.runAsync(() => sample(2)))!;
+    expect(atOne.coreHeight, inInclusiveRange(9, 11));
+    expect(atTwo.coreHeight, inInclusiveRange(9, 11));
+    expect(atOne.center.b, greaterThan(atOne.center.r));
+    expect(atOne.center.b, greaterThan(atOne.center.g));
+
+    canvas.setLaserColor(CanvasController.defaultLaserColor);
+    final redLaser = (await tester.runAsync(() => sample(1)))!;
+    expect(
+      (redLaser.center.r - redLaser.center.g).abs(),
+      lessThanOrEqualTo(0.05),
+    );
+    expect(
+      (redLaser.center.r - redLaser.center.b).abs(),
+      lessThanOrEqualTo(0.05),
+    );
     canvas.dispose();
   });
 }

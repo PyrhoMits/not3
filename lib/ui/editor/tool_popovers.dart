@@ -216,10 +216,9 @@ class LassoPopover extends StatelessWidget {
 }
 
 class LaserPopover extends StatelessWidget {
-  const LaserPopover({super.key, required this.canvas, required this.presets});
+  const LaserPopover({super.key, required this.canvas});
 
   final CanvasController canvas;
-  final PenPresetsController presets;
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<int>(
@@ -228,15 +227,6 @@ class LaserPopover extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        SwitchListTile(
-          key: const Key('laser-enabled'),
-          contentPadding: EdgeInsets.zero,
-          secondary: LaserPointerGlyph(color: canvas.laserColor),
-          title: Text(context.l10n.laserEnabled),
-          value: canvas.laserMode,
-          onChanged: canvas.setLaserEnabled,
-        ),
-        const SizedBox(height: Spacing.sm),
         _SectionTitle(context.l10n.laserMode),
         SegmentedButton<LaserPointerMode>(
           showSelectedIcon: false,
@@ -258,7 +248,7 @@ class LaserPopover extends StatelessWidget {
         ),
         const SizedBox(height: Spacing.lg),
         _SectionTitle(context.l10n.laserColor),
-        _LaserColorGrid(canvas: canvas, presets: presets),
+        _LaserColorGrid(canvas: canvas),
         const SizedBox(height: Spacing.lg),
         _SectionTitle(context.l10n.laserThickness),
         Row(
@@ -321,47 +311,35 @@ class LaserPopover extends StatelessWidget {
 }
 
 class _LaserColorGrid extends StatelessWidget {
-  const _LaserColorGrid({required this.canvas, required this.presets});
+  const _LaserColorGrid({required this.canvas});
 
   final CanvasController canvas;
-  final PenPresetsController presets;
 
-  void _pick(Color color) {
-    presets.addRecentColor(color);
-    canvas.setLaserColor(color);
-  }
+  static const colors = <Color>[
+    Color(0xFFFF5252),
+    Color(0xFF2979FF),
+    Color(0xFF00B8D4),
+    Color(0xFF00A86B),
+    Color(0xFFFFAB00),
+    Color(0xFFAA00FF),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final recent = presets.recentColors
-        .where((color) => !kDefaultPalette.contains(color))
-        .toList();
-    final colors = <Color>[
-      if (!kDefaultPalette.contains(canvas.laserColor) &&
-          !recent.contains(canvas.laserColor))
-        canvas.laserColor,
-      ...kDefaultPalette,
-      ...recent,
+    final visibleColors = <Color>[
+      if (!colors.contains(canvas.laserColor)) canvas.laserColor,
+      ...colors.take(colors.contains(canvas.laserColor) ? 6 : 5),
     ];
     return Wrap(
       spacing: Spacing.xs,
       runSpacing: Spacing.xs,
       children: [
-        for (final color in colors)
+        for (final color in visibleColors)
           ColorSwatchButton(
             color: color,
             selected: canvas.laserColor == color,
-            onTap: () => _pick(color),
+            onTap: () => canvas.setLaserColor(color),
           ),
-        _CustomColorButton(
-          onTap: () async {
-            final color = await showCustomColorPicker(
-              context,
-              initialColor: canvas.laserColor,
-            );
-            if (color != null) _pick(color);
-          },
-        ),
       ],
     );
   }

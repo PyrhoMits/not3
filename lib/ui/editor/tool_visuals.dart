@@ -106,7 +106,7 @@ class LaserPointerGlyph extends StatelessWidget {
     return SizedBox.square(
       dimension: resolvedSize,
       child: Padding(
-        padding: EdgeInsets.all(resolvedSize * 0.1),
+        padding: EdgeInsets.all(resolvedSize * 0.2),
         child: CustomPaint(
           key: const Key('laser-pointer-glyph'),
           painter: _LaserPointerGlyphPainter(resolvedColor),

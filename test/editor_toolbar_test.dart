@@ -9,6 +9,7 @@ import 'package:not3/logic/pen_presets.dart';
 import 'package:not3/models/stroke.dart';
 import 'package:not3/services/storage_service.dart';
 import 'package:not3/ui/editor/editor_toolbar.dart';
+import 'package:not3/ui/editor/tool_popovers.dart';
 import 'package:not3/ui/editor/tool_visuals.dart';
 import 'package:not3/ui/theme/app_theme.dart';
 import 'package:not3/ui/theme/tokens.dart';
@@ -321,7 +322,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Laser pointer on'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('laser-enabled')), findsOneWidget);
+    expect(find.byKey(const Key('laser-enabled')), findsNothing);
     expect(find.text('Display mode'), findsOneWidget);
     expect(find.text('Lines'), findsOneWidget);
     expect(find.text('Dot'), findsOneWidget);
@@ -332,9 +333,12 @@ void main() {
     await tester.pump();
     expect(canvas.laserPointerMode, LaserPointerMode.dot);
 
-    await tester.tap(find.byKey(const Key('laser-enabled')));
+    await tester.tapAt(const Offset(1200, 700));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Eraser'));
     await tester.pump();
     expect(canvas.laserMode, isFalse);
+    expect(canvas.tool, ToolType.eraser);
     expect(find.byTooltip('Insert sticker'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -350,14 +354,17 @@ void main() {
     await tester.pumpAndSettle();
 
     final inkColor = canvas.color;
-    final swatches = find.byWidgetPredicate(
-      (widget) =>
-          widget is Semantics &&
-          widget.properties.button == true &&
-          widget.properties.label?.startsWith('Color ') == true,
+    final swatches = find.descendant(
+      of: find.byType(LaserPopover),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.button == true &&
+            widget.properties.label?.startsWith('Color ') == true,
+      ),
     );
-    expect(swatches, findsWidgets);
-    await tester.tap(swatches.at(7));
+    expect(swatches, findsNWidgets(6));
+    await tester.tap(swatches.at(1));
     await tester.pump();
     expect(canvas.laserColor, isNot(CanvasController.defaultLaserColor));
     expect(canvas.color, inkColor);

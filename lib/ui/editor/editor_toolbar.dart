@@ -238,7 +238,7 @@ class EditorToolbar extends StatelessWidget {
       icon: ToolVisuals.icon(ToolType.select),
       toolIcon: ToolType.select,
       label: context.l10n.tbMoveSelect,
-      selected: canvas.tool == ToolType.select,
+      selected: !canvas.laserMode && canvas.tool == ToolType.select,
       onTap: () => canvas.setTool(ToolType.select),
     ),
     ...trailing,
@@ -283,7 +283,10 @@ class EditorToolbar extends StatelessWidget {
       _ToolbarButton(
         icon: Icons.add_photo_alternate_outlined,
         label: context.l10n.tbInsertImage,
-        onTap: onInsertImage,
+        onTap: () {
+          canvas.setLaserEnabled(false);
+          onInsertImage();
+        },
       ),
       _ToolbarButton(
         icon: canvas.rulerEnabled && canvas.rulerType == RulerType.protractor
@@ -295,7 +298,10 @@ class EditorToolbar extends StatelessWidget {
             ? context.l10n.tbRulerNext
             : context.l10n.tbProtractorNext,
         selected: canvas.rulerEnabled,
-        onTap: canvas.cycleRuler,
+        onTap: () {
+          canvas.setLaserEnabled(false);
+          canvas.cycleRuler();
+        },
       ),
       Builder(
         builder: (anchor) => _ToolbarButton(
@@ -310,7 +316,7 @@ class EditorToolbar extends StatelessWidget {
               showAnchoredPopover<void>(
                 context: context,
                 anchorContext: anchor,
-                builder: (_) => LaserPopover(canvas: canvas, presets: presets),
+                builder: (_) => LaserPopover(canvas: canvas),
               );
             } else {
               canvas.setLaserEnabled(true);
@@ -321,13 +327,16 @@ class EditorToolbar extends StatelessWidget {
       _ToolbarButton(
         icon: Icons.emoji_emotions_outlined,
         label: context.l10n.tbInsertSticker,
-        onTap: onInsertSticker,
+        onTap: () {
+          canvas.setLaserEnabled(false);
+          onInsertSticker();
+        },
       ),
       _ToolbarButton(
         icon: ToolVisuals.icon(ToolType.bucket),
         toolIcon: ToolType.bucket,
         label: context.l10n.tbFill,
-        selected: tool == ToolType.bucket,
+        selected: !canvas.laserMode && tool == ToolType.bucket,
         onTap: () => canvas.setTool(ToolType.bucket),
       ),
       _ToolbarButton(
@@ -336,7 +345,10 @@ class EditorToolbar extends StatelessWidget {
             ? context.l10n.tbHideMagnifier
             : context.l10n.tbMagnifier,
         selected: canvas.magnifierEnabled,
-        onTap: canvas.toggleMagnifier,
+        onTap: () {
+          canvas.setLaserEnabled(false);
+          canvas.toggleMagnifier();
+        },
       ),
     ];
   }
@@ -344,7 +356,7 @@ class EditorToolbar extends StatelessWidget {
   /// Ranura de pluma favorita / resaltador.
   Widget _penSlot(BuildContext context, int slot, ToolType currentTool) {
     final preset = presets.presetAt(slot);
-    final showing = presets.isShowing(slot, currentTool);
+    final showing = !canvas.laserMode && presets.isShowing(slot, currentTool);
     return Builder(
       builder: (anchor) => _ToolbarButton(
         icon: ToolVisuals.icon(preset.tool),
@@ -378,7 +390,7 @@ class EditorToolbar extends StatelessWidget {
     ToolType type,
     WidgetBuilder popover,
   ) {
-    final selected = canvas.tool == type;
+    final selected = !canvas.laserMode && canvas.tool == type;
     return Builder(
       builder: (anchor) => _ToolbarButton(
         icon: ToolVisuals.icon(type),
@@ -438,6 +450,7 @@ class _InlineToolControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (canvas.laserMode) return const SizedBox.shrink();
     if (!_showsColors && !_showsSizes) return const SizedBox.shrink();
     final sizes = _quickSizes;
     var selectedSize = 0;

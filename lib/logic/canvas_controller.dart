@@ -588,6 +588,7 @@ class CanvasController extends _CanvasCore
   // ------------------------------------------------------------------
 
   void setTool(ToolType tool) {
+    if (_laserMode) setLaserEnabled(false);
     if (_tool == tool) return;
     _tool = tool;
     _selectedImageId = null;
