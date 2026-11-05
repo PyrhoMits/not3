@@ -10,7 +10,8 @@ import '../theme/tokens.dart';
 /// popovers de herramienta y la barra de selección.
 /// Actualiza el hex del controlador de texto a partir de un HSVColor.
 void _syncHex(TextEditingController hexCtrl, HSVColor hsv) {
-  hexCtrl.text = '#${hsv.toColor().toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+  hexCtrl.text =
+      '#${hsv.toColor().toARGB32().toRadixString(16).substring(2).toUpperCase()}';
 }
 
 /// Parsea un string hex a Color. Devuelve null si es inválido.
@@ -33,10 +34,23 @@ Future<void> showCustomColorDialog(
   BuildContext context,
   CanvasController controller,
 ) async {
-  final previousColor = controller.color;
-  var hsv = HSVColor.fromColor(controller.color);
+  final result = await showCustomColorPicker(
+    context,
+    initialColor: controller.color,
+  );
+  if (result != null) controller.setColor(result);
+}
+
+/// Opens the shared custom color UI without coupling the result to ink state.
+Future<Color?> showCustomColorPicker(
+  BuildContext context, {
+  required Color initialColor,
+}) async {
+  final previousColor = initialColor;
+  var hsv = HSVColor.fromColor(initialColor);
   final hexController = TextEditingController(
-    text: '#${controller.color.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
+    text:
+        '#${initialColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
   );
 
   // 0 = Rueda, 1 = Sliders
@@ -58,8 +72,12 @@ Future<void> showCustomColorDialog(
                   // Color actual
                   Column(
                     children: [
-                      Text(context.l10n.colorCurrent,
-                          style: context.text.labelSmall?.copyWith(color: context.colors.onSurfaceVariant)),
+                      Text(
+                        context.l10n.colorCurrent,
+                        style: context.text.labelSmall?.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                        ),
+                      ),
                       const SizedBox(height: Spacing.xs),
                       Container(
                         width: 40,
@@ -67,20 +85,31 @@ Future<void> showCustomColorDialog(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: previousColor,
-                          border: Border.all(color: context.colors.outline, width: 1.5),
+                          border: Border.all(
+                            color: context.colors.outline,
+                            width: 1.5,
+                          ),
                         ),
                       ),
                     ],
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: Spacing.sm),
-                    child: Icon(Icons.arrow_forward, size: 16, color: context.colors.onSurfaceVariant),
+                    child: Icon(
+                      Icons.arrow_forward,
+                      size: 16,
+                      color: context.colors.onSurfaceVariant,
+                    ),
                   ),
                   // Color nuevo
                   Column(
                     children: [
-                      Text(context.l10n.colorNew,
-                          style: context.text.labelSmall?.copyWith(color: context.colors.onSurfaceVariant)),
+                      Text(
+                        context.l10n.colorNew,
+                        style: context.text.labelSmall?.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                        ),
+                      ),
                       const SizedBox(height: Spacing.xs),
                       Container(
                         width: 40,
@@ -88,7 +117,10 @@ Future<void> showCustomColorDialog(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: hsv.toColor(),
-                          border: Border.all(color: context.colors.outline, width: 1.5),
+                          border: Border.all(
+                            color: context.colors.outline,
+                            width: 1.5,
+                          ),
                         ),
                       ),
                     ],
@@ -102,9 +134,7 @@ Future<void> showCustomColorDialog(
                         labelText: 'Hex',
                         hintText: '#FF0000',
                         prefixIcon: Icon(Icons.tag, size: 18),
-                        border: OutlineInputBorder(
-                          borderRadius: Radii.smAll,
-                        ),
+                        border: OutlineInputBorder(borderRadius: Radii.smAll),
                         isDense: true,
                       ),
                       onSubmitted: (v) {
@@ -174,9 +204,12 @@ Future<void> showCustomColorDialog(
                       max: 360,
                       gradient: const LinearGradient(
                         colors: [
-                          Color(0xFFFF0000), Color(0xFFFFFF00),
-                          Color(0xFF00FF00), Color(0xFF00FFFF),
-                          Color(0xFF0000FF), Color(0xFFFF00FF),
+                          Color(0xFFFF0000),
+                          Color(0xFFFFFF00),
+                          Color(0xFF00FF00),
+                          Color(0xFF00FFFF),
+                          Color(0xFF0000FF),
+                          Color(0xFFFF00FF),
                           Color(0xFFFF0000),
                         ],
                       ),
@@ -213,7 +246,12 @@ Future<void> showCustomColorDialog(
                       gradient: LinearGradient(
                         colors: [
                           Colors.black,
-                          HSVColor.fromAHSV(1, hsv.hue, hsv.saturation, 1).toColor(),
+                          HSVColor.fromAHSV(
+                            1,
+                            hsv.hue,
+                            hsv.saturation,
+                            1,
+                          ).toColor(),
                         ],
                       ),
                       valueLabel: '${(hsv.value * 100).round()}%',
@@ -241,10 +279,8 @@ Future<void> showCustomColorDialog(
     ),
   );
 
-  if (result != null) {
-    controller.setColor(result);
-  }
   hexController.dispose();
+  return result;
 }
 
 class _ModeButton extends StatelessWidget {
@@ -275,11 +311,23 @@ class _ModeButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16,
-                color: selected ? context.colors.primary : context.colors.onSurfaceVariant),
+            Icon(
+              icon,
+              size: 16,
+              color: selected
+                  ? context.colors.primary
+                  : context.colors.onSurfaceVariant,
+            ),
             const SizedBox(width: Spacing.xs),
-            Text(label,
-                style: context.text.labelMedium?.copyWith(fontWeight: selected ? FontWeight.w600 : FontWeight.normal, color: selected ? context.colors.primary : context.colors.onSurfaceVariant)),
+            Text(
+              label,
+              style: context.text.labelMedium?.copyWith(
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                color: selected
+                    ? context.colors.primary
+                    : context.colors.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       ),
@@ -313,11 +361,19 @@ class _HsvSliderWithGradient extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(label,
-                style: context.text.labelSmall?.copyWith(color: context.colors.onSurfaceVariant)),
+            Text(
+              label,
+              style: context.text.labelSmall?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
             const Spacer(),
-            Text(valueLabel,
-                style: context.text.labelSmall?.copyWith(color: context.colors.onSurfaceVariant)),
+            Text(
+              valueLabel,
+              style: context.text.labelSmall?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: Spacing.xxs),

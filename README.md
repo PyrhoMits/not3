@@ -8,7 +8,7 @@
 
 🌐 **English**
 
-Handwriting app for **stylus** tablets, in the spirit of GoodNotes or Samsung Notes, built with **Flutter**. Real pressure sensitivity, palm rejection, notebooks with templates, lasso, handwriting recognition, PDF import and optional Google Drive backup.
+Handwriting app for **stylus** tablets, in the spirit of GoodNotes or Samsung Notes, built with **Flutter**. Real pressure sensitivity, palm rejection, notes with templates, lasso, handwriting recognition, PDF import and optional Google Drive backup.
 
 **Free, ad-free, no accounts and no analytics.** Everything lives on your device.
 
@@ -58,7 +58,7 @@ Not3 is distributed as an APK on [**GitHub Releases**](https://github.com/PyrhoM
 | Shapes | Hold at the end of a stroke to straighten it: lines, rectangles, triangles, ellipses |
 | Ruler and protractor | cm/mm measurements on the page, live angle, strokes snap to the edge |
 | Rich text | Bold, italic, underline, alignment, font family and size |
-| Laser pointer and magnifier | For presenting or writing in detail |
+| Laser pointer and magnifier | Configurable Lines/Dot laser for presenting; fixed zoom board for writing in detail |
 | Images | Insert from the device, move and resize |
 
 ### 🔤 Handwriting OCR
@@ -72,28 +72,29 @@ Not3 is distributed as an APK on [**GitHub Releases**](https://github.com/PyrhoM
 |---|---|
 | Infinite canvas | Blank, grows as you write |
 | Sheet | A4-like fixed size, with continuous scrolling between sheets |
-| Ruled / Grid | Notebook style |
+| Ruled / Grid | Note style |
 | Custom template | Upload an image: **fixed sheet** or **infinite fill** |
 
 ### 📚 Organization
-- **Library** with notebooks, covers, favorites, recents and grid/list view.
-- **Tags** and **smart folders**.
+- **Library → Notebook → Note → Page** organization, with covers, favorites, recents and grid/list view.
+- **Tags** and dynamic **Smart views**.
 - **Search** across all notes, including on-device recognized handwriting.
 - **Page bookmarks**, go to page and keyboard shortcuts.
 - **Trash** with restore and automatic purge after 30 days.
 - **Reminders** linked to notebooks and **writing stats** (totals and streaks).
 
 ### 💾 Import, export and backup
-- **PDF import** to annotate it (one note page per PDF page).
-- **Export** a page or a whole notebook to **PNG, PDF, SVG or PPTX** (off-screen rendering, independent of zoom).
-- **Native `.inklus` format**: a single file per notebook with the document and its images: shareable and re-importable.
+- **PDF import** as a new notebook, a new note in an existing notebook, or additional pages in the open note.
+- **Move one or multiple notes** between notebooks.
+- **Export** a page or a whole note to **PNG, PDF, SVG or PPTX** (off-screen rendering, independent of zoom).
+- **Native `.inklus` format**: a self-contained notebook or note with its images, shareable and re-importable.
 - **Instant save** of every change and local **version history**.
 - **Full backup** as `.zip`, with **optional AES-256-GCM encryption** (key derived with PBKDF2).
 - **Marketplace** of free packs (templates, palettes, stickers) with sha256 verification.
 
 ### ☁️ Google Drive (optional)
 The app is **offline-first**: it works 100% without an account or network. If you sign in with Google:
-- Each notebook is mirrored to an **Not3** folder in your Drive as `.inklus`, always in the same file.
+- Each notebook is mirrored to its own folder under **Not3** in Drive, with one `.inklus` file per note.
 - It uses the **`drive.file`** scope: the app only sees files it created itself.
 - **Restore from Drive** brings back the latest version of each note, and the version history also shows revisions saved on Drive.
 

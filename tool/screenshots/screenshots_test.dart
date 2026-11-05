@@ -12,6 +12,7 @@
 // como cajas porque el entorno de test no tiene fuente por defecto.
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart' hide Page;
@@ -45,6 +46,8 @@ import 'package:not3/ui/notebook_library.dart';
 import 'package:not3/ui/editor/editor_toolbar.dart';
 import 'package:not3/ui/theme/app_theme.dart';
 import 'package:not3/logic/canvas_controller.dart';
+import 'package:not3/logic/pen_presets.dart';
+import 'package:not3/logic/shape_detector.dart';
 import 'package:not3/services/image_service.dart';
 import 'package:not3/ui/canvas/drawing_canvas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -122,9 +125,9 @@ void main() {
     final s = StorageService.instance;
     if ((await s.loadIndex()).isNotEmpty) return;
     for (final (t, c) in [
-      ('Matemáticas', 0xFF1E88E5),
-      ('Diario', 0xFFE53935),
-      ('Física II', 0xFF43A047),
+      ('Mathematics', 0xFF1E88E5),
+      ('Journal', 0xFFE53935),
+      ('Physics II', 0xFF43A047),
       ('Ideas', 0xFFFDD835),
     ]) {
       await s.createNotebook(
@@ -276,6 +279,81 @@ void main() {
     });
   }
 
+  testWidgets('shape point editing reference', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 2;
+    final canvas = CanvasController(StorageService(baseDir: tmp))
+      ..setHapticEnabled(false);
+    addTearDown(canvas.dispose);
+    const anchors = [
+      Offset(150, 110),
+      Offset(450, 145),
+      Offset(420, 380),
+      Offset(125, 350),
+    ];
+    final stroke = Stroke(
+      id: 'shape-reference',
+      points: ShapeDetector.pointsFromAnchors(ShapeType.rectangle, anchors),
+      tool: ToolType.pen,
+      colorValue: 0xFFB3261E,
+      size: 12,
+      shapeType: ShapeType.rectangle.name,
+      shapeAnchors: anchors,
+    );
+    canvas.page.strokes.add(stroke);
+    canvas.activateShapeEditing(stroke);
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: _shotLocale,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: DrawingCanvas(controller: canvas, imageService: ImageService()),
+        ),
+      ),
+    );
+    await settle(tester);
+    await shot(tester, 'shape_point_editing_reference');
+  });
+
+  testWidgets('laser trail reference', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 2;
+    final canvas = CanvasController(StorageService(baseDir: tmp))
+      ..setHapticEnabled(false)
+      ..setLaserDuration(CanvasController.maxLaserDuration);
+    addTearDown(canvas.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: DrawingCanvas(controller: canvas, imageService: ImageService()),
+        ),
+      ),
+    );
+    await settle(tester);
+    canvas
+      ..setLaserColor(CanvasController.defaultLaserColor)
+      ..setLaserThickness(CanvasController.defaultLaserThickness)
+      ..setLaserEnabled(true)
+      ..beginStroke(const Offset(110, 310), 0.5, tool: ToolType.pen);
+    for (var i = 1; i <= 42; i++) {
+      final t = i / 42;
+      canvas.addStrokePoint(
+        Offset(110 + 520 * t, 310 - 185 * sin(t * pi)),
+        0.5,
+      );
+    }
+    canvas.endStroke();
+    await tester.pump();
+    await shot(tester, 'laser_trail_reference');
+    canvas.setLaserEnabled(false);
+    await tester.pump();
+  });
+
   testWidgets('marketplace', (tester) async {
     tester.view.physicalSize = const Size(2560, 1600);
     tester.view.devicePixelRatio = 2;
@@ -352,13 +430,57 @@ void main() {
         final metas = await StorageService.instance.loadIndex();
         return StorageService.instance.loadNotebook(metas.first.id);
       });
-      await app(tester, NoteListScreen(notebook: nb!), dark: dark);
+      await app(
+        tester,
+        NoteListScreen(
+          notebook: nb!,
+          pdfImporter: const PdfImportCoordinator(supported: true),
+        ),
+        dark: dark,
+      );
       await shot(tester, 'notes_$tag');
     });
 
     testWidgets('settings $tag', (tester) async {
       await app(tester, const SettingsScreen(), dark: dark);
       await shot(tester, 'settings_$tag');
+    });
+
+    testWidgets('laser pointer popover $tag', (tester) async {
+      final canvas = CanvasController(StorageService(baseDir: tmp));
+      final presets = PenPresetsController(persist: false);
+      addTearDown(canvas.dispose);
+      addTearDown(presets.dispose);
+      await app(
+        tester,
+        Scaffold(
+          body: Align(
+            alignment: Alignment.topCenter,
+            child: EditorToolbar(
+              canvas: canvas,
+              presets: presets,
+              onBack: () {},
+              onEditTitle: () {},
+              onInsertImage: () {},
+              onTemplates: () {},
+              onInsertSticker: () {},
+              pagesOpen: false,
+              onTogglePages: () {},
+              layersOpen: false,
+              onToggleLayers: () {},
+              toolsCollapsed: false,
+              onToggleTools: () {},
+              trailing: const [],
+            ),
+          ),
+        ),
+        dark: dark,
+      );
+      await tester.tap(find.byTooltip('Laser pointer'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Laser pointer on'));
+      await settle(tester);
+      await shot(tester, 'laser_pointer_popover_$tag');
     });
   }
 

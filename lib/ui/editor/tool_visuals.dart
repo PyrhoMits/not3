@@ -87,6 +87,77 @@ class _ToolGlyph extends StatelessWidget {
   }
 }
 
+/// A stylus emitting a short beam toward a presentation dot.
+///
+/// Kept as local vector geometry so the laser does not require an SVG package
+/// or an additional icon font.
+class LaserPointerGlyph extends StatelessWidget {
+  const LaserPointerGlyph({super.key, this.size, this.color});
+
+  final double? size;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconTheme = IconTheme.of(context);
+    final resolvedSize = size ?? iconTheme.size ?? 24;
+    final resolvedColor =
+        color ?? iconTheme.color ?? Theme.of(context).colorScheme.onSurface;
+    return SizedBox.square(
+      dimension: resolvedSize,
+      child: Padding(
+        padding: EdgeInsets.all(resolvedSize * 0.2),
+        child: CustomPaint(
+          key: const Key('laser-pointer-glyph'),
+          painter: _LaserPointerGlyphPainter(resolvedColor),
+        ),
+      ),
+    );
+  }
+}
+
+class _LaserPointerGlyphPainter extends CustomPainter {
+  const _LaserPointerGlyphPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final side = size.shortestSide;
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = side * 0.085
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final fill = Paint()..color = color;
+
+    final stylus = Path()
+      ..moveTo(side * 0.12, side * 0.72)
+      ..lineTo(side * 0.28, side * 0.88)
+      ..lineTo(side * 0.63, side * 0.53)
+      ..lineTo(side * 0.47, side * 0.37)
+      ..close();
+    canvas.drawPath(stylus, stroke);
+    canvas.drawLine(
+      Offset(side * 0.50, side * 0.62),
+      Offset(side * 0.39, side * 0.73),
+      stroke,
+    );
+
+    canvas.drawLine(
+      Offset(side * 0.65, side * 0.35),
+      Offset(side * 0.78, side * 0.22),
+      stroke,
+    );
+    canvas.drawCircle(Offset(side * 0.87, side * 0.13), side * 0.09, fill);
+  }
+
+  @override
+  bool shouldRepaint(_LaserPointerGlyphPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
 /// A tilted, divided block eraser. Drawing it here avoids adding another icon
 /// font solely for one glyph and follows the surrounding [IconTheme].
 class _EraserGlyphPainter extends CustomPainter {

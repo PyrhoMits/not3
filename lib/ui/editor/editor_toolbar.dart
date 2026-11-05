@@ -83,52 +83,37 @@ class EditorToolbar extends StatelessWidget {
               SizedBox(
                 height: Sizes.editorDocumentBar,
                 child: _ToolbarRowInset(
-                  child: Row(
-                    children: [
-                      IconButton(
-                        tooltip: context.l10n.tbBackToLibrary,
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: onBack,
-                      ),
-                      Expanded(
-                        child: _TitleButton(canvas: canvas, onTap: onEditTitle),
-                      ),
-                      _ToolbarButton(
-                        icon: Icons.view_sidebar_outlined,
-                        label: pagesOpen
-                            ? context.l10n.tbHidePages
-                            : context.l10n.tbPages,
-                        selected: pagesOpen,
-                        onTap: onTogglePages,
-                      ),
-                      _ToolbarButton(
-                        icon: layersOpen ? Icons.layers : Icons.layers_outlined,
-                        label: layersOpen
-                            ? context.l10n.tbHideLayers
-                            : context.l10n.tbLayers,
-                        selected: layersOpen,
-                        onTap: onToggleLayers,
-                      ),
-                      _ToolbarButton(
-                        icon: ToolVisuals.icon(ToolType.select),
-                        toolIcon: ToolType.select,
-                        label: context.l10n.tbMoveSelect,
-                        selected: canvas.tool == ToolType.select,
-                        onTap: () => canvas.setTool(ToolType.select),
-                      ),
-                      ...trailing,
-                      IconButton(
-                        tooltip: toolsCollapsed
-                            ? context.l10n.tbShowTools
-                            : context.l10n.tbHideTools,
-                        icon: AnimatedRotation(
-                          turns: toolsCollapsed ? 0.5 : 0,
-                          duration: Motion.fast,
-                          child: const Icon(Icons.keyboard_arrow_up),
-                        ),
-                        onPressed: onToggleTools,
-                      ),
-                    ],
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final actions = _documentActions(context);
+                      final compact =
+                          constraints.maxWidth < Breakpoints.compact;
+                      return Row(
+                        children: [
+                          IconButton(
+                            tooltip: context.l10n.tbBackToLibrary,
+                            icon: const Icon(Icons.arrow_back),
+                            onPressed: onBack,
+                          ),
+                          Expanded(
+                            child: _TitleButton(
+                              canvas: canvas,
+                              onTap: onEditTitle,
+                            ),
+                          ),
+                          if (compact)
+                            Flexible(
+                              child: SingleChildScrollView(
+                                key: const Key('editor-document-action-scroll'),
+                                scrollDirection: Axis.horizontal,
+                                child: Row(children: actions),
+                              ),
+                            )
+                          else
+                            ...actions,
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -231,6 +216,45 @@ class EditorToolbar extends StatelessWidget {
     );
   }
 
+  List<Widget> _documentActions(BuildContext context) => [
+    _ToolbarButton(
+      icon: Icons.view_sidebar_outlined,
+      label: pagesOpen ? context.l10n.tbHidePages : context.l10n.tbPages,
+      selected: pagesOpen,
+      onTap: onTogglePages,
+    ),
+    _ToolbarButton(
+      icon: layersOpen ? Icons.layers : Icons.layers_outlined,
+      label: layersOpen ? context.l10n.tbHideLayers : context.l10n.tbLayers,
+      selected: layersOpen,
+      onTap: onToggleLayers,
+    ),
+    _ToolbarButton(
+      icon: Icons.dashboard_customize_outlined,
+      label: context.l10n.tbPageTemplate,
+      onTap: onTemplates,
+    ),
+    _ToolbarButton(
+      icon: ToolVisuals.icon(ToolType.select),
+      toolIcon: ToolType.select,
+      label: context.l10n.tbMoveSelect,
+      selected: !canvas.laserMode && canvas.tool == ToolType.select,
+      onTap: () => canvas.setTool(ToolType.select),
+    ),
+    ...trailing,
+    IconButton(
+      tooltip: toolsCollapsed
+          ? context.l10n.tbShowTools
+          : context.l10n.tbHideTools,
+      icon: AnimatedRotation(
+        turns: toolsCollapsed ? 0.5 : 0,
+        duration: Motion.fast,
+        child: const Icon(Icons.keyboard_arrow_up),
+      ),
+      onPressed: onToggleTools,
+    ),
+  ];
+
   List<Widget> _allTools(BuildContext context, {required bool compact}) {
     final tool = canvas.tool;
     final slots = compact
@@ -259,7 +283,10 @@ class EditorToolbar extends StatelessWidget {
       _ToolbarButton(
         icon: Icons.add_photo_alternate_outlined,
         label: context.l10n.tbInsertImage,
-        onTap: onInsertImage,
+        onTap: () {
+          canvas.setLaserEnabled(false);
+          onInsertImage();
+        },
       ),
       _ToolbarButton(
         icon: canvas.rulerEnabled && canvas.rulerType == RulerType.protractor
@@ -271,26 +298,45 @@ class EditorToolbar extends StatelessWidget {
             ? context.l10n.tbRulerNext
             : context.l10n.tbProtractorNext,
         selected: canvas.rulerEnabled,
-        onTap: canvas.cycleRuler,
+        onTap: () {
+          canvas.setLaserEnabled(false);
+          canvas.cycleRuler();
+        },
       ),
-      _ToolbarButton(
-        icon: canvas.laserMode ? Icons.flashlight_off : Icons.flashlight_on,
-        label: canvas.laserMode
-            ? context.l10n.tbLaserOff
-            : context.l10n.tbLaser,
-        selected: canvas.laserMode,
-        onTap: canvas.toggleLaser,
+      Builder(
+        builder: (anchor) => _ToolbarButton(
+          iconWidget: LaserPointerGlyph(
+            color: canvas.laserMode ? canvas.laserColor : null,
+          ),
+          label: canvas.laserMode ? context.l10n.laserOn : context.l10n.tbLaser,
+          selected: canvas.laserMode,
+          glyphColor: canvas.laserMode ? canvas.laserColor : null,
+          onTap: () {
+            if (canvas.laserMode) {
+              showAnchoredPopover<void>(
+                context: context,
+                anchorContext: anchor,
+                builder: (_) => LaserPopover(canvas: canvas),
+              );
+            } else {
+              canvas.setLaserEnabled(true);
+            }
+          },
+        ),
       ),
       _ToolbarButton(
         icon: Icons.emoji_emotions_outlined,
         label: context.l10n.tbInsertSticker,
-        onTap: onInsertSticker,
+        onTap: () {
+          canvas.setLaserEnabled(false);
+          onInsertSticker();
+        },
       ),
       _ToolbarButton(
         icon: ToolVisuals.icon(ToolType.bucket),
         toolIcon: ToolType.bucket,
         label: context.l10n.tbFill,
-        selected: tool == ToolType.bucket,
+        selected: !canvas.laserMode && tool == ToolType.bucket,
         onTap: () => canvas.setTool(ToolType.bucket),
       ),
       _ToolbarButton(
@@ -299,12 +345,10 @@ class EditorToolbar extends StatelessWidget {
             ? context.l10n.tbHideMagnifier
             : context.l10n.tbMagnifier,
         selected: canvas.magnifierEnabled,
-        onTap: canvas.toggleMagnifier,
-      ),
-      _ToolbarButton(
-        icon: Icons.dashboard_customize_outlined,
-        label: context.l10n.tbPageTemplate,
-        onTap: onTemplates,
+        onTap: () {
+          canvas.setLaserEnabled(false);
+          canvas.toggleMagnifier();
+        },
       ),
     ];
   }
@@ -312,7 +356,7 @@ class EditorToolbar extends StatelessWidget {
   /// Ranura de pluma favorita / resaltador.
   Widget _penSlot(BuildContext context, int slot, ToolType currentTool) {
     final preset = presets.presetAt(slot);
-    final showing = presets.isShowing(slot, currentTool);
+    final showing = !canvas.laserMode && presets.isShowing(slot, currentTool);
     return Builder(
       builder: (anchor) => _ToolbarButton(
         icon: ToolVisuals.icon(preset.tool),
@@ -346,7 +390,7 @@ class EditorToolbar extends StatelessWidget {
     ToolType type,
     WidgetBuilder popover,
   ) {
-    final selected = canvas.tool == type;
+    final selected = !canvas.laserMode && canvas.tool == type;
     return Builder(
       builder: (anchor) => _ToolbarButton(
         icon: ToolVisuals.icon(type),
@@ -406,6 +450,7 @@ class _InlineToolControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (canvas.laserMode) return const SizedBox.shrink();
     if (!_showsColors && !_showsSizes) return const SizedBox.shrink();
     final sizes = _quickSizes;
     var selectedSize = 0;
@@ -679,7 +724,8 @@ class _UndoRedo extends StatelessWidget {
 /// their glyph directly with the assigned ink/highlighter color.
 class _ToolbarButton extends StatelessWidget {
   const _ToolbarButton({
-    required this.icon,
+    this.icon,
+    this.iconWidget,
     required this.label,
     required this.onTap,
     this.selected = false,
@@ -687,7 +733,8 @@ class _ToolbarButton extends StatelessWidget {
     this.toolIcon,
   });
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget? iconWidget;
   final String label;
   final VoidCallback onTap;
   final bool selected;
@@ -728,6 +775,14 @@ class _ToolbarButton extends StatelessWidget {
                           toolIcon!,
                           size: Sizes.toolIcon,
                           color: glyphColor ?? fg,
+                        )
+                      : iconWidget != null
+                      ? IconTheme(
+                          data: IconThemeData(
+                            size: Sizes.toolIcon,
+                            color: glyphColor ?? fg,
+                          ),
+                          child: iconWidget!,
                         )
                       : Icon(
                           icon,

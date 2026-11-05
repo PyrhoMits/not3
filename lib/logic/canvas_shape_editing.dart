@@ -44,7 +44,7 @@ mixin _CanvasShapeEditing on _CanvasCore {
     final radius = 9 / _scale;
     return (
       anchors: anchors,
-      rotate: Offset(bounds.center.dx, bounds.top - 38 / _scale),
+      rotate: Offset(bounds.center.dx, bounds.bottom + 38 / _scale),
       radius: radius,
     );
   }
@@ -213,11 +213,12 @@ mixin _CanvasShapeEditing on _CanvasCore {
   }
 
   void _replaceEditedShape(Stroke before, List<Offset> anchors) {
-    final type = ShapeType.values.where(
-      (value) => value.name == before.shapeType,
+    final resolvedType = ShapeType.values.cast<ShapeType?>().firstWhere(
+      (value) => value?.name == before.shapeType,
+      orElse: () => null,
     );
-    if (type.isEmpty) return;
-    final points = ShapeDetector.pointsFromAnchors(type.first, anchors);
+    if (resolvedType == null) return;
+    final points = ShapeDetector.pointsFromAnchors(resolvedType, anchors);
     if (points.isEmpty) return;
     final currentIndex = page.strokes.indexWhere(
       (stroke) => stroke.id == before.id,

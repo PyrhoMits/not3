@@ -51,7 +51,8 @@ class SearchResult {
 /// La búsqueda ignora mayúsculas y acentos ("matematicas" encuentra
 /// "Matemáticas"). Archivo: `<appSupport>/inklus/search_index.json`.
 class SearchService {
-  SearchService({StorageService? storage}) : _storage = storage ?? StorageService.instance;
+  SearchService({StorageService? storage})
+    : _storage = storage ?? StorageService.instance;
 
   /// Instancia compartida (biblioteca y editor ven el mismo índice).
   static final SearchService instance = SearchService();
@@ -113,8 +114,12 @@ class SearchService {
         for (final page in note.pages)
           _PageIndex(
             pageId: page.id,
-            typed: page.textItems.map((t) => t.text).where((t) => t.isNotEmpty).join('\n'),
-            handwriting: previous?.pages
+            typed: page.textItems
+                .map((t) => t.text)
+                .where((t) => t.isNotEmpty)
+                .join('\n'),
+            handwriting:
+                previous?.pages
                     .where((p) => p.pageId == page.id)
                     .map((p) => p.handwriting)
                     .firstOrNull ??
@@ -141,6 +146,23 @@ class SearchService {
     if (_index.remove(noteId) != null) await _save();
   }
 
+  /// Reassigns indexed notes to another container without rebuilding their
+  /// page text, so previously recognized handwriting is preserved.
+  Future<void> moveNotesToNotebook(
+    Iterable<String> noteIds,
+    String notebookId,
+  ) async {
+    await load();
+    var changed = false;
+    for (final noteId in noteIds) {
+      final previous = _index[noteId];
+      if (previous == null || previous.notebookId == notebookId) continue;
+      _index[noteId] = previous.copyWith(notebookId: notebookId);
+      changed = true;
+    }
+    if (changed) await _save();
+  }
+
   /// Busca en todas las notas indexadas (o solo en [onlyNoteId]).
   List<SearchResult> search(String query, {String? onlyNoteId}) {
     final q = normalize(query.trim());
@@ -150,12 +172,14 @@ class SearchService {
       if (onlyNoteId != null && note.noteId != onlyNoteId) continue;
       final matches = <SearchMatch>[];
       if (normalize(note.title).contains(q)) {
-        matches.add(SearchMatch(
-          pageIndex: -1,
-          pageId: null,
-          snippet: note.title,
-          source: SearchSource.title,
-        ));
+        matches.add(
+          SearchMatch(
+            pageIndex: -1,
+            pageId: null,
+            snippet: note.title,
+            source: SearchSource.title,
+          ),
+        );
       }
       for (var i = 0; i < note.pages.length; i++) {
         final page = note.pages[i];
@@ -165,22 +189,26 @@ class SearchService {
         ]) {
           final snippet = _snippet(text, q);
           if (snippet != null) {
-            matches.add(SearchMatch(
-              pageIndex: i,
-              pageId: page.pageId,
-              snippet: snippet,
-              source: source,
-            ));
+            matches.add(
+              SearchMatch(
+                pageIndex: i,
+                pageId: page.pageId,
+                snippet: snippet,
+                source: source,
+              ),
+            );
           }
         }
       }
       if (matches.isNotEmpty) {
-        results.add(SearchResult(
-          noteId: note.noteId,
-          notebookId: note.notebookId,
-          noteTitle: note.title,
-          matches: matches,
-        ));
+        results.add(
+          SearchResult(
+            noteId: note.noteId,
+            notebookId: note.notebookId,
+            noteTitle: note.title,
+            matches: matches,
+          ),
+        );
       }
     }
     return results;
@@ -227,42 +255,56 @@ class _NoteIndex {
   final String title;
   final List<_PageIndex> pages;
 
+  _NoteIndex copyWith({String? notebookId}) => _NoteIndex(
+    noteId: noteId,
+    notebookId: notebookId ?? this.notebookId,
+    title: title,
+    pages: pages,
+  );
+
   factory _NoteIndex.fromJson(Map<String, dynamic> j) => _NoteIndex(
-        noteId: j['id'] as String,
-        notebookId: j['nb'] as String? ?? '',
-        title: j['title'] as String? ?? '',
-        pages: (j['pages'] as List? ?? [])
-            .map((p) => _PageIndex.fromJson(p as Map<String, dynamic>))
-            .toList(),
-      );
+    noteId: j['id'] as String,
+    notebookId: j['nb'] as String? ?? '',
+    title: j['title'] as String? ?? '',
+    pages: (j['pages'] as List? ?? [])
+        .map((p) => _PageIndex.fromJson(p as Map<String, dynamic>))
+        .toList(),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': noteId,
-        'nb': notebookId,
-        'title': title,
-        'pages': [for (final p in pages) p.toJson()],
-      };
+    'id': noteId,
+    'nb': notebookId,
+    'title': title,
+    'pages': [for (final p in pages) p.toJson()],
+  };
 }
 
 class _PageIndex {
-  const _PageIndex({required this.pageId, required this.typed, required this.handwriting});
+  const _PageIndex({
+    required this.pageId,
+    required this.typed,
+    required this.handwriting,
+  });
 
   final String pageId;
   final String typed;
   final String handwriting;
 
-  _PageIndex copyWith({String? handwriting}) =>
-      _PageIndex(pageId: pageId, typed: typed, handwriting: handwriting ?? this.handwriting);
+  _PageIndex copyWith({String? handwriting}) => _PageIndex(
+    pageId: pageId,
+    typed: typed,
+    handwriting: handwriting ?? this.handwriting,
+  );
 
   factory _PageIndex.fromJson(Map<String, dynamic> j) => _PageIndex(
-        pageId: j['id'] as String? ?? '',
-        typed: j['typed'] as String? ?? '',
-        handwriting: j['ink'] as String? ?? '',
-      );
+    pageId: j['id'] as String? ?? '',
+    typed: j['typed'] as String? ?? '',
+    handwriting: j['ink'] as String? ?? '',
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': pageId,
-        if (typed.isNotEmpty) 'typed': typed,
-        if (handwriting.isNotEmpty) 'ink': handwriting,
-      };
+    'id': pageId,
+    if (typed.isNotEmpty) 'typed': typed,
+    if (handwriting.isNotEmpty) 'ink': handwriting,
+  };
 }

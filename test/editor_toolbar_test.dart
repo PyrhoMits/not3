@@ -9,6 +9,8 @@ import 'package:not3/logic/pen_presets.dart';
 import 'package:not3/models/stroke.dart';
 import 'package:not3/services/storage_service.dart';
 import 'package:not3/ui/editor/editor_toolbar.dart';
+import 'package:not3/ui/editor/tool_popovers.dart';
+import 'package:not3/ui/editor/tool_visuals.dart';
 import 'package:not3/ui/theme/app_theme.dart';
 import 'package:not3/ui/theme/tokens.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,6 +21,7 @@ void main() {
   late Directory temp;
   late CanvasController canvas;
   late PenPresetsController presets;
+  late int templateOpenCount;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -26,6 +29,7 @@ void main() {
     canvas = CanvasController(StorageService(baseDir: temp))
       ..setHapticEnabled(false);
     presets = PenPresetsController(persist: false);
+    templateOpenCount = 0;
   });
 
   tearDown(() {
@@ -37,9 +41,10 @@ void main() {
   Widget app({
     required bool collapsed,
     required ValueChanged<bool> setCollapsed,
+    bool dark = false,
   }) {
     return MaterialApp(
-      theme: AppTheme.light(),
+      theme: dark ? AppTheme.dark() : AppTheme.light(),
       locale: const Locale('en'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -52,7 +57,7 @@ void main() {
             onBack: () {},
             onEditTitle: () {},
             onInsertImage: () {},
-            onTemplates: () {},
+            onTemplates: () => templateOpenCount++,
             onInsertSticker: () {},
             pagesOpen: false,
             onTogglePages: () {},
@@ -78,7 +83,11 @@ void main() {
     );
   }
 
-  Future<void> pumpToolbar(WidgetTester tester, {required double width}) async {
+  Future<void> pumpToolbar(
+    WidgetTester tester, {
+    required double width,
+    bool dark = false,
+  }) async {
     tester.view.physicalSize = Size(width, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -88,6 +97,7 @@ void main() {
         builder: (context, setState) => app(
           collapsed: collapsed,
           setCollapsed: (value) => setState(() => collapsed = value),
+          dark: dark,
         ),
       ),
     );
@@ -136,6 +146,7 @@ void main() {
     expect(find.byTooltip('Back to library'), findsOneWidget);
     expect(find.byTooltip('Pages'), findsOneWidget);
     expect(find.byTooltip('Layers'), findsOneWidget);
+    expect(find.byTooltip('Page template'), findsOneWidget);
     expect(find.byTooltip('Move / select images and strokes'), findsOneWidget);
     expect(find.byTooltip('Sync'), findsOneWidget);
     expect(find.byTooltip('More'), findsOneWidget);
@@ -289,7 +300,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('laser is a direct tool and updates its selected state', (
+  testWidgets('laser activates directly and a second tap opens settings', (
     tester,
   ) async {
     await pumpToolbar(tester, width: 1280);
@@ -298,8 +309,75 @@ void main() {
     await tester.pump();
 
     expect(canvas.laserMode, isTrue);
-    expect(find.byTooltip('Turn off laser pointer'), findsOneWidget);
+    expect(find.byTooltip('Laser pointer on'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byTooltip('Laser pointer on'),
+        matching: find.byType(LaserPointerGlyph),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.flashlight_on), findsNothing);
+    expect(find.byIcon(Icons.flashlight_off), findsNothing);
+
+    await tester.tap(find.byTooltip('Laser pointer on'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('laser-enabled')), findsNothing);
+    expect(find.text('Display mode'), findsOneWidget);
+    expect(find.text('Lines'), findsOneWidget);
+    expect(find.text('Dot'), findsOneWidget);
+    expect(find.byKey(const Key('laser-thickness')), findsOneWidget);
+    expect(find.byKey(const Key('laser-duration')), findsOneWidget);
+
+    await tester.tap(find.text('Dot'));
+    await tester.pump();
+    expect(canvas.laserPointerMode, LaserPointerMode.dot);
+
+    await tester.tapAt(const Offset(1200, 700));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Eraser'));
+    await tester.pump();
+    expect(canvas.laserMode, isFalse);
+    expect(canvas.tool, ToolType.eraser);
     expect(find.byTooltip('Insert sticker'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('laser settings update independently in a compact dark popover', (
+    tester,
+  ) async {
+    await pumpToolbar(tester, width: 360, dark: true);
+    await tester.ensureVisible(find.byTooltip('Laser pointer'));
+    await tester.tap(find.byTooltip('Laser pointer'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Laser pointer on'));
+    await tester.pumpAndSettle();
+
+    final inkColor = canvas.color;
+    final swatches = find.descendant(
+      of: find.byType(LaserPopover),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.button == true &&
+            widget.properties.label?.startsWith('Color ') == true,
+      ),
+    );
+    expect(swatches, findsNWidgets(6));
+    await tester.tap(swatches.at(1));
+    await tester.pump();
+    expect(canvas.laserColor, isNot(CanvasController.defaultLaserColor));
+    expect(canvas.color, inkColor);
+
+    tester.widget<Slider>(find.byKey(const Key('laser-thickness'))).onChanged!(
+      14,
+    );
+    tester.widget<Slider>(find.byKey(const Key('laser-duration'))).onChanged!(
+      1500,
+    );
+    await tester.pump();
+    expect(canvas.laserThickness, 14);
+    expect(canvas.laserDuration, const Duration(milliseconds: 1500));
     expect(tester.takeException(), isNull);
   });
 
@@ -316,6 +394,13 @@ void main() {
     expect(canvas.magnifierEnabled, isTrue);
     expect(find.byTooltip('Close zoom writing'), findsOneWidget);
     expect(find.byTooltip('Page template'), findsOneWidget);
+    await tester.tap(find.byTooltip('Page template'));
+    expect(templateOpenCount, 1);
+    final templateTop = tester.getTopLeft(find.byTooltip('Page template')).dy;
+    final pagesTop = tester.getTopLeft(find.byTooltip('Pages')).dy;
+    final laserTop = tester.getTopLeft(find.byTooltip('Laser pointer')).dy;
+    expect(templateTop, pagesTop);
+    expect(templateTop, lessThan(laserTop));
     expect(tester.takeException(), isNull);
   });
 

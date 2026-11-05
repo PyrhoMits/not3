@@ -33,4 +33,4 @@ The debug and release SHA-1s must be registered in Google Cloud (Android OAuth c
 
 ## After
 
-Download the release APK and check it on a clean device (install, open a notebook, write, export).
+Download the release APK and check it on a clean device (install, open a notebook and note, write, export).

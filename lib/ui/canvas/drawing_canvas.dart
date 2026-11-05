@@ -10,7 +10,6 @@ import 'package:flutter/services.dart';
 import '../../constants.dart';
 import '../../logic/canvas_controller.dart';
 import '../../logic/editor_performance_recorder.dart';
-import '../../logic/lasso.dart';
 import '../../logic/palm_rejection.dart';
 import '../../logic/shape_detector.dart';
 import '../../logic/snap_guides.dart';
@@ -341,7 +340,7 @@ class ActiveLayerPainter extends CustomPainter {
       paintActiveStroke(canvas, active, viewScale: scale);
     }
 
-    // Puntero láser: estela roja que se desvanece (no se guarda).
+    // Ephemeral laser presentation effect (never persisted).
     _paintLaser(canvas, controller, scale);
 
     // Lazo en progreso (trazo punteado del lazo).
@@ -487,6 +486,9 @@ class ActiveLayerPainter extends CustomPainter {
   static final Paint _laserCore = Paint()
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round;
+  static final Paint _laserHotCore = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round;
 
   static void _paintShapeEditing(
     Canvas canvas,
@@ -496,45 +498,29 @@ class ActiveLayerPainter extends CustomPainter {
     final stroke = controller.activeShapeEditStroke;
     final handles = controller.shapeEditingHandles;
     if (stroke == null || handles == null) return;
-    final fill = Paint()..color = kAccentColor;
+    final fill = Paint()..color = Colors.white;
     final ring = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2 / scale
-      ..color = Colors.white;
-    final guide = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5 / scale
-      ..color = kAccentColor.withValues(alpha: 0.8);
+      ..color = kAccentColor;
 
-    final bounds = polygonBounds(handles.anchors);
-    canvas.drawLine(bounds.topCenter, handles.rotate, guide);
     for (final anchor in handles.anchors) {
       canvas.drawCircle(anchor, handles.radius, fill);
       canvas.drawCircle(anchor, handles.radius, ring);
     }
-    canvas.drawCircle(handles.rotate, handles.radius, fill);
-    canvas.drawCircle(handles.rotate, handles.radius, ring);
+    _drawShapeRotationHandle(canvas, handles.rotate, handles.radius, scale);
 
     final polygon =
         stroke.shapeType == ShapeType.rectangle.name ||
         stroke.shapeType == ShapeType.triangle.name;
     if (polygon) {
       final angles = ShapeDetector.polygonAngles(handles.anchors);
-      final center =
-          handles.anchors.fold<Offset>(
-            Offset.zero,
-            (sum, anchor) => sum + anchor,
-          ) /
-          handles.anchors.length.toDouble();
       for (var i = 0; i < handles.anchors.length; i++) {
-        final fromCenter = handles.anchors[i] - center;
-        final direction = fromCenter.distance == 0
-            ? const Offset(0, -1)
-            : fromCenter / fromCenter.distance;
-        _drawShapeLabel(
+        _drawShapeAngle(
           canvas,
+          handles.anchors,
+          i,
           '${(angles[i] * 180 / pi).round()}°',
-          handles.anchors[i] + direction * (22 / scale),
           scale,
         );
       }
@@ -546,10 +532,133 @@ class ActiveLayerPainter extends CustomPainter {
       _drawShapeLabel(
         canvas,
         '${degrees >= 0 ? '+' : ''}$degrees°',
-        handles.rotate + Offset(0, -24 / scale),
+        handles.rotate + Offset(0, 24 / scale),
         scale,
       );
     }
+  }
+
+  static void _drawShapeAngle(
+    Canvas canvas,
+    List<Offset> anchors,
+    int index,
+    String text,
+    double scale,
+  ) {
+    final vertex = anchors[index];
+    final previous = anchors[(index - 1 + anchors.length) % anchors.length];
+    final next = anchors[(index + 1) % anchors.length];
+    final toPrevious = previous - vertex;
+    final toNext = next - vertex;
+    if (toPrevious.distance == 0 || toNext.distance == 0) return;
+
+    var sweep = toNext.direction - toPrevious.direction;
+    while (sweep > pi) {
+      sweep -= 2 * pi;
+    }
+    while (sweep < -pi) {
+      sweep += 2 * pi;
+    }
+    final radius = min(
+      18 / scale,
+      min(toPrevious.distance, toNext.distance) * 0.28,
+    );
+    if (radius <= 0) return;
+    canvas.drawArc(
+      Rect.fromCircle(center: vertex, radius: radius),
+      toPrevious.direction,
+      sweep,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.8 / scale
+        ..strokeCap = StrokeCap.round
+        ..color = kAccentColor,
+    );
+
+    final bisector =
+        toPrevious / toPrevious.distance + toNext / toNext.distance;
+    if (bisector.distance == 0) return;
+    final labelCenter =
+        vertex + bisector / bisector.distance * (radius + 11 / scale);
+    _drawShapeAngleLabel(canvas, text, labelCenter, scale);
+  }
+
+  static void _drawShapeAngleLabel(
+    Canvas canvas,
+    String text,
+    Offset center,
+    double scale,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: kAccentColor,
+          fontSize: 12 / scale,
+          fontWeight: FontWeight.w700,
+          shadows: [
+            Shadow(color: Colors.white, blurRadius: 2 / scale),
+            Shadow(color: Colors.white, blurRadius: 2 / scale),
+          ],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(
+      canvas,
+      Offset(center.dx - painter.width / 2, center.dy - painter.height / 2),
+    );
+  }
+
+  static void _drawShapeRotationHandle(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    double scale,
+  ) {
+    canvas.drawCircle(center, radius, Paint()..color = kAccentColor);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5 / scale
+        ..color = Colors.white,
+    );
+
+    final iconRadius = radius * 0.48;
+    const start = -0.8 * pi;
+    const sweep = 1.55 * pi;
+    final iconPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5 / scale
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..color = Colors.white;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: iconRadius),
+      start,
+      sweep,
+      false,
+      iconPaint,
+    );
+    final end = start + sweep;
+    final tip = center + Offset(cos(end), sin(end)) * iconRadius;
+    final tangent = Offset(-sin(end), cos(end));
+    final radial = Offset(cos(end), sin(end));
+    final arrow = Path()
+      ..moveTo(tip.dx, tip.dy)
+      ..lineTo(
+        tip.dx - tangent.dx * 3 / scale - radial.dx * 2 / scale,
+        tip.dy - tangent.dy * 3 / scale - radial.dy * 2 / scale,
+      )
+      ..moveTo(tip.dx, tip.dy)
+      ..lineTo(
+        tip.dx - tangent.dx * 3 / scale + radial.dx * 2 / scale,
+        tip.dy - tangent.dy * 3 / scale + radial.dy * 2 / scale,
+      );
+    canvas.drawPath(arrow, iconPaint);
   }
 
   static void _drawShapeLabel(
@@ -585,24 +694,78 @@ class ActiveLayerPainter extends CustomPainter {
     );
   }
 
-  /// Dibuja la estela del láser: cada segmento con opacidad según su edad.
+  /// Paints the laser in world coordinates with screen-space sizing.
   static void _paintLaser(Canvas canvas, CanvasController c, double scale) {
     final trail = c.laserTrail;
     if (trail.isEmpty) return;
     final now = DateTime.now().millisecondsSinceEpoch;
-    final fade = CanvasController.laserFade.inMilliseconds;
-    _laserGlow.strokeWidth = 14 / scale;
-    _laserCore.strokeWidth = 5 / scale;
+    final fade = c.laserDuration.inMilliseconds;
+    final rimWidth = c.laserThickness / scale;
+    final hotCoreWidth = max(1.2, c.laserThickness * 0.34) / scale;
+    final glowWidth = c.laserThickness * (14 / 5) / scale;
+    _laserGlow.strokeWidth = glowWidth;
+    _laserGlow.maskFilter = MaskFilter.blur(
+      BlurStyle.normal,
+      6 * (c.laserThickness / CanvasController.defaultLaserThickness) / scale,
+    );
+    _laserCore.strokeWidth = rimWidth;
+    _laserHotCore.strokeWidth = hotCoreWidth;
+    final color = c.laserColor;
+    final hotColor = color == CanvasController.defaultLaserColor
+        ? Colors.white
+        : Color.lerp(color, Colors.white, 0.72)!;
+    if (c.laserPointerMode == LaserPointerMode.dot) {
+      final latest = trail.last;
+      final age = (now - latest.t).clamp(0, fade);
+      final alpha = 1 - age / fade;
+      if (alpha <= 0) return;
+      _laserGlow.color = color.withValues(alpha: 0.5 * alpha);
+      _laserCore.color = color.withValues(alpha: 0.9 * alpha);
+      _laserHotCore.color = hotColor.withValues(alpha: 0.96 * alpha);
+      canvas.drawCircle(
+        latest.point,
+        glowWidth / 2,
+        _laserGlow..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        latest.point,
+        rimWidth / 2,
+        _laserCore..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        latest.point,
+        hotCoreWidth / 2,
+        _laserHotCore..style = PaintingStyle.fill,
+      );
+      _laserGlow.style = PaintingStyle.stroke;
+      _laserCore.style = PaintingStyle.stroke;
+      _laserHotCore.style = PaintingStyle.stroke;
+      return;
+    }
+    final hotPath = Path();
+    var hotPathStarted = false;
+    var hotAlpha = 0.0;
     for (var i = 1; i < trail.length; i++) {
       final age = (now - trail[i].t).clamp(0, fade);
       final alpha = 1 - age / fade;
-      if (alpha <= 0) continue;
-      _laserGlow.color = const Color(
-        0xFFFF1744,
-      ).withValues(alpha: 0.35 * alpha);
-      _laserCore.color = const Color(0xFFFF5252).withValues(alpha: alpha);
+      if (alpha <= 0) {
+        hotPathStarted = false;
+        continue;
+      }
+      _laserGlow.color = color.withValues(alpha: 0.5 * alpha);
+      _laserCore.color = color.withValues(alpha: 0.9 * alpha);
       canvas.drawLine(trail[i - 1].point, trail[i].point, _laserGlow);
       canvas.drawLine(trail[i - 1].point, trail[i].point, _laserCore);
+      if (!hotPathStarted) {
+        hotPath.moveTo(trail[i - 1].point.dx, trail[i - 1].point.dy);
+        hotPathStarted = true;
+      }
+      hotPath.lineTo(trail[i].point.dx, trail[i].point.dy);
+      hotAlpha = max(hotAlpha, alpha);
+    }
+    if (hotAlpha > 0) {
+      _laserHotCore.color = hotColor.withValues(alpha: 0.96 * hotAlpha);
+      canvas.drawPath(hotPath, _laserHotCore);
     }
   }
 }
@@ -954,6 +1117,13 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
           tool: ToolType.eraser,
           timeStamp: event.timeStamp,
         );
+      } else if (c.laserMode) {
+        c.beginStroke(
+          world,
+          event.pressure,
+          tool: c.tool,
+          timeStamp: event.timeStamp,
+        );
       } else if (c.beginShapeEditGesture(world)) {
         _editingShape = true;
       } else if (c.tool == ToolType.select) {
@@ -1001,7 +1171,15 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       }
       return;
     }
-    if (c.beginShapeEditGesture(world)) {
+    if (c.laserMode) {
+      _drawingPointer = event.pointer;
+      c.beginStroke(
+        world,
+        event.pressure,
+        tool: c.tool,
+        timeStamp: event.timeStamp,
+      );
+    } else if (c.beginShapeEditGesture(world)) {
       _drawingPointer = event.pointer;
       _editingShape = true;
     } else if (c.tool == ToolType.select) {

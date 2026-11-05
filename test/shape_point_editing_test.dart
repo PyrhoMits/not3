@@ -111,17 +111,52 @@ void main() {
     );
   });
 
+  test('nearby polygon vertices preserve rectangle topology', () {
+    const anchors = [
+      Offset(0, 0),
+      Offset(120, 0),
+      Offset(120, 80),
+      Offset(0, 80),
+    ];
+    addShape(ShapeType.rectangle, anchors);
+
+    expect(canvas.beginShapeEditGesture(anchors.first), isTrue);
+    canvas.updateShapeEditGesture(const Offset(116, 3));
+    canvas.endShapeEditGesture();
+
+    final edited = canvas.activeShapeEditStroke!;
+    expect(edited.shapeType, ShapeType.rectangle.name);
+    expect(edited.shapeAnchors, const [
+      Offset(116, 3),
+      Offset(120, 0),
+      Offset(120, 80),
+      Offset(0, 80),
+    ]);
+    expect(canvas.shapeEditingHandles!.anchors, hasLength(4));
+
+    canvas.undo();
+    expect(canvas.page.strokes.single.shapeType, ShapeType.rectangle.name);
+    expect(canvas.page.strokes.single.shapeAnchors, anchors);
+    canvas.redo();
+    expect(canvas.page.strokes.single.shapeType, ShapeType.rectangle.name);
+    expect(canvas.page.strokes.single.shapeAnchors, hasLength(4));
+  });
+
   test('rotation reports signed delta and move preserves internal angles', () {
     const anchors = [Offset(0, 0), Offset(100, 0), Offset(50, 80)];
     addShape(ShapeType.triangle, anchors);
     final initialAngles = ShapeDetector.polygonAngles(anchors);
     final handle = canvas.shapeEditingHandles!.rotate;
     final center = canvas.activeShapeEditStroke!.pointBounds.center;
+    expect(
+      handle.dy,
+      greaterThan(canvas.activeShapeEditStroke!.pointBounds.bottom),
+    );
     final radius = (handle - center).distance;
 
     expect(canvas.beginShapeEditGesture(handle), isTrue);
     canvas.updateShapeEditGesture(center + Offset(radius, 0));
-    expect(canvas.shapeRotationDelta, closeTo(pi / 2, 0.05));
+    expect(canvas.shapeRotationDelta, closeTo(-pi / 2, 0.05));
     canvas.endShapeEditGesture();
 
     final rotated = canvas.activeShapeEditStroke!;

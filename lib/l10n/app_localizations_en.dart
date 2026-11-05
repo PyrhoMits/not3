@@ -243,7 +243,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get driveRestoreBody =>
-      'Notes on this device are only replaced if the Drive copy is newer. Notes missing here go back to their notebook (or to a new \"Recovered from Drive\" one).';
+      'Notes on this device are only replaced if the Drive copy is newer. Notes missing here go back to their notebook (or to a new \"Recovered from Drive\" notebook).';
 
   @override
   String get backupSaveTitle => 'Save Not3 backup';
@@ -546,7 +546,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libNavFavorites => 'Favorites';
 
   @override
-  String get libNavFolders => 'Folders';
+  String get libNavFolders => 'Smart views';
 
   @override
   String get libImport => 'Import .inklus';
@@ -564,7 +564,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libMoreOptions => 'More options';
 
   @override
-  String get libMyNotebooks => 'My notebooks';
+  String get libMyNotebooks => 'Library';
 
   @override
   String get libClearFilter => 'Clear filter';
@@ -675,7 +675,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get libEmptyHint =>
-      'Create a new notebook or import an existing one\\nto get started.';
+      'Create a new notebook or import a PDF\\nto get started.';
 
   @override
   String get noteRenameTitle => 'Rename note';
@@ -703,6 +703,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noteOptions => 'Options';
+
+  @override
+  String get noteMoveToNotebook => 'Move to notebook';
+
+  @override
+  String get noteMoveTitle => 'Choose a notebook';
+
+  @override
+  String get noteMoveHint => 'The selected notes will be moved here.';
+
+  @override
+  String get noteCreateNotebook => 'New notebook';
+
+  @override
+  String get noteSelectAll => 'Select all';
+
+  @override
+  String noteSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notes selected',
+      one: '1 note selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String noteMoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notes moved',
+      one: 'Note moved',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String noteMoveFailed(String error) {
+    return 'Could not move the notes: $error';
+  }
 
   @override
   String get timeNow => 'just now';
@@ -1038,6 +1080,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tbLaser => 'Laser pointer';
 
   @override
+  String get laserOn => 'Laser pointer on';
+
+  @override
+  String get laserMode => 'Display mode';
+
+  @override
+  String get laserLines => 'Lines';
+
+  @override
+  String get laserDot => 'Dot';
+
+  @override
+  String get laserColor => 'Laser color';
+
+  @override
+  String get laserThickness => 'Thickness';
+
+  @override
+  String get laserDuration => 'Visibility duration';
+
+  @override
+  String laserDurationValue(int milliseconds) {
+    return '$milliseconds ms';
+  }
+
+  @override
   String get tbInsertSticker => 'Insert sticker';
 
   @override
@@ -1077,7 +1145,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tagTitle => 'Notebook tags';
 
   @override
-  String get tagSubtitle => 'To find it and group it in smart folders';
+  String get tagSubtitle => 'Use tags to find this notebook in Smart views';
 
   @override
   String get tagActive => 'Active tags';
@@ -1833,10 +1901,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsDaysWithPages => 'Days with new pages';
 
   @override
-  String get smartTitle => 'Smart folders';
+  String get smartTitle => 'Smart views';
 
   @override
-  String get smartSubtitle => 'Organize your notebooks automatically';
+  String get smartSubtitle => 'Filter your notebooks automatically';
 
   @override
   String get smartByColor => 'By color';
@@ -1941,7 +2009,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statsEmptyBody =>
-      'Start writing in your notebooks and your statistics will appear here.';
+      'Start writing in your notes and your statistics will appear here.';
 
   @override
   String get remOverdue => ' · overdue';
@@ -2007,7 +2075,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errNotNot3 =>
-      'The file is not an .inklus notebook or an Not3 backup.';
+      'The file is not an .inklus notebook or a Not3 backup.';
 
   @override
   String get errNotNot3File => 'Not a valid .inklus notebook';
@@ -2108,7 +2176,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get driveRecovered => 'Recovered from Drive';
 
   @override
-  String get packClassicName => 'Classic notebooks';
+  String get packClassicName => 'Classic paper';
 
   @override
   String get packClassicDesc =>

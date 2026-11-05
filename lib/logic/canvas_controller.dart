@@ -33,6 +33,8 @@ part 'canvas_selection.dart';
 part 'canvas_shape_editing.dart';
 part 'canvas_view.dart';
 
+enum LaserPointerMode { lines, dot }
+
 /// Controlador central del lienzo.
 ///
 /// Gestiona: documento actual, herramienta/color/grosor, transformación
@@ -177,7 +179,7 @@ class CanvasController extends _CanvasCore
   // ---- Notificadores granulares ----
   // Permiten que la barra del editor y sus popovers solo se reconstruyan cuando
   // cambia lo que realmente les importa, en vez de en cada trazo.
-  /// Cambia cuando: tool, rulerEnabled, magnifierEnabled, laserMode.
+  /// Changes with the active tool and transient presentation-tool settings.
   final ValueNotifier<int> _toolContextNotifier = ValueNotifier<int>(0);
   ValueListenable<int> get toolContextNotifier => _toolContextNotifier;
 
@@ -294,6 +296,10 @@ class CanvasController extends _CanvasCore
       _rulerType,
       _magnifierEnabled,
       _laserMode,
+      _laserPointerMode,
+      _laserColor,
+      _laserThickness,
+      _laserDuration,
     );
     if (toolKey != _lastToolKey) {
       _lastToolKey = toolKey;
@@ -582,6 +588,7 @@ class CanvasController extends _CanvasCore
   // ------------------------------------------------------------------
 
   void setTool(ToolType tool) {
+    if (_laserMode) setLaserEnabled(false);
     if (_tool == tool) return;
     _tool = tool;
     _selectedImageId = null;
@@ -620,6 +627,10 @@ class CanvasController extends _CanvasCore
   static const _prefFingerDrawing = 'finger_drawing';
   static const _prefFingerDrawingUserSet = 'finger_drawing_user_set';
   static const _prefLassoSelectionFilter = 'lasso_selection_filter_v1';
+  static const _prefLaserMode = 'laser_pointer_mode';
+  static const _prefLaserColor = 'laser_pointer_color';
+  static const _prefLaserThickness = 'laser_pointer_thickness';
+  static const _prefLaserDuration = 'laser_pointer_duration_ms';
   bool _fingerDrawingUserSet = false;
 
   bool setLassoContentEnabled(LassoContentType type, bool enabled) {
@@ -677,9 +688,42 @@ class CanvasController extends _CanvasCore
           // Invalid or old values use the backwards-compatible all-on default.
         }
       }
+      final savedLaserMode = prefs.getString(_prefLaserMode);
+      _laserPointerMode = LaserPointerMode.values.firstWhere(
+        (mode) => mode.name == savedLaserMode,
+        orElse: () => LaserPointerMode.lines,
+      );
+      final savedLaserColor = prefs.getInt(_prefLaserColor);
+      _laserColor =
+          savedLaserColor != null &&
+              savedLaserColor >= 0 &&
+              savedLaserColor <= 0xFFFFFFFF
+          ? Color(savedLaserColor)
+          : defaultLaserColor;
+      final savedLaserThickness = prefs.getDouble(_prefLaserThickness);
+      _laserThickness =
+          savedLaserThickness != null &&
+              savedLaserThickness.isFinite &&
+              savedLaserThickness >= minLaserThickness &&
+              savedLaserThickness <= maxLaserThickness
+          ? savedLaserThickness
+          : defaultLaserThickness;
+      final savedLaserDuration = prefs.getInt(_prefLaserDuration);
+      _laserDuration = Duration(
+        milliseconds:
+            savedLaserDuration != null &&
+                savedLaserDuration >= minLaserDuration.inMilliseconds &&
+                savedLaserDuration <= maxLaserDuration.inMilliseconds
+            ? savedLaserDuration
+            : defaultLaserDuration.inMilliseconds,
+      );
       final saved = prefs.getBool(_prefFingerDrawing);
       if (saved != null && saved != _fingerDrawingEnabled && !_disposed) {
         _fingerDrawingEnabled = saved;
+      }
+      if (!_disposed) {
+        _notifyToolContext();
+        _notifyActiveOverlay();
         notifyListeners();
       }
     } catch (_) {}
@@ -759,39 +803,142 @@ class CanvasController extends _CanvasCore
     _heldShapeAnchors = null;
   }
 
-  // ---- Puntero láser ----
+  // ---- Laser pointer ----
   bool _laserMode = false;
   bool get laserMode => _laserMode;
+
+  static const defaultLaserColor = Color(0xFFFF5252);
+  static const defaultLaserThickness = 5.0;
+  static const defaultLaserDuration = Duration(milliseconds: 750);
+  static const minLaserThickness = 1.0;
+  static const maxLaserThickness = 20.0;
+  static const minLaserDuration = Duration(milliseconds: 250);
+  static const maxLaserDuration = Duration(milliseconds: 3000);
+
+  LaserPointerMode _laserPointerMode = LaserPointerMode.lines;
+  LaserPointerMode get laserPointerMode => _laserPointerMode;
+  Color _laserColor = defaultLaserColor;
+  Color get laserColor => _laserColor;
+  double _laserThickness = defaultLaserThickness;
+  double get laserThickness => _laserThickness;
+  Duration _laserDuration = defaultLaserDuration;
+  Duration get laserDuration => _laserDuration;
 
   /// Estela del láser: puntos con su instante (ms). Se desvanece sola.
   final List<({Offset point, int t})> _laserTrail = [];
   List<({Offset point, int t})> get laserTrail => _laserTrail;
   Timer? _laserTicker;
 
-  /// Duración de la estela del láser.
-  static const laserFade = Duration(milliseconds: 750);
+  @visibleForTesting
+  bool get laserTickerActive => _laserTicker?.isActive ?? false;
 
-  void toggleLaser() {
-    _laserMode = !_laserMode;
-    if (!_laserMode) _laserTrail.clear();
+  void setLaserEnabled(bool enabled) {
+    if (_laserMode == enabled) return;
+    _laserMode = enabled;
+    if (!enabled) {
+      _laserTrail.clear();
+      _laserTicker?.cancel();
+      _laserTicker = null;
+    }
+    _notifyToolContext();
     _notifyActiveOverlay();
     notifyListeners();
   }
 
-  void _addLaserPoint(Offset p) {
-    _laserTrail.add((point: p, t: DateTime.now().millisecondsSinceEpoch));
-    _notifyActiveOverlay();
-    _laserTicker ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
-      final cutoff =
-          DateTime.now().millisecondsSinceEpoch - laserFade.inMilliseconds;
-      _laserTrail.removeWhere((e) => e.t < cutoff);
-      if (_laserTrail.isEmpty && !_isDrawing) {
+  void toggleLaser() => setLaserEnabled(!_laserMode);
+
+  void setLaserPointerMode(LaserPointerMode mode) {
+    if (_laserPointerMode == mode) return;
+    _laserPointerMode = mode;
+    if (mode == LaserPointerMode.dot && _laserTrail.length > 1) {
+      final latest = _laserTrail.last;
+      _laserTrail
+        ..clear()
+        ..add(latest);
+    } else if (mode == LaserPointerMode.lines) {
+      // Do not connect a previous stationary dot to the next line gesture.
+      _laserTrail.clear();
+      if (!_isDrawing) {
         _laserTicker?.cancel();
         _laserTicker = null;
       }
+    }
+    _persistLaserString(_prefLaserMode, mode.name);
+    _notifyToolContext();
+    _notifyActiveOverlay();
+    notifyListeners();
+  }
+
+  void setLaserColor(Color color) {
+    if (_laserColor == color) return;
+    _laserColor = color;
+    _persistLaserInt(_prefLaserColor, color.toARGB32());
+    _notifyToolContext();
+    _notifyActiveOverlay();
+    notifyListeners();
+  }
+
+  void setLaserThickness(double thickness) {
+    final next = thickness.clamp(minLaserThickness, maxLaserThickness);
+    if (_laserThickness == next) return;
+    _laserThickness = next;
+    _persistLaserDouble(_prefLaserThickness, next);
+    _notifyToolContext();
+    _notifyActiveOverlay();
+    notifyListeners();
+  }
+
+  void setLaserDuration(Duration duration) {
+    final milliseconds = duration.inMilliseconds.clamp(
+      minLaserDuration.inMilliseconds,
+      maxLaserDuration.inMilliseconds,
+    );
+    final next = Duration(milliseconds: milliseconds);
+    if (_laserDuration == next) return;
+    _laserDuration = next;
+    _persistLaserInt(_prefLaserDuration, milliseconds);
+    _pruneLaserTrail();
+    _notifyToolContext();
+    _notifyActiveOverlay();
+    notifyListeners();
+  }
+
+  void _persistLaserString(String key, String value) {
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setString(key, value))
+        .catchError((_) => false);
+  }
+
+  void _persistLaserInt(String key, int value) {
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setInt(key, value))
+        .catchError((_) => false);
+  }
+
+  void _persistLaserDouble(String key, double value) {
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setDouble(key, value))
+        .catchError((_) => false);
+  }
+
+  void _pruneLaserTrail() {
+    final cutoff =
+        DateTime.now().millisecondsSinceEpoch - _laserDuration.inMilliseconds;
+    _laserTrail.removeWhere((sample) => sample.t < cutoff);
+    if (_laserTrail.isEmpty && !_isDrawing) {
+      _laserTicker?.cancel();
+      _laserTicker = null;
+    }
+  }
+
+  void _addLaserPoint(Offset p) {
+    if (_laserPointerMode == LaserPointerMode.dot) _laserTrail.clear();
+    _laserTrail.add((point: p, t: DateTime.now().millisecondsSinceEpoch));
+    _notifyActiveOverlay();
+    _laserTicker ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
+      _pruneLaserTrail();
       if (!_disposed) {
         _notifyActiveOverlay();
-        notifyListeners();
       }
     });
   }
@@ -928,6 +1075,17 @@ class CanvasController extends _CanvasCore
     required ToolType tool,
     Duration? timeStamp,
   }) {
+    // The presentation laser temporarily overrides every drawing tool except
+    // a physical stylus eraser. It never creates page content or undo state.
+    if (_laserMode && tool != ToolType.eraser) {
+      commitEditingText();
+      worldPoint = _adoptPageAt(worldPoint);
+      _isDrawing = true;
+      _activeStroke = null;
+      _activeEraserPath = [];
+      _addLaserPoint(worldPoint);
+      return;
+    }
     if (tool == ToolType.select) return;
     if (tool != ToolType.text) commitEditingText();
     // Empezar a escribir en una hoja vecina visible la hace la actual.
@@ -948,14 +1106,6 @@ class CanvasController extends _CanvasCore
         commitEditingText();
         addTextItem(worldPoint);
       }
-      return;
-    }
-    // Láser: estela efímera, nunca se guarda ni pasa por deshacer.
-    if (_laserMode && tool != ToolType.eraser) {
-      _isDrawing = true;
-      _activeStroke = null;
-      _activeEraserPath = [];
-      _addLaserPoint(worldPoint);
       return;
     }
     // Hoja fija: no se empieza a escribir fuera del papel (se guardaría un

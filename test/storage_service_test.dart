@@ -97,8 +97,7 @@ void main() {
       expect(await storage.load(doc.id), isNull);
       expect((await storage.loadIndex()).length, 0);
 
-      final docFile =
-          File('${tempDir.path}/documents/${doc.id}.json');
+      final docFile = File('${tempDir.path}/documents/${doc.id}.json');
       expect(docFile.existsSync(), isFalse);
     });
 
@@ -143,47 +142,52 @@ void main() {
   });
 
   group('Respaldo local completo', () {
-    test('exportFullBackup + importFullBackup restaura Notebook+Note e imágenes',
-        () async {
-      final imagesDir = Directory('${tempDir.path}/images')..createSync();
-      final img = File('${imagesDir.path}/foto.png')..writeAsBytesSync([1, 2, 3]);
+    test(
+      'exportFullBackup + importFullBackup restaura Notebook+Note e imágenes',
+      () async {
+        final imagesDir = Directory('${tempDir.path}/images')..createSync();
+        final img = File('${imagesDir.path}/foto.png')
+          ..writeAsBytesSync([1, 2, 3]);
 
-      final nb = await storage.createNotebook(title: 'Física');
-      final note = nb.notes.first;
-      note.pages.first.images.add(ImageItem(
-        id: 'img_1',
-        localPath: img.path,
-        x: 0,
-        y: 0,
-        width: 10,
-        height: 10,
-      ));
-      await storage.saveNote(nb.id, note);
-      await storage.setSyncEnabled(nb.id, false);
+        final nb = await storage.createNotebook(title: 'Física');
+        final note = nb.notes.first;
+        note.pages.first.images.add(
+          ImageItem(
+            id: 'img_1',
+            localPath: img.path,
+            x: 0,
+            y: 0,
+            width: 10,
+            height: 10,
+          ),
+        );
+        await storage.saveNote(nb.id, note);
+        await storage.setSyncEnabled(nb.id, false);
 
-      final zip = await storage.exportFullBackup();
+        final zip = await storage.exportFullBackup();
 
-      // Restaurar en "otro equipo" (otra carpeta base).
-      final otherDir = Directory.systemTemp.createTempSync('inklus_restore_');
-      try {
-        final other = StorageService(baseDir: otherDir);
-        final count = await other.importFullBackup(zip);
-        expect(count, 1);
+        // Restaurar en "otro equipo" (otra carpeta base).
+        final otherDir = Directory.systemTemp.createTempSync('inklus_restore_');
+        try {
+          final other = StorageService(baseDir: otherDir);
+          final count = await other.importFullBackup(zip);
+          expect(count, 1);
 
-        final metas = await other.loadIndex();
-        expect(metas.single.title, 'Física');
-        expect(metas.single.isSyncEnabled, isFalse);
+          final metas = await other.loadIndex();
+          expect(metas.single.title, 'Física');
+          expect(metas.single.isSyncEnabled, isFalse);
 
-        final restored = await other.loadNotebook(nb.id);
-        expect(restored, isNotNull);
-        final restoredImg = restored!.notes.first.pages.first.images.single;
-        // La ruta absoluta se re-mapea a la nueva carpeta base.
-        expect(restoredImg.localPath, '${otherDir.path}/images/foto.png');
-        expect(File(restoredImg.localPath).readAsBytesSync(), [1, 2, 3]);
-      } finally {
-        otherDir.deleteSync(recursive: true);
-      }
-    });
+          final restored = await other.loadNotebook(nb.id);
+          expect(restored, isNotNull);
+          final restoredImg = restored!.notes.first.pages.first.images.single;
+          // La ruta absoluta se re-mapea a la nueva carpeta base.
+          expect(restoredImg.localPath, '${otherDir.path}/images/foto.png');
+          expect(File(restoredImg.localPath).readAsBytesSync(), [1, 2, 3]);
+        } finally {
+          otherDir.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test('importFullBackup fusiona: conserva cuadernos locales', () async {
       final a = await storage.createNotebook(title: 'A');
@@ -215,15 +219,26 @@ void main() {
     test('backup antiguo (solo documents/) se migra a Notebook+Note', () async {
       final doc = Document.newBlank(title: 'Viejo');
       final archive = Archive()
-        ..addFile(ArchiveFile.string(
-            'documents/${doc.id}.json', jsonEncode(doc.toJson())))
-        ..addFile(ArchiveFile.string(
+        ..addFile(
+          ArchiveFile.string(
+            'documents/${doc.id}.json',
+            jsonEncode(doc.toJson()),
+          ),
+        )
+        ..addFile(
+          ArchiveFile.string(
             'index.json',
             jsonEncode({
               'documents': [
-                {'id': doc.id, 'title': 'Viejo', 'updatedAt': doc.updatedAt.toIso8601String()}
-              ]
-            })));
+                {
+                  'id': doc.id,
+                  'title': 'Viejo',
+                  'updatedAt': doc.updatedAt.toIso8601String(),
+                },
+              ],
+            }),
+          ),
+        );
       final zip = Uint8List.fromList(ZipEncoder().encode(archive));
 
       final count = await storage.importFullBackup(zip);
@@ -266,7 +281,10 @@ void main() {
       await writeAtomic(f, '{"a":1}');
       await writeAtomic(f, '{"a":2}');
       expect(f.readAsStringSync(), '{"a":2}');
-      expect(tempDir.listSync().where((e) => e.path.contains('.tmp-')), isEmpty);
+      expect(
+        tempDir.listSync().where((e) => e.path.contains('.tmp-')),
+        isEmpty,
+      );
     });
   });
 
@@ -286,24 +304,26 @@ void main() {
       expect(onDisk, note.updatedAt);
     });
 
-    test('createNote, renameNote y duplicateNote no tocan las otras notas',
-        () async {
-      final nb = await storage.createNotebook(title: 'Grande');
-      final first = nb.notes.first;
-      final stamp = DateTime(2001);
-      noteFile(first.id).setLastModifiedSync(stamp);
+    test(
+      'createNote, renameNote y duplicateNote no tocan las otras notas',
+      () async {
+        final nb = await storage.createNotebook(title: 'Grande');
+        final first = nb.notes.first;
+        final stamp = DateTime(2001);
+        noteFile(first.id).setLastModifiedSync(stamp);
 
-      final created = await storage.createNote(nb.id, title: 'Nueva');
-      await storage.renameNote(nb.id, created.id, 'Renombrada');
-      final copy = await storage.duplicateNote(nb.id, created.id);
+        final created = await storage.createNote(nb.id, title: 'Nueva');
+        await storage.renameNote(nb.id, created.id, 'Renombrada');
+        final copy = await storage.duplicateNote(nb.id, created.id);
 
-      expect(noteFile(first.id).lastModifiedSync(), stamp);
-      final loaded = (await storage.loadNotebook(nb.id))!;
-      expect(loaded.notes.map((n) => n.id), [first.id, created.id, copy.id]);
-      expect(loaded.notes[1].title, 'Renombrada');
-    });
+        expect(noteFile(first.id).lastModifiedSync(), stamp);
+        final loaded = (await storage.loadNotebook(nb.id))!;
+        expect(loaded.notes.map((n) => n.id), [first.id, created.id, copy.id]);
+        expect(loaded.notes[1].title, 'Renombrada');
+      },
+    );
 
-    test('deleteNote quita la nota pero nunca la última', () async {
+    test('deleteNote allows a notebook to become empty', () async {
       final nb = await storage.createNotebook(title: 'Borrar');
       final extra = await storage.createNote(nb.id);
 
@@ -314,11 +334,75 @@ void main() {
 
       await storage.deleteNote(nb.id, nb.notes.first.id);
       loaded = (await storage.loadNotebook(nb.id))!;
-      expect(loaded.notes.length, 1);
+      expect(loaded.notes, isEmpty);
     });
 
+    test('createNotebook can create an explicitly empty notebook', () async {
+      final notebook = await storage.createNotebook(
+        title: 'Empty',
+        createInitialNote: false,
+      );
+
+      expect(notebook.notes, isEmpty);
+      expect((await storage.loadNotebook(notebook.id))!.notes, isEmpty);
+    });
+
+    test(
+      'moveNotes preserves content and order and may empty the source',
+      () async {
+        final source = await storage.createNotebook(title: 'Source');
+        final second = await storage.createNote(source.id, title: 'Second');
+        final destination = await storage.createNotebook(title: 'Destination');
+        final first = source.notes.single;
+        final firstBefore = (await storage.loadNote(first.id))!.toJson();
+        final secondBefore = (await storage.loadNote(second.id))!.toJson();
+
+        await storage.moveNotes(source.id, destination.id, [
+          second.id,
+          first.id,
+        ]);
+
+        expect((await storage.loadNotebook(source.id))!.notes, isEmpty);
+        final moved = (await storage.loadNotebook(destination.id))!;
+        expect(
+          moved.notes.map((note) => note.id),
+          [destination.notes.single.id, first.id, second.id],
+          reason: 'moved notes retain their source-notebook ordering',
+        );
+        expect((await storage.loadNote(first.id))!.toJson(), firstBefore);
+        expect((await storage.loadNote(second.id))!.toJson(), secondBefore);
+      },
+    );
+
+    test(
+      'moveNotes rejects invalid ownership without partial changes',
+      () async {
+        final source = await storage.createNotebook(title: 'Source');
+        final destination = await storage.createNotebook(title: 'Destination');
+
+        await expectLater(
+          storage.moveNotes(source.id, destination.id, ['missing']),
+          throwsStateError,
+        );
+
+        expect(
+          (await storage.loadNotebook(source.id))!.notes.map((note) => note.id),
+          source.notes.map((note) => note.id),
+        );
+        expect(
+          (await storage.loadNotebook(
+            destination.id,
+          ))!.notes.map((note) => note.id),
+          destination.notes.map((note) => note.id),
+        );
+      },
+    );
+
     test('renombrar, color y etiquetas actualizan cuaderno e índice', () async {
-      final nb = await storage.createNotebook(title: 'Antes', colorValue: 0xFF112233);
+      final nb = await storage.createNotebook(
+        title: 'Antes',
+        colorValue: 0xFF112233,
+      );
       await storage.renameNotebook(nb.id, 'Después');
       await storage.setNotebookTags(nb.id, ['física']);
       await storage.setNotebookColor(nb.id, null);
@@ -334,37 +418,50 @@ void main() {
       expect(loaded.notes.length, 1);
     });
 
-    test('createNote en un cuaderno inexistente no deja la nota huérfana',
-        () async {
-      await expectLater(storage.createNote('nb_no_existe'), throwsStateError);
-      final notesDir = Directory('${tempDir.path}/notes');
-      final left = notesDir.existsSync() ? notesDir.listSync() : const [];
-      expect(left, isEmpty);
-    });
+    test(
+      'createNote en un cuaderno inexistente no deja la nota huérfana',
+      () async {
+        await expectLater(storage.createNote('nb_no_existe'), throwsStateError);
+        final notesDir = Directory('${tempDir.path}/notes');
+        final left = notesDir.existsSync() ? notesDir.listSync() : const [];
+        expect(left, isEmpty);
+      },
+    );
 
     test('writeJsonAtomic en segundo plano escribe el mismo JSON', () async {
       final f = File('${tempDir.path}/big.json');
-      final json = {'a': List.generate(1000, (i) => {'x': i, 'y': i / 2})};
+      final json = {
+        'a': List.generate(1000, (i) => {'x': i, 'y': i / 2}),
+      };
       await writeJsonAtomic(f, json, background: true);
       expect(jsonDecode(f.readAsStringSync()), json);
-      expect(tempDir.listSync().where((e) => e.path.contains('.tmp-')), isEmpty);
+      expect(
+        tempDir.listSync().where((e) => e.path.contains('.tmp-')),
+        isEmpty,
+      );
     });
   });
 
   group('Papelera', () {
     Directory trash() => Directory('${tempDir.path}/trash');
 
-    test('un cuaderno borrado es UNA entrada, con sus notas y su fecha', () async {
-      final nb = await storage.createNotebook(title: 'Física');
-      await storage.createNote(nb.id, title: 'Tema 2');
-      await storage.deleteNotebook(nb.id);
+    test(
+      'un cuaderno borrado es UNA entrada, con sus notas y su fecha',
+      () async {
+        final nb = await storage.createNotebook(title: 'Física');
+        await storage.createNote(nb.id, title: 'Tema 2');
+        await storage.deleteNotebook(nb.id);
 
-      final entries = await storage.loadTrash();
-      expect(entries.single.id, nb.id);
-      expect(entries.single.kind, TrashKind.notebook);
-      expect(entries.single.noteCount, 2);
-      expect(DateTime.now().difference(entries.single.deletedAt).inMinutes, 0);
-    });
+        final entries = await storage.loadTrash();
+        expect(entries.single.id, nb.id);
+        expect(entries.single.kind, TrashKind.notebook);
+        expect(entries.single.noteCount, 2);
+        expect(
+          DateTime.now().difference(entries.single.deletedAt).inMinutes,
+          0,
+        );
+      },
+    );
 
     test('una nota borrada vuelve a su cuaderno', () async {
       final nb = await storage.createNotebook(title: 'Química');
@@ -379,7 +476,11 @@ void main() {
       final loaded = (await storage.loadNotebook(nb.id))!;
       expect(loaded.notes.map((n) => n.id), contains(extra.id));
       expect(await storage.loadTrash(), isEmpty);
-      expect((await storage.loadIndex()).length, 1, reason: 'sin cuaderno nuevo');
+      expect(
+        (await storage.loadIndex()).length,
+        1,
+        reason: 'sin cuaderno nuevo',
+      );
     });
 
     test('si su cuaderno ya no existe, la nota vuelve en uno nuevo', () async {
@@ -396,12 +497,15 @@ void main() {
       expect(restored.notes.single.title, 'Roma');
     });
 
-    test('borrar definitivamente un cuaderno borra también sus notas', () async {
-      final nb = await storage.createNotebook(title: 'Temporal');
-      await storage.deleteNotebook(nb.id);
-      await storage.purgeFromTrash(nb.id);
-      expect(trash().listSync(), isEmpty);
-    });
+    test(
+      'borrar definitivamente un cuaderno borra también sus notas',
+      () async {
+        final nb = await storage.createNotebook(title: 'Temporal');
+        await storage.deleteNotebook(nb.id);
+        await storage.purgeFromTrash(nb.id);
+        expect(trash().listSync(), isEmpty);
+      },
+    );
 
     test('restaurar un cuaderno recupera todas sus notas', () async {
       final nb = await storage.createNotebook(title: 'Arte');
@@ -412,7 +516,9 @@ void main() {
       final loaded = (await storage.loadNotebook(nb.id))!;
       expect(loaded.notes.map((n) => n.id), [nb.notes.first.id, n2.id]);
       expect(await storage.loadTrash(), isEmpty);
-      final raw = File('${tempDir.path}/notebooks/${nb.id}.json').readAsStringSync();
+      final raw = File(
+        '${tempDir.path}/notebooks/${nb.id}.json',
+      ).readAsStringSync();
       expect(raw.contains('_trash'), isFalse);
     });
 
@@ -422,8 +528,9 @@ void main() {
       final f = File('${trash().path}/${nb.id}.json');
       final json = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
       json['_trash'] = {
-        'deletedAt':
-            DateTime.now().subtract(const Duration(days: 31)).toIso8601String(),
+        'deletedAt': DateTime.now()
+            .subtract(const Duration(days: 31))
+            .toIso8601String(),
       };
       f.writeAsStringSync(jsonEncode(json));
 

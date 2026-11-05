@@ -39,6 +39,7 @@ import 'editor/version_history_sheet.dart';
 import 'editor/editor_toolbar.dart';
 import 'editor/pages_panel.dart';
 import 'editor/selection_bar.dart';
+import 'editor/tool_visuals.dart';
 import 'theme/inklus_colors.dart';
 import 'theme/tokens.dart';
 import 'widgets/controller_selector.dart';
@@ -56,10 +57,11 @@ import '../services/app_paths.dart';
 import '../l10n/l10n.dart';
 import '../services/app_errors.dart';
 
-/// Editor de un cuaderno (pantalla principal de escritura).
+/// Editor for one multi-page note.
 ///
-/// Recibe un [note] ya cargado desde la lista de notas ([NoteListScreen])
-/// y crea su [CanvasController] al montarse.
+/// Receives an already-loaded [note] from [NoteListScreen] and creates its
+/// [CanvasController] when mounted. [notebookId] is the persisted identifier
+/// of the notebook that owns the note.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -67,6 +69,8 @@ class HomeScreen extends StatefulWidget {
     required this.notebookId,
     this.initialPage = 0,
     this.pdfImporter = const PdfImportCoordinator(),
+    this.storage,
+    this.search,
   });
 
   final Note note;
@@ -75,6 +79,8 @@ class HomeScreen extends StatefulWidget {
   /// Página a mostrar al abrir (p. ej. desde un resultado de búsqueda).
   final int initialPage;
   final PdfImportCoordinator pdfImporter;
+  final StorageService? storage;
+  final SearchService? search;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -83,13 +89,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Textos traducidos (atajo seguro tras `await`: el `context` del State vive mientras esté montado).
   AppLocalizations get _l10n => context.l10n;
-  final StorageService _storage = StorageService.instance;
+  late final StorageService _storage;
   final ImageService _imageService = ImageService();
   final DriveSyncService _syncService = DriveSyncService.instance;
   final TemplateLibraryService _templateLibrary = TemplateLibraryService();
   final WritingStatsService _stats = WritingStatsService();
   final ReminderService _reminders = ReminderService();
-  final SearchService _search = SearchService.instance;
+  late final SearchService _search;
   final VersionHistoryService _versions = VersionHistoryService();
   late final CanvasController _controller;
 
@@ -161,6 +167,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _storage = widget.storage ?? StorageService.instance;
+    _search =
+        widget.search ??
+        (widget.storage == null
+            ? SearchService.instance
+            : SearchService(storage: _storage));
     EditorPerformanceRecorder.instance.start();
     WidgetsBinding.instance.addObserver(this);
     _templateLibrary.init();
@@ -1447,8 +1459,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                                 : context.l10n.tbLaser,
                                             isSelected: on,
                                             onPressed: controller.toggleLaser,
-                                            icon: const Icon(
-                                              Icons.flashlight_on,
+                                            icon: LaserPointerGlyph(
+                                              color: on
+                                                  ? controller.laserColor
+                                                  : null,
                                             ),
                                           ),
                                     ),

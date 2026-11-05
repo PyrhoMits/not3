@@ -20,7 +20,7 @@ The automated tests (`flutter test`, screenshots and `integration_test`) cover d
 
 ## 2. View (performance)
 
-Import the stress notebook (`flutter test tool/stress/stress_note_test.dart` → `build/inklus_stress.inklus`) and open it with `flutter run --profile` (key `P` to see the frame graph):
+Import the stress note (`flutter test tool/stress/stress_note_test.dart` → `build/inklus_stress.inklus`) and open it with `flutter run --profile` (key `P` to see the frame graph):
 
 - [ ] Scroll and zoom on the page with 1,700 strokes: smooth; it looks crisp on release.
 - [ ] While scrolling, no lines or jumps appear between the "frozen" area and the one drawn live.
@@ -36,8 +36,8 @@ Import the stress notebook (`flutter test tool/stress/stress_note_test.dart` →
 
 - [ ] Force-close the app right after writing: when you come back, the stroke is there.
 - [ ] Delete a note and restore it from the Trash: it returns to its notebook.
-- [ ] Export a full backup, import it (Settings → Import): notebooks intact.
-- [ ] Export page PNG/PDF and notebook PDF (high quality): the photos are visible.
+- [ ] Export a full backup, import it (Settings → Import): notebooks and notes remain intact.
+- [ ] Export page PNG/PDF and note PDF (high quality): the photos are visible.
 
 ## 5. Google Drive (with the test account)
 

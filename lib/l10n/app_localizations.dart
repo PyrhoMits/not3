@@ -487,7 +487,7 @@ abstract class AppLocalizations {
   /// No description provided for @driveRestoreBody.
   ///
   /// In en, this message translates to:
-  /// **'Notes on this device are only replaced if the Drive copy is newer. Notes missing here go back to their notebook (or to a new \"Recovered from Drive\" one).'**
+  /// **'Notes on this device are only replaced if the Drive copy is newer. Notes missing here go back to their notebook (or to a new \"Recovered from Drive\" notebook).'**
   String get driveRestoreBody;
 
   /// No description provided for @backupSaveTitle.
@@ -1057,7 +1057,7 @@ abstract class AppLocalizations {
   /// No description provided for @libNavFolders.
   ///
   /// In en, this message translates to:
-  /// **'Folders'**
+  /// **'Smart views'**
   String get libNavFolders;
 
   /// No description provided for @libImport.
@@ -1093,7 +1093,7 @@ abstract class AppLocalizations {
   /// No description provided for @libMyNotebooks.
   ///
   /// In en, this message translates to:
-  /// **'My notebooks'**
+  /// **'Library'**
   String get libMyNotebooks;
 
   /// No description provided for @libClearFilter.
@@ -1273,7 +1273,7 @@ abstract class AppLocalizations {
   /// No description provided for @libEmptyHint.
   ///
   /// In en, this message translates to:
-  /// **'Create a new notebook or import an existing one\\nto get started.'**
+  /// **'Create a new notebook or import a PDF\\nto get started.'**
   String get libEmptyHint;
 
   /// No description provided for @noteRenameTitle.
@@ -1329,6 +1329,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Options'**
   String get noteOptions;
+
+  /// No description provided for @noteMoveToNotebook.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to notebook'**
+  String get noteMoveToNotebook;
+
+  /// No description provided for @noteMoveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a notebook'**
+  String get noteMoveTitle;
+
+  /// No description provided for @noteMoveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected notes will be moved here.'**
+  String get noteMoveHint;
+
+  /// No description provided for @noteCreateNotebook.
+  ///
+  /// In en, this message translates to:
+  /// **'New notebook'**
+  String get noteCreateNotebook;
+
+  /// No description provided for @noteSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get noteSelectAll;
+
+  /// No description provided for @noteSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 note selected} other{{count} notes selected}}'**
+  String noteSelectedCount(int count);
+
+  /// No description provided for @noteMoved.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Note moved} other{{count} notes moved}}'**
+  String noteMoved(int count);
+
+  /// No description provided for @noteMoveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not move the notes: {error}'**
+  String noteMoveFailed(String error);
 
   /// No description provided for @timeNow.
   ///
@@ -1912,6 +1960,54 @@ abstract class AppLocalizations {
   /// **'Laser pointer'**
   String get tbLaser;
 
+  /// No description provided for @laserOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Laser pointer on'**
+  String get laserOn;
+
+  /// No description provided for @laserMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Display mode'**
+  String get laserMode;
+
+  /// No description provided for @laserLines.
+  ///
+  /// In en, this message translates to:
+  /// **'Lines'**
+  String get laserLines;
+
+  /// No description provided for @laserDot.
+  ///
+  /// In en, this message translates to:
+  /// **'Dot'**
+  String get laserDot;
+
+  /// No description provided for @laserColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Laser color'**
+  String get laserColor;
+
+  /// No description provided for @laserThickness.
+  ///
+  /// In en, this message translates to:
+  /// **'Thickness'**
+  String get laserThickness;
+
+  /// No description provided for @laserDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Visibility duration'**
+  String get laserDuration;
+
+  /// No description provided for @laserDurationValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{milliseconds} ms'**
+  String laserDurationValue(int milliseconds);
+
   /// No description provided for @tbInsertSticker.
   ///
   /// In en, this message translates to:
@@ -1993,7 +2089,7 @@ abstract class AppLocalizations {
   /// No description provided for @tagSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'To find it and group it in smart folders'**
+  /// **'Use tags to find this notebook in Smart views'**
   String get tagSubtitle;
 
   /// No description provided for @tagActive.
@@ -3241,13 +3337,13 @@ abstract class AppLocalizations {
   /// No description provided for @smartTitle.
   ///
   /// In en, this message translates to:
-  /// **'Smart folders'**
+  /// **'Smart views'**
   String get smartTitle;
 
   /// No description provided for @smartSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Organize your notebooks automatically'**
+  /// **'Filter your notebooks automatically'**
   String get smartSubtitle;
 
   /// No description provided for @smartByColor.
@@ -3445,7 +3541,7 @@ abstract class AppLocalizations {
   /// No description provided for @statsEmptyBody.
   ///
   /// In en, this message translates to:
-  /// **'Start writing in your notebooks and your statistics will appear here.'**
+  /// **'Start writing in your notes and your statistics will appear here.'**
   String get statsEmptyBody;
 
   /// No description provided for @remOverdue.
@@ -3529,7 +3625,7 @@ abstract class AppLocalizations {
   /// No description provided for @errNotNot3.
   ///
   /// In en, this message translates to:
-  /// **'The file is not an .inklus notebook or an Not3 backup.'**
+  /// **'The file is not an .inklus notebook or a Not3 backup.'**
   String get errNotNot3;
 
   /// No description provided for @errNotNot3File.
@@ -3649,7 +3745,7 @@ abstract class AppLocalizations {
   /// No description provided for @packClassicName.
   ///
   /// In en, this message translates to:
-  /// **'Classic notebooks'**
+  /// **'Classic paper'**
   String get packClassicName;
 
   /// No description provided for @packClassicDesc.
