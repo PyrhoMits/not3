@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:not3/services/html_import_service.dart';
+import 'package:not3/services/html_math_baker.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -130,6 +131,17 @@ void main() {
     ).join();
     await expectLater(
       prepare(source),
+      throwsA(failure(HtmlImportFailureKind.tooComplex)),
+    );
+  });
+
+  test('rejects excessive TeX before starting MathJax', () async {
+    final source = List.filled(
+      HtmlMathBaker.maximumFormulaCount + 1,
+      r'\(x\)',
+    ).join(' ');
+    await expectLater(
+      prepare('<p>$source</p>'),
       throwsA(failure(HtmlImportFailureKind.tooComplex)),
     );
   });

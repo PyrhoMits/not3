@@ -5,7 +5,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -18,6 +20,7 @@ import '../models/note.dart';
 import '../models/stroke.dart';
 import '../services/drive_sync_service.dart';
 import '../services/huawei_stylus_shortcut_service.dart';
+import '../services/html_math_baker.dart';
 import '../services/storage_service.dart';
 import 'canvas/drawing_canvas.dart' show ActiveLayerPainter;
 import 'canvas/world_painter.dart' show paintStroke;
@@ -69,6 +72,7 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
   double _scrollStartY = 0;
   HtmlStrokeIndex? _strokeIndex;
   int _strokeIndexVersion = -1;
+  Future<void> _mathBakeWrite = Future<void>.value();
 
   @override
   void initState() {
@@ -107,7 +111,11 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
     }
     try {
       final file = await widget.storage.htmlSourceFile(_canvas.page);
-      final html = await file.readAsString();
+      var html = await file.readAsString();
+      if (HtmlMathBaker.needsBake(html)) {
+        final mathJax = await rootBundle.loadString(HtmlMathBaker.assetPath);
+        html = HtmlMathBaker.runtimeHtml(html, mathJax);
+      }
       if (!mounted) return;
       final web = WebViewController();
       await web.setJavaScriptMode(JavaScriptMode.unrestricted);
@@ -212,7 +220,13 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
   };
   const fonts = document.fonts && document.fonts.ready
     ? document.fonts.ready.catch(() => {}) : Promise.resolve();
-  fonts.then(() => requestAnimationFrame(() => {
+  const mathReady = window.__not3MathReady || Promise.resolve(null);
+  mathReady.then((bakedHtml) => {
+    if (typeof bakedHtml === 'string' && bakedHtml.length <= 12582912) {
+      Not3Html.postMessage(JSON.stringify({type: 'mathBaked', html: bakedHtml}));
+    }
+    return fonts;
+  }).then(() => requestAnimationFrame(() => {
     installSectionCulling();
     requestAnimationFrame(() => report('ready'));
   }));
@@ -231,6 +245,11 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
     try {
       final message = jsonDecode(raw) as Map<String, dynamic>;
       switch (message['type']) {
+        case 'mathBaked':
+          final html = message['html'];
+          if (html is String && html.isNotEmpty) {
+            _mathBakeWrite = _persistBakedMath(html);
+          }
         case 'link':
           final uri = Uri.tryParse(message['href'] as String? ?? '');
           if (uri != null &&
@@ -258,6 +277,15 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
       }
     } catch (_) {
       // Ignore malformed messages from imported content.
+    }
+  }
+
+  Future<void> _persistBakedMath(String html) async {
+    try {
+      final sanitized = await compute(HtmlMathBaker.sanitizeBaked, html);
+      await widget.storage.replaceHtmlSource(_canvas.page, sanitized);
+    } catch (error) {
+      debugPrint('HtmlAnnotationScreen: math bake persistence failed: $error');
     }
   }
 
@@ -429,6 +457,7 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
   Future<void> _close() async {
     if (_closing) return;
     _closing = true;
+    await _mathBakeWrite;
     await _canvas.flush();
     if (_remoteSyncPending) unawaited(_runRemoteSync());
     if (mounted) Navigator.pop(context);

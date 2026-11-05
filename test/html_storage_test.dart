@@ -78,6 +78,38 @@ void main() {
     expect(source.existsSync(), isFalse);
   });
 
+  test('atomically replaces baked HTML in app-owned storage', () async {
+    final notebook = await storage.createNotebook(
+      title: 'Articles',
+      createInitialNote: false,
+    );
+    final note = await storage.createHtmlNote(
+      notebook.id,
+      title: 'Math',
+      sanitizedHtml: '<p>\\(x\\)</p>',
+    );
+
+    await storage.replaceHtmlSource(
+      note.pages.single,
+      '<p><mjx-container>rendered</mjx-container></p>',
+    );
+
+    final source = await storage.htmlSourceFile(note.pages.single);
+    expect(source.readAsStringSync(), contains('mjx-container'));
+    expect(source.readAsStringSync(), isNot(contains(r'\(x\)')));
+  });
+
+  test('does not create a missing source during MathJax persistence', () async {
+    await expectLater(
+      storage.replaceHtmlSource(
+        Page.html(sourcePath: 'html/missing/source.html'),
+        '<p>unexpected</p>',
+      ),
+      throwsStateError,
+    );
+    expect(File('${temp.path}/html/missing/source.html').existsSync(), isFalse);
+  });
+
   test('full backup restores the owned HTML source', () async {
     final notebook = await storage.createNotebook(
       title: 'Articles',

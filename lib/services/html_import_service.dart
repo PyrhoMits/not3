@@ -9,6 +9,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 
+import 'html_math_baker.dart';
+
 enum HtmlImportFailureKind {
   unsupportedPlatform,
   unsupportedFileType,
@@ -166,6 +168,11 @@ class HtmlImportService {
       element.remove();
       removedActiveContent = true;
     }
+    if (HtmlMathBaker.formulaCount(document) >
+        HtmlMathBaker.maximumFormulaCount) {
+      throw const HtmlImportException(HtmlImportFailureKind.tooComplex);
+    }
+    HtmlMathBaker.preserveSourceConfiguration(document, source);
 
     for (final element in document.querySelectorAll('*')) {
       for (final name in element.attributes.keys.toList()) {

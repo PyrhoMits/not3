@@ -110,6 +110,9 @@ flutter:
     # Thai dictionary for OCR candidate reranking (PyThaiNLP, Apache-2.0;
     # attribution in third_party_licenses/pythainlp.txt).
     - assets/ocr/thai_words.txt
+    # Offline TeX-to-SVG baking for imported HTML (MathJax, Apache-2.0;
+    # attribution in third_party_licenses/mathjax-3.2.2.txt).
+    - assets/mathjax/tex-svg-full-3.2.2.js
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

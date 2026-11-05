@@ -199,6 +199,16 @@ class StorageService {
     return File(canonicalFile);
   }
 
+  /// Atomically replaces an app-owned HTML source after trusted offline
+  /// processing such as MathJax-to-SVG baking.
+  Future<void> replaceHtmlSource(Page page, String sanitizedHtml) async {
+    final file = await htmlSourceFile(page);
+    if (!await file.exists()) {
+      throw StateError('HTML source file is missing.');
+    }
+    await writeAtomic(file, utf8.encode(sanitizedHtml));
+  }
+
   Future<File> _indexFile(Directory base) async =>
       File('${base.path}/$_indexName');
 
