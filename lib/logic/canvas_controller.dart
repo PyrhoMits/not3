@@ -385,14 +385,30 @@ class CanvasController extends _CanvasCore
     Size viewport, {
     double margin = 48,
   }) {
-    double axis(double t, double lo, double hi, double viewLen) {
+    double axis(
+      double t,
+      double lo,
+      double hi,
+      double viewLen, {
+      bool centerWhenFits = false,
+    }) {
+      final extent = (hi - lo) * scale;
+      if (centerWhenFits && extent <= viewLen - margin * 2) {
+        return viewLen / 2 - (lo + hi) * scale / 2;
+      }
       final a = margin - lo * scale; // borde inicial en el margen
       final b = viewLen - margin - hi * scale; // borde final en el margen
       return t.clamp(min(a, b), max(a, b));
     }
 
     return Offset(
-      axis(translate.dx, world.left, world.right, viewport.width),
+      axis(
+        translate.dx,
+        world.left,
+        world.right,
+        viewport.width,
+        centerWhenFits: true,
+      ),
       axis(translate.dy, world.top, world.bottom, viewport.height),
     );
   }

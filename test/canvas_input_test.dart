@@ -6,11 +6,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:not3/constants.dart';
 import 'package:not3/logic/canvas_controller.dart';
+import 'package:not3/models/template.dart';
 import 'package:not3/models/stroke.dart';
 import 'package:not3/services/image_service.dart';
 import 'package:not3/services/storage_service.dart';
 import 'package:not3/ui/canvas/drawing_canvas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _RecordingImageService extends ImageService {
+  final requestedPaths = <String>{};
+
+  @override
+  Future<void> ensureCached(String path) async {
+    requestedPaths.add(path);
+  }
+}
 
 /// Entrada real (eventos de puntero) sobre el lienzo: lápiz, palma y dedo.
 void main() {
@@ -142,6 +152,52 @@ void main() {
     );
     expect(c.page.strokes, isEmpty);
     expect(c.translate, isNot(before));
+  });
+
+  testWidgets('decodes each fixed-page background after page changes', (
+    tester,
+  ) async {
+    c.setTemplate(
+      const PageTemplate(
+        type: TemplateType.custom,
+        imagePath: '/pdf/page-1.png',
+      ),
+    );
+    c.addPage();
+    c.goToPage(1);
+    c.setTemplate(
+      const PageTemplate(
+        type: TemplateType.custom,
+        imagePath: '/pdf/page-2.png',
+      ),
+    );
+    c.addPage();
+    c.goToPage(2);
+    c.setTemplate(
+      const PageTemplate(
+        type: TemplateType.custom,
+        imagePath: '/pdf/page-3.png',
+      ),
+    );
+    c.goToPage(0);
+
+    final images = _RecordingImageService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DrawingCanvas(controller: c, imageService: images),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(images.requestedPaths, contains('/pdf/page-1.png'));
+
+    c.goToPage(2);
+    await tester.pump();
+    expect(images.requestedPaths, contains('/pdf/page-3.png'));
+
+    // Let the controller's debounced autosave complete before test teardown.
+    await tester.pump(const Duration(milliseconds: 700));
   });
 
   testWidgets('regla: un dedo la arrastra y el lápiz se pega a su borde', (

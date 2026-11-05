@@ -562,11 +562,30 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
   final ViewSnapshot _viewSnapshot = ViewSnapshot();
 
   @override
+  void initState() {
+    super.initState();
+    widget.controller.pageMetadataNotifier.addListener(_onPageChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant DrawingCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.pageMetadataNotifier.removeListener(_onPageChanged);
+      widget.controller.pageMetadataNotifier.addListener(_onPageChanged);
+      _ensureImagesDecoded();
+    }
+  }
+
+  @override
   void dispose() {
+    widget.controller.pageMetadataNotifier.removeListener(_onPageChanged);
     _viewGesture.dispose();
     _viewSnapshot.clear();
     super.dispose();
   }
+
+  void _onPageChanged() => _ensureImagesDecoded();
 
   /// Rechazo de palma (lápiz apoyado/cerca, contacto grande).
   final PalmRejection _palm = PalmRejection();

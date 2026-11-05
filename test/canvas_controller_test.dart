@@ -681,10 +681,10 @@ void main() {
       },
     );
 
-    test('una hoja más pequeña se mueve pero no sale de la pantalla', () {
+    test('una hoja más pequeña queda centrada horizontalmente', () {
       // Escala 0.5: la hoja ocupa 300×400 px.
       final inside = CanvasController.clampSheetTranslate(
-        const Offset(400, 500),
+        const Offset(100, 500),
         0.5,
         sheet,
         viewport,
@@ -696,7 +696,7 @@ void main() {
         sheet,
         viewport,
       );
-      expect(out.dx - 150, 48);
+      expect(out.dx, viewport.width / 2);
       expect(out.dy + 200, 1000 - 48);
     });
 
