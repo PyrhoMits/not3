@@ -56,17 +56,6 @@ class MainActivity : FlutterActivity() {
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         logMotionBoundary("generic", event)
-        val boundary = event.toStylusBoundary()
-        if (listenForStylusShortcuts && stylusClassifier.accept(boundary)) {
-            stylusChannel?.invokeMethod(
-                "togglePenEraser",
-                mapOf(
-                    "eventId" to ++stylusEventId,
-                    "eventTimeMs" to event.eventTime,
-                ),
-            )
-            if (isDebuggable) Log.d(STYLUS_LOG_TAG, "accepted togglePenEraser")
-        }
         return super.dispatchGenericMotionEvent(event)
     }
 
@@ -87,13 +76,22 @@ class MainActivity : FlutterActivity() {
                     deviceLogFields(device),
             )
         }
+        if (listenForStylusShortcuts && stylusClassifier.accept(event.toStylusBoundary())) {
+            stylusChannel?.invokeMethod(
+                "togglePenEraser",
+                mapOf(
+                    "eventId" to ++stylusEventId,
+                    "eventTimeMs" to event.eventTime,
+                ),
+            )
+            if (isDebuggable) Log.d(STYLUS_LOG_TAG, "accepted togglePenEraser")
+        }
         return super.dispatchKeyEvent(event)
     }
 
     private fun stylusSupport(): Map<String, Any?> {
         val signature = ConfirmedMatePad11MPencil2.signature
         val target = if (
-            signature == null ||
             !Build.MANUFACTURER.equals(signature.manufacturer, ignoreCase = true) ||
             !Build.MODEL.equals(signature.tabletModel, ignoreCase = true)
         ) {
@@ -103,9 +101,11 @@ class MainActivity : FlutterActivity() {
                 .asSequence()
                 .mapNotNull(InputDevice::getDevice)
                 .firstOrNull {
-                    it.descriptor == signature.descriptor &&
+                    it.name == signature.deviceName &&
+                        it.descriptor == signature.descriptor &&
                         it.vendorId == signature.vendorId &&
-                        it.productId == signature.productId
+                        it.productId == signature.productId &&
+                        it.sources == signature.deviceSources
                 }
         }
         return mapOf(
@@ -115,18 +115,19 @@ class MainActivity : FlutterActivity() {
         )
     }
 
-    private fun MotionEvent.toStylusBoundary(): StylusMotionBoundary {
+    private fun KeyEvent.toStylusBoundary(): StylusKeyBoundary {
         val input = device
-        return StylusMotionBoundary(
+        return StylusKeyBoundary(
             manufacturer = Build.MANUFACTURER,
             tabletModel = Build.MODEL,
+            deviceName = input?.name,
             descriptor = input?.descriptor,
             vendorId = input?.vendorId ?: 0,
             productId = input?.productId ?: 0,
-            source = source,
-            action = actionMasked,
-            actionButton = actionButton,
-            toolType = if (pointerCount == 0) MotionEvent.TOOL_TYPE_UNKNOWN else getToolType(0),
+            deviceSources = input?.sources ?: 0,
+            action = action,
+            keyCode = keyCode,
+            repeatCount = repeatCount,
             eventTime = eventTime,
         )
     }

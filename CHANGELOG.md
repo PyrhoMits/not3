@@ -8,7 +8,7 @@ Each release is written in English. The release workflow copies the matching sec
 
 ### Added
 
-- Prepared a fail-closed Huawei MatePad 11 / M-Pencil (2nd generation) Pen–Eraser double-tap bridge with queued tool switching, persistent preference, exact tablet-and-stylus fingerprint checks, and debug event capture for confirming the real device signature.
+- Added a fail-closed Huawei MatePad 11 / M-Pencil (2nd generation) Pen–Eraser double-tap bridge using the confirmed DBY-W09 `M-Pencil Mouse` key-event signature, with queued tool switching, a persistent preference, and exact tablet-and-stylus fingerprint checks.
 
 ### Fixed
 

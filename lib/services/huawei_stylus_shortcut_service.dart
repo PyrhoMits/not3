@@ -32,8 +32,8 @@ class HuaweiStylusSupport {
 /// Narrow bridge for the confirmed MatePad 11 M-Pencil shortcut.
 ///
 /// This service reports shortcut intent only. It does not know about pages,
-/// strokes, or toolbar widgets. Native detection is fail-closed until the real
-/// tablet fingerprint has been captured and configured on Android.
+/// strokes, or toolbar widgets. Native detection uses the exact confirmed
+/// MatePad and M-Pencil input-device fingerprint and otherwise fails closed.
 class HuaweiStylusShortcutService extends ChangeNotifier {
   HuaweiStylusShortcutService({
     MethodChannel? channel,

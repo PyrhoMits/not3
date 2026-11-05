@@ -1,67 +1,56 @@
 package io.github.pyrhomits.not3
 
-import android.view.MotionEvent
-
-internal enum class HuaweiShortcutProtocol {
-    TWO_BUTTON_PRESSES,
-    COMPLETED_DOUBLE_TAP_EVENT,
-}
+import android.view.KeyEvent
 
 internal data class HuaweiStylusDeviceSignature(
     val manufacturer: String,
     val tabletModel: String,
+    val deviceName: String,
     val descriptor: String,
     val vendorId: Int,
     val productId: Int,
-    val source: Int,
-    val toolType: Int,
-    val actionButton: Int,
-    val protocol: HuaweiShortcutProtocol,
+    val deviceSources: Int,
+    val keyCode: Int,
 )
 
-internal data class StylusMotionBoundary(
+internal data class StylusKeyBoundary(
     val manufacturer: String,
     val tabletModel: String,
+    val deviceName: String?,
     val descriptor: String?,
     val vendorId: Int,
     val productId: Int,
-    val source: Int,
+    val deviceSources: Int,
     val action: Int,
-    val actionButton: Int,
-    val toolType: Int,
+    val keyCode: Int,
+    val repeatCount: Int,
     val eventTime: Long,
 )
 
 /** Fail-closed classifier for the MatePad 11 M-Pencil (2nd generation). */
 internal class HuaweiStylusShortcutClassifier(
-    private val signature: HuaweiStylusDeviceSignature?,
+    private val signature: HuaweiStylusDeviceSignature,
     private val doubleTapWindowMs: Long = 350,
 ) {
     private var firstPressTime: Long? = null
 
-    fun supports(boundary: StylusMotionBoundary): Boolean {
-        val target = signature ?: return false
-        return boundary.manufacturer.equals(target.manufacturer, ignoreCase = true) &&
-            boundary.tabletModel.equals(target.tabletModel, ignoreCase = true) &&
-            boundary.descriptor == target.descriptor &&
-            boundary.vendorId == target.vendorId &&
-            boundary.productId == target.productId &&
-            boundary.source == target.source &&
-            boundary.toolType == target.toolType
-    }
+    fun supports(boundary: StylusKeyBoundary): Boolean =
+        boundary.manufacturer.equals(signature.manufacturer, ignoreCase = true) &&
+            boundary.tabletModel.equals(signature.tabletModel, ignoreCase = true) &&
+            boundary.deviceName == signature.deviceName &&
+            boundary.descriptor == signature.descriptor &&
+            boundary.vendorId == signature.vendorId &&
+            boundary.productId == signature.productId &&
+            boundary.deviceSources == signature.deviceSources
 
-    /** Returns true exactly once for one confirmed physical double-tap. */
-    fun accept(boundary: StylusMotionBoundary): Boolean {
-        val target = signature ?: return false
+    /** Returns true once for the two key-down events emitted by one body double-tap. */
+    fun accept(boundary: StylusKeyBoundary): Boolean {
         if (!supports(boundary) ||
-            boundary.action != MotionEvent.ACTION_BUTTON_PRESS ||
-            boundary.actionButton != target.actionButton
+            boundary.action != KeyEvent.ACTION_DOWN ||
+            boundary.keyCode != signature.keyCode ||
+            boundary.repeatCount != 0
         ) {
             return false
-        }
-        if (target.protocol == HuaweiShortcutProtocol.COMPLETED_DOUBLE_TAP_EVENT) {
-            firstPressTime = null
-            return true
         }
 
         val previous = firstPressTime
@@ -75,10 +64,15 @@ internal class HuaweiStylusShortcutClassifier(
     }
 }
 
-/**
- * Filled only after `Not3Stylus` logs have been captured from the real target.
- * A null signature deliberately disables recognition on every device.
- */
 internal object ConfirmedMatePad11MPencil2 {
-    val signature: HuaweiStylusDeviceSignature? = null
+    val signature = HuaweiStylusDeviceSignature(
+        manufacturer = "HUAWEI",
+        tabletModel = "DBY-W09",
+        deviceName = "M-Pencil Mouse",
+        descriptor = "07b1a2a2713ba3b634f6cbd3d49af6895fd64026",
+        vendorId = 4817,
+        productId = 4261,
+        deviceSources = 8451,
+        keyCode = 718,
+    )
 }
