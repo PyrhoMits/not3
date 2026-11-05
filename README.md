@@ -8,7 +8,7 @@
 
 🌐 **English**
 
-Handwriting app for **stylus** tablets, in the spirit of GoodNotes or Samsung Notes, built with **Flutter**. Real pressure sensitivity, palm rejection, notes with templates, lasso, handwriting recognition, PDF import and optional Google Drive backup.
+Handwriting app for **stylus** tablets, in the spirit of GoodNotes or Samsung Notes, built with **Flutter**. Real pressure sensitivity, palm rejection, notes with templates, lasso, handwriting recognition, PDF and continuous HTML import, and optional Google Drive backup.
 
 **Free, ad-free, no accounts and no analytics.** Everything lives on your device.
 
@@ -85,6 +85,7 @@ Not3 is distributed as an APK on [**GitHub Releases**](https://github.com/PyrhoM
 
 ### 💾 Import, export and backup
 - **PDF import** as a new notebook, a new note in an existing notebook, or additional pages in the open note.
+- **Android HTML import** as one continuous, scrollable note with aligned pen, highlighter, eraser, and lasso annotations. Standalone self-contained `.html`/`.htm` files stay offline; unsafe active content and external resources are blocked.
 - **Move one or multiple notes** between notebooks.
 - **Export** a page or a whole note to **PNG, PDF, SVG or PPTX** (off-screen rendering, independent of zoom).
 - **Native `.inklus` format**: a self-contained notebook or note with its images, shareable and re-importable.

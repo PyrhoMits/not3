@@ -15,9 +15,11 @@ import '../services/drive_sync_service.dart';
 import '../services/export_service.dart';
 import '../services/image_service.dart';
 import '../services/pdf_import_coordinator.dart';
+import '../services/html_import_service.dart';
 import '../services/search_service.dart';
 import '../services/storage_service.dart';
 import 'home_screen.dart';
+import 'html_annotation_screen.dart';
 import 'widgets/dialogs.dart';
 import '../l10n/l10n.dart';
 import '../utils/date_utils.dart' as date_util;
@@ -33,6 +35,7 @@ class NoteListScreen extends StatefulWidget {
   final StorageService? storage;
   final SearchService? search;
   final PdfImportCoordinator pdfImporter;
+  final HtmlImportService htmlImporter;
   final String? initialNoteId;
 
   const NoteListScreen({
@@ -41,6 +44,7 @@ class NoteListScreen extends StatefulWidget {
     this.storage,
     this.search,
     this.pdfImporter = const PdfImportCoordinator(),
+    this.htmlImporter = const HtmlImportService(),
     this.initialNoteId,
   });
 
@@ -56,6 +60,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
   final Map<String, Future<Uint8List>> _thumbs = {};
   final Set<String> _selectedNoteIds = {};
   bool _importingPdf = false;
+  bool _importingHtml = false;
 
   bool get _selecting => _selectedNoteIds.isNotEmpty;
 
@@ -128,13 +133,19 @@ class _NoteListScreenState extends State<NoteListScreen> {
   Future<void> _openNote(Note note) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => HomeScreen(
-          note: note,
-          notebookId: _notebook.id,
-          storage: _storage,
-          search: _search,
-          pdfImporter: widget.pdfImporter,
-        ),
+        builder: (_) => note.pages.length == 1 && note.pages.single.isHtml
+            ? HtmlAnnotationScreen(
+                note: note,
+                notebookId: _notebook.id,
+                storage: _storage,
+              )
+            : HomeScreen(
+                note: note,
+                notebookId: _notebook.id,
+                storage: _storage,
+                search: _search,
+                pdfImporter: widget.pdfImporter,
+              ),
       ),
     );
     await _reload();
@@ -190,6 +201,81 @@ class _NoteListScreenState extends State<NoteListScreen> {
     } finally {
       if (mounted) setState(() => _importingPdf = false);
     }
+  }
+
+  Future<void> _importHtml() async {
+    if (_importingHtml) return;
+    setState(() => _importingHtml = true);
+    try {
+      final picked = await widget.htmlImporter.pick();
+      if (picked == null) return;
+      final prepared = await widget.htmlImporter.prepare(picked);
+      if (!mounted) return;
+      if (prepared.requiresLargeFileConfirmation) {
+        final sizeMiB = prepared.sourceBytes / (1024 * 1024);
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(context.l10n.htmlImportLargeTitle),
+            content: Text(
+              context.l10n.htmlImportLargeBody(sizeMiB.toStringAsFixed(1)),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(context.l10n.commonCancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(context.l10n.htmlImportAction),
+              ),
+            ],
+          ),
+        );
+        if (proceed != true) return;
+      }
+      final note = await _storage.createHtmlNote(
+        _notebook.id,
+        title: prepared.suggestedTitle,
+        sanitizedHtml: prepared.html,
+      );
+      await _reload();
+      if (!mounted) return;
+      if (prepared.removedActiveContent) {
+        showSnack(context, context.l10n.htmlImportRemovedUnsafe);
+      }
+      await _openNote(note);
+    } on HtmlImportException catch (error) {
+      if (mounted) showSnack(context, _htmlImportError(error));
+    } catch (error) {
+      if (mounted) showSnack(context, context.l10n.htmlImportFailed('$error'));
+    } finally {
+      if (mounted) setState(() => _importingHtml = false);
+    }
+  }
+
+  String _htmlImportError(HtmlImportException error) => switch (error.kind) {
+    HtmlImportFailureKind.unsupportedPlatform => context.l10n.htmlAndroidOnly,
+    HtmlImportFailureKind.unsupportedFileType =>
+      context.l10n.htmlUnsupportedFileType,
+    HtmlImportFailureKind.missingFile => context.l10n.htmlFileMissing,
+    HtmlImportFailureKind.empty => context.l10n.htmlFileEmpty,
+    HtmlImportFailureKind.tooLarge => context.l10n.htmlFileTooLarge(
+      _htmlSizeMiB(error.details),
+    ),
+    HtmlImportFailureKind.tooComplex => context.l10n.htmlFileTooComplex,
+    HtmlImportFailureKind.invalidEncoding => context.l10n.htmlUtf8Required,
+    HtmlImportFailureKind.unsupportedResource =>
+      context.l10n.htmlUnsupportedResource,
+    HtmlImportFailureKind.oversizedImage => context.l10n.htmlOversizedImage,
+    HtmlImportFailureKind.invalidImage => context.l10n.htmlInvalidImage,
+  };
+
+  String _htmlSizeMiB(String? bytes) {
+    final length = int.tryParse(bytes ?? '');
+    return length == null
+        ? 'over 5'
+        : (length / (1024 * 1024)).toStringAsFixed(1);
   }
 
   void _toggleSelection(String noteId) {
@@ -484,6 +570,20 @@ class _NoteListScreenState extends State<NoteListScreen> {
                     icon: const Icon(Icons.picture_as_pdf_outlined),
                     label: Text(context.l10n.pdfImportAction),
                   ),
+                  const SizedBox(height: Spacing.xs),
+                  OutlinedButton.icon(
+                    onPressed:
+                        _importingHtml || !widget.htmlImporter.isSupported
+                        ? null
+                        : _importHtml,
+                    icon: _importingHtml
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.html_outlined),
+                    label: Text(context.l10n.htmlImportAction),
+                  ),
                   const SizedBox(height: Spacing.sm),
                   FloatingActionButton.extended(
                     onPressed: _createNote,
@@ -506,6 +606,17 @@ class _NoteListScreenState extends State<NoteListScreen> {
                     icon: const Icon(Icons.add),
                     label: Text(context.l10n.noteCreateAction),
                   ),
+                  if (widget.htmlImporter.isSupported)
+                    OutlinedButton.icon(
+                      onPressed: _importHtml,
+                      icon: _importingHtml
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.html_outlined),
+                      label: Text(context.l10n.htmlImportAction),
+                    ),
                 ],
               ),
             )
@@ -555,7 +666,10 @@ class _NoteListScreenState extends State<NoteListScreen> {
                       Container(
                         color: context.colors.surfaceContainerHighest,
                         child: FutureBuilder<Uint8List>(
-                          future: _thumbFor(note),
+                          future:
+                              note.pages.length == 1 && note.pages.single.isHtml
+                              ? Future<Uint8List>.error('HTML preview')
+                              : _thumbFor(note),
                           builder: (context, snapshot) {
                             if (snapshot.hasData) {
                               return Image.memory(

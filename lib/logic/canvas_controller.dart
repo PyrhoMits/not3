@@ -591,6 +591,22 @@ class CanvasController extends _CanvasCore
   @override
   Size get sheetSize => page.template.sheetSize;
 
+  /// Freezes the measured size of a continuous HTML page before annotation.
+  void setHtmlContentHeight(double height) {
+    final html = page.htmlContent;
+    if (html == null || !height.isFinite || height <= 0) return;
+    final bounded = height.clamp(1.0, 10000000.0);
+    if ((html.contentHeight - bounded).abs() < 0.5) return;
+    page.htmlContent = html.copyWith(contentHeight: bounded);
+    page.template = PageTemplate(
+      type: TemplateType.custom,
+      infiniteFill: false,
+      customWidth: html.logicalWidth,
+      customHeight: bounded,
+    );
+    _touch();
+  }
+
   // ------------------------------------------------------------------
   // Herramientas
   // ------------------------------------------------------------------

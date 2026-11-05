@@ -1503,6 +1503,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pdfImportAction => 'Import PDF';
 
   @override
+  String get htmlImportAction => 'Import HTML';
+
+  @override
+  String get htmlImportLargeTitle => 'Import large HTML file?';
+
+  @override
+  String htmlImportLargeBody(String size) {
+    return '$size MiB may open more slowly. The maximum supported size is 5 MiB.';
+  }
+
+  @override
+  String get htmlImportRemovedUnsafe =>
+      'Unsafe active HTML content was removed.';
+
+  @override
+  String htmlImportFailed(String error) {
+    return 'Could not import HTML: $error';
+  }
+
+  @override
+  String get htmlAndroidOnly =>
+      'HTML annotation is currently available on Android only.';
+
+  @override
+  String get htmlUnsupportedFileType =>
+      'Choose a standalone .html or .htm file.';
+
+  @override
+  String get htmlFileMissing => 'The selected HTML file was not found.';
+
+  @override
+  String get htmlFileEmpty => 'The selected HTML file is empty.';
+
+  @override
+  String htmlFileTooLarge(String size) {
+    return 'The HTML file is $size MiB. The maximum supported size is 5 MiB.';
+  }
+
+  @override
+  String get htmlFileTooComplex =>
+      'The HTML document contains too many elements to import safely.';
+
+  @override
+  String get htmlUtf8Required => 'The HTML file must use UTF-8 text encoding.';
+
+  @override
+  String get htmlUnsupportedResource =>
+      'The HTML contains an unsupported external or relative resource.';
+
+  @override
+  String get htmlOversizedImage =>
+      'An embedded image exceeds the supported dimensions.';
+
+  @override
+  String get htmlInvalidImage => 'An embedded image is invalid or unsupported.';
+
+  @override
+  String get htmlReadSelect => 'Read and select text';
+
+  @override
+  String get htmlAnnotate => 'Annotate';
+
+  @override
+  String get htmlOpenExternalTitle => 'Open external link?';
+
+  @override
+  String get htmlOpenExternalAction => 'Open';
+
+  @override
+  String get htmlDocument => 'HTML document';
+
+  @override
   String get pdfNoPages => 'The PDF has no pages to import';
 
   @override

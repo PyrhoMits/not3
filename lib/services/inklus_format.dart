@@ -8,6 +8,7 @@ import 'package:archive/archive.dart';
 import '../models/document.dart';
 import '../models/default_titles.dart';
 import '../models/image_item.dart';
+import '../models/html_content.dart';
 import '../models/note.dart';
 import '../models/notebook.dart';
 import '../models/page.dart';
@@ -45,6 +46,7 @@ class Not3Format {
   static const _notebookEntry = 'notebook.json'; // v2
   static const _notesPrefix = 'notes/';
   static const _imagesPrefix = 'images/';
+  static const _htmlPrefix = 'html/';
   static const scheme = 'inklus://';
 
   static const _currentVersion = 2;
@@ -60,10 +62,15 @@ class Not3Format {
   static Future<Uint8List> exportNotebookBytes(Notebook notebook) async {
     // 1) Recopilar imágenes de todos los notes.
     final images = <String, Future<Uint8List>>{};
+    final htmlFiles = <String, Future<Uint8List>>{};
 
     final notesData = <String, Map<String, dynamic>>{};
     for (final note in notebook.notes) {
-      final processedNote = await _processNoteForExport(note, images);
+      final processedNote = await _processNoteForExport(
+        note,
+        images,
+        htmlFiles,
+      );
       notesData[note.id] = processedNote;
     }
 
@@ -103,6 +110,12 @@ class Not3Format {
         ArchiveFile('$_imagesPrefix${entry.key}', bytes.length, bytes),
       );
     }
+    for (final entry in htmlFiles.entries) {
+      final bytes = await entry.value;
+      archive.addFile(
+        ArchiveFile('$_htmlPrefix${entry.key}', bytes.length, bytes),
+      );
+    }
 
     return ZipEncoder().encodeBytes(archive);
   }
@@ -139,6 +152,7 @@ class Not3Format {
     Uint8List? notebookBytes;
     final noteEntries = <String, Uint8List>{};
     final imageEntries = <String, Uint8List>{};
+    final htmlEntries = <String, Uint8List>{};
 
     for (final file in archive.files) {
       if (!file.isFile) continue;
@@ -154,6 +168,8 @@ class Not3Format {
         noteEntries[noteId] = data;
       } else if (file.name.startsWith(_imagesPrefix)) {
         imageEntries[file.name] = data;
+      } else if (file.name.startsWith(_htmlPrefix)) {
+        htmlEntries[file.name] = data;
       }
     }
 
@@ -178,6 +194,14 @@ class Not3Format {
       await writeAtomic(file, entry.value);
       extractedImages[entry.key] = file.path;
     }
+    final extractedHtml = <String, String>{};
+    for (final entry in htmlEntries.entries) {
+      final fileName = safeFileName(entry.key);
+      if (fileName == null) continue;
+      final file = File('${dir.path}/$fileName');
+      await writeAtomic(file, entry.value);
+      extractedHtml[entry.key] = file.path;
+    }
 
     // Reconstruir Notes.
     final notes = <Note>[];
@@ -187,7 +211,7 @@ class Not3Format {
       if (noteBytes == null) continue;
       final noteJson =
           jsonDecode(utf8.decode(noteBytes)) as Map<String, dynamic>;
-      final note = _rebuildNote(noteJson, extractedImages);
+      final note = _rebuildNote(noteJson, extractedImages, extractedHtml);
       notes.add(note);
     }
 
@@ -208,6 +232,7 @@ class Not3Format {
 
   static Future<Uint8List> exportBytes(Document document) async {
     final images = <String, Future<Uint8List>>{};
+    final htmlFiles = <String, Future<Uint8List>>{};
     final pages = <Page>[];
     for (final page in document.pages) {
       final newImages = <ImageItem>[];
@@ -231,7 +256,25 @@ class Not3Format {
           template = template.copyWith(imagePath: _embedKey(name));
         }
       }
-      pages.add(page.copyWith(images: newImages, template: template));
+      var htmlContent = page.htmlContent;
+      if (htmlContent != null) {
+        final file = await _htmlSourceFile(htmlContent.sourcePath);
+        if (!await file.exists()) {
+          throw StateError('HTML source file is missing.');
+        }
+        final name = '${document.id}-${page.id}.html';
+        htmlFiles.putIfAbsent(name, () => file.readAsBytes());
+        htmlContent = htmlContent.copyWith(
+          sourcePath: '$scheme$_htmlPrefix$name',
+        );
+      }
+      pages.add(
+        page.copyWith(
+          images: newImages,
+          template: template,
+          htmlContent: htmlContent,
+        ),
+      );
     }
 
     final outDoc = Document(
@@ -251,6 +294,12 @@ class Not3Format {
       final bytes = await entry.value;
       archive.addFile(
         ArchiveFile('$_imagesPrefix${entry.key}', bytes.length, bytes),
+      );
+    }
+    for (final entry in htmlFiles.entries) {
+      final bytes = await entry.value;
+      archive.addFile(
+        ArchiveFile('$_htmlPrefix${entry.key}', bytes.length, bytes),
       );
     }
     return ZipEncoder().encodeBytes(archive);
@@ -305,7 +354,22 @@ class Not3Format {
           imagePath: await _materialize(templatePath, dir, entries),
         );
       }
-      pages.add(page.copyWith(images: images, template: template));
+      var htmlContent = page.htmlContent;
+      final htmlPath = htmlContent?.sourcePath;
+      if (htmlPath != null && htmlPath.startsWith(scheme)) {
+        final materialized = await _materialize(htmlPath, dir, entries);
+        if (materialized.startsWith(scheme)) {
+          throw const FormatException('HTML source is missing from archive.');
+        }
+        htmlContent = htmlContent!.copyWith(sourcePath: materialized);
+      }
+      pages.add(
+        page.copyWith(
+          images: images,
+          template: template,
+          htmlContent: htmlContent,
+        ),
+      );
     }
     return Document(
       id: doc.id,
@@ -354,6 +418,7 @@ class Not3Format {
   static Future<Map<String, dynamic>> _processNoteForExport(
     Note note,
     Map<String, Future<Uint8List>> images,
+    Map<String, Future<Uint8List>> htmlFiles,
   ) async {
     final pages = <Map<String, dynamic>>[];
     for (final page in note.pages) {
@@ -378,6 +443,18 @@ class Not3Format {
           template = template.copyWith(imagePath: _embedKey(name));
         }
       }
+      var htmlContent = page.htmlContent;
+      if (htmlContent != null) {
+        final file = await _htmlSourceFile(htmlContent.sourcePath);
+        if (!await file.exists()) {
+          throw StateError('HTML source file is missing.');
+        }
+        final name = '${note.id}-${page.id}.html';
+        htmlFiles.putIfAbsent(name, () => file.readAsBytes());
+        htmlContent = htmlContent.copyWith(
+          sourcePath: '$scheme$_htmlPrefix$name',
+        );
+      }
       pages.add({
         'id': page.id,
         'name': page.name,
@@ -385,6 +462,7 @@ class Not3Format {
         'images': newImages,
         'textItems': page.textItems.map((t) => t.toJson()).toList(),
         'template': template.toJson(),
+        if (htmlContent != null) 'htmlContent': htmlContent.toJson(),
         'layers': page.layers.map((l) => l.toJson()).toList(),
       });
     }
@@ -402,6 +480,7 @@ class Not3Format {
   static Note _rebuildNote(
     Map<String, dynamic> json,
     Map<String, String> extractedImages,
+    Map<String, String> extractedHtml,
   ) {
     final pages = (json['pages'] as List? ?? []).map((p) {
       final pageJson = p as Map<String, dynamic>;
@@ -431,6 +510,19 @@ class Not3Format {
         }
       }
 
+      final htmlJson = pageJson['htmlContent'] as Map<String, dynamic>?;
+      var htmlContent = htmlJson == null
+          ? null
+          : HtmlContent.fromJson(htmlJson);
+      if (htmlContent != null && htmlContent.sourcePath.startsWith(scheme)) {
+        final key = htmlContent.sourcePath.substring(scheme.length);
+        final localPath = extractedHtml[key];
+        if (localPath == null) {
+          throw const FormatException('HTML source is missing from archive.');
+        }
+        htmlContent = htmlContent.copyWith(sourcePath: localPath);
+      }
+
       return Page(
         id: pageJson['id'] as String,
         name: pageJson['name'] as String? ?? '',
@@ -442,6 +534,7 @@ class Not3Format {
             .map((t) => TextItem.fromJson(t as Map<String, dynamic>))
             .toList(),
         template: template,
+        htmlContent: htmlContent,
         layers: (pageJson['layers'] as List? ?? [])
             .map((l) => Layer.fromJson(l as Map<String, dynamic>))
             .toList(),
@@ -481,4 +574,19 @@ class Not3Format {
   static String _basename(String path) => path.split('/').last;
 
   static String _embedKey(String name) => '$scheme$_imagesPrefix$name';
+
+  static Future<File> _htmlSourceFile(String path) async {
+    if (path.split('/').contains('..') || path.startsWith(scheme)) {
+      throw StateError('Invalid HTML source path.');
+    }
+    final root = await AppPaths.root();
+    final file = File(path.startsWith('/') ? path : '${root.path}/$path');
+    if (!await file.exists()) return file;
+    final canonicalRoot = await root.resolveSymbolicLinks();
+    final canonicalFile = await file.resolveSymbolicLinks();
+    if (!canonicalFile.startsWith('$canonicalRoot/')) {
+      throw StateError('HTML source is outside app storage.');
+    }
+    return File(canonicalFile);
+  }
 }

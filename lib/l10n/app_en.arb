@@ -761,6 +761,47 @@
   "pdfUnsupported": "Importing PDFs is only available on Android/iOS for now",
   "pdfReadFailed": "Could not read the PDF",
   "pdfImportAction": "Import PDF",
+  "htmlImportAction": "Import HTML",
+  "htmlImportLargeTitle": "Import large HTML file?",
+  "htmlImportLargeBody": "{size} MiB may open more slowly. The maximum supported size is 5 MiB.",
+  "@htmlImportLargeBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "htmlImportRemovedUnsafe": "Unsafe active HTML content was removed.",
+  "htmlImportFailed": "Could not import HTML: {error}",
+  "@htmlImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "htmlAndroidOnly": "HTML annotation is currently available on Android only.",
+  "htmlUnsupportedFileType": "Choose a standalone .html or .htm file.",
+  "htmlFileMissing": "The selected HTML file was not found.",
+  "htmlFileEmpty": "The selected HTML file is empty.",
+  "htmlFileTooLarge": "The HTML file is {size} MiB. The maximum supported size is 5 MiB.",
+  "@htmlFileTooLarge": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "htmlFileTooComplex": "The HTML document contains too many elements to import safely.",
+  "htmlUtf8Required": "The HTML file must use UTF-8 text encoding.",
+  "htmlUnsupportedResource": "The HTML contains an unsupported external or relative resource.",
+  "htmlOversizedImage": "An embedded image exceeds the supported dimensions.",
+  "htmlInvalidImage": "An embedded image is invalid or unsupported.",
+  "htmlReadSelect": "Read and select text",
+  "htmlAnnotate": "Annotate",
+  "htmlOpenExternalTitle": "Open external link?",
+  "htmlOpenExternalAction": "Open",
+  "htmlDocument": "HTML document",
   "pdfNoPages": "The PDF has no pages to import",
   "pdfImportProgress": "{count, plural, =0{Preparing PDF…} =1{Importing page 1…} other{Importing page {count}…}}",
   "@pdfImportProgress": {

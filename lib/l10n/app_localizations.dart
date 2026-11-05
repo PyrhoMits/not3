@@ -2692,6 +2692,126 @@ abstract class AppLocalizations {
   /// **'Import PDF'**
   String get pdfImportAction;
 
+  /// No description provided for @htmlImportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import HTML'**
+  String get htmlImportAction;
+
+  /// No description provided for @htmlImportLargeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import large HTML file?'**
+  String get htmlImportLargeTitle;
+
+  /// No description provided for @htmlImportLargeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} MiB may open more slowly. The maximum supported size is 5 MiB.'**
+  String htmlImportLargeBody(String size);
+
+  /// No description provided for @htmlImportRemovedUnsafe.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsafe active HTML content was removed.'**
+  String get htmlImportRemovedUnsafe;
+
+  /// No description provided for @htmlImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not import HTML: {error}'**
+  String htmlImportFailed(String error);
+
+  /// No description provided for @htmlAndroidOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'HTML annotation is currently available on Android only.'**
+  String get htmlAndroidOnly;
+
+  /// No description provided for @htmlUnsupportedFileType.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a standalone .html or .htm file.'**
+  String get htmlUnsupportedFileType;
+
+  /// No description provided for @htmlFileMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected HTML file was not found.'**
+  String get htmlFileMissing;
+
+  /// No description provided for @htmlFileEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected HTML file is empty.'**
+  String get htmlFileEmpty;
+
+  /// No description provided for @htmlFileTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'The HTML file is {size} MiB. The maximum supported size is 5 MiB.'**
+  String htmlFileTooLarge(String size);
+
+  /// No description provided for @htmlFileTooComplex.
+  ///
+  /// In en, this message translates to:
+  /// **'The HTML document contains too many elements to import safely.'**
+  String get htmlFileTooComplex;
+
+  /// No description provided for @htmlUtf8Required.
+  ///
+  /// In en, this message translates to:
+  /// **'The HTML file must use UTF-8 text encoding.'**
+  String get htmlUtf8Required;
+
+  /// No description provided for @htmlUnsupportedResource.
+  ///
+  /// In en, this message translates to:
+  /// **'The HTML contains an unsupported external or relative resource.'**
+  String get htmlUnsupportedResource;
+
+  /// No description provided for @htmlOversizedImage.
+  ///
+  /// In en, this message translates to:
+  /// **'An embedded image exceeds the supported dimensions.'**
+  String get htmlOversizedImage;
+
+  /// No description provided for @htmlInvalidImage.
+  ///
+  /// In en, this message translates to:
+  /// **'An embedded image is invalid or unsupported.'**
+  String get htmlInvalidImage;
+
+  /// No description provided for @htmlReadSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Read and select text'**
+  String get htmlReadSelect;
+
+  /// No description provided for @htmlAnnotate.
+  ///
+  /// In en, this message translates to:
+  /// **'Annotate'**
+  String get htmlAnnotate;
+
+  /// No description provided for @htmlOpenExternalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open external link?'**
+  String get htmlOpenExternalTitle;
+
+  /// No description provided for @htmlOpenExternalAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get htmlOpenExternalAction;
+
+  /// No description provided for @htmlDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'HTML document'**
+  String get htmlDocument;
+
   /// No description provided for @pdfNoPages.
   ///
   /// In en, this message translates to:

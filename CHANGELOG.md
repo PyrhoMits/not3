@@ -9,6 +9,8 @@ Each release is written in English. The release workflow copies the matching sec
 ### Added
 
 - Added a fail-closed Huawei MatePad 11 / M-Pencil (2nd generation) Pen–Eraser double-tap bridge using the confirmed DBY-W09 `M-Pencil Mouse` key-event signature, with queued tool switching, a persistent preference, and exact tablet-and-stylus fingerprint checks.
+- Added Android import and annotation for standalone self-contained HTML files as one continuous document, with fit-to-width reading, pinch zoom, stylus ink, touch scrolling, lasso actions, offline app-owned storage, `.inklus`/full-backup portability, and guarded external-link opening.
+- HTML imports warn above 3 MiB and reject files above 5 MiB before parsing; scripts, active content, relative/remote resources, HTML packages, unsupported embedded formats, and oversized decoded images are blocked.
 
 ### Changed
 
