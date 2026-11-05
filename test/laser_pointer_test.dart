@@ -87,7 +87,7 @@ void main() {
     canvas.addStrokePoint(const Offset(40, 40), 0.5);
     canvas.endStroke();
     expect(canvas.laserTrail, hasLength(1));
-    expect(canvas.laserTrail.single.point, const Offset(40, 40));
+    expect(canvas.laserTrail.single, const Offset(40, 40));
     expect(canvas.page.strokes, isEmpty);
     expect(canvas.canUndo, isFalse);
 
@@ -100,39 +100,66 @@ void main() {
   });
 
   test(
-    'duration prunes current samples and disabling stops the ticker',
+    'complete gesture expires at once and disabling stops its timer',
     () async {
       final canvas = controller();
       await canvas.inputPreferencesLoaded;
       canvas
         ..setLaserEnabled(true)
-        ..setLaserDuration(CanvasController.maxLaserDuration);
-      canvas.beginStroke(Offset.zero, 0.5, tool: ToolType.pen);
-      canvas.endStroke();
-      expect(canvas.laserTickerActive, isTrue);
-      expect(canvas.laserTrail, isNotEmpty);
+        ..setLaserDuration(CanvasController.minLaserDuration)
+        ..beginStroke(Offset.zero, 0.5, tool: ToolType.pen)
+        ..addStrokePoint(const Offset(10, 10), 0.5)
+        ..addStrokePoint(const Offset(20, 20), 0.5)
+        ..endStroke();
+      expect(canvas.laserExpiryTimerActive, isTrue);
+      expect(canvas.laserTrail, hasLength(3));
 
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      canvas.setLaserDuration(CanvasController.minLaserDuration);
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      expect(canvas.laserTrail, hasLength(3));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(canvas.laserTrail, isEmpty);
-      expect(canvas.laserTickerActive, isFalse);
+      expect(canvas.laserExpiryTimerActive, isFalse);
 
       canvas.setLaserPointerMode(LaserPointerMode.dot);
       canvas.beginStroke(const Offset(10, 10), 0.5, tool: ToolType.pen);
       canvas.endStroke();
       await Future<void>.delayed(const Duration(milliseconds: 300));
       expect(canvas.laserTrail, isEmpty);
-      expect(canvas.laserTickerActive, isFalse);
+      expect(canvas.laserExpiryTimerActive, isFalse);
 
       canvas.beginStroke(const Offset(20, 20), 0.5, tool: ToolType.pen);
       canvas.endStroke();
-      expect(canvas.laserTickerActive, isTrue);
+      expect(canvas.laserExpiryTimerActive, isTrue);
       canvas.setLaserEnabled(false);
       expect(canvas.laserTrail, isEmpty);
-      expect(canvas.laserTickerActive, isFalse);
+      expect(canvas.laserExpiryTimerActive, isFalse);
       canvas.dispose();
     },
   );
+
+  test('starting a new line replaces the previous complete gesture', () async {
+    final canvas = controller();
+    await canvas.inputPreferencesLoaded;
+    canvas
+      ..setLaserEnabled(true)
+      ..setLaserDuration(CanvasController.maxLaserDuration)
+      ..beginStroke(Offset.zero, 0.5, tool: ToolType.pen)
+      ..addStrokePoint(const Offset(10, 10), 0.5)
+      ..endStroke();
+    expect(canvas.laserTrail, hasLength(2));
+    expect(canvas.laserExpiryTimerActive, isTrue);
+
+    canvas.beginStroke(const Offset(30, 30), 0.5, tool: ToolType.pen);
+    expect(canvas.laserTrail, hasLength(1));
+    expect(canvas.laserTrail.single, const Offset(30, 30));
+    expect(canvas.laserExpiryTimerActive, isFalse);
+    canvas
+      ..addStrokePoint(const Offset(40, 40), 0.5)
+      ..endStroke();
+    expect(canvas.laserTrail, hasLength(2));
+    expect(canvas.laserExpiryTimerActive, isTrue);
+    canvas.dispose();
+  });
 
   testWidgets('selected color and thickness stay in screen space across zoom', (
     tester,

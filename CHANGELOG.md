@@ -10,6 +10,10 @@ Each release is written in English. The release workflow copies the matching sec
 
 - Added a fail-closed Huawei MatePad 11 / M-Pencil (2nd generation) Pen–Eraser double-tap bridge using the confirmed DBY-W09 `M-Pencil Mouse` key-event signature, with queued tool switching, a persistent preference, and exact tablet-and-stylus fingerprint checks.
 
+### Changed
+
+- Laser lines now remain visible as a complete gesture and disappear together after the selected duration, using one expiry timer and a bounded, simplified path instead of continuously aging individual segments.
+
 ### Fixed
 
 - Recognized rectangles, triangles, and ellipses now keep a seamless closed edge after release; a rectangle no longer gains a clipped fifth corner at its starting point.

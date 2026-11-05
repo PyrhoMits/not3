@@ -861,21 +861,23 @@ class CanvasController extends _CanvasCore
   Duration _laserDuration = defaultLaserDuration;
   Duration get laserDuration => _laserDuration;
 
-  /// Estela del láser: puntos con su instante (ms). Se desvanece sola.
-  final List<({Offset point, int t})> _laserTrail = [];
-  List<({Offset point, int t})> get laserTrail => _laserTrail;
-  Timer? _laserTicker;
+  /// Current laser gesture. It expires as one unit after the pointer lifts.
+  final List<Offset> _laserTrail = [];
+  List<Offset> get laserTrail => _laserTrail;
+  Timer? _laserExpiryTimer;
+
+  static const _maxLaserTrailPoints = 1024;
+  static const _minLaserSampleDistancePx = 0.75;
 
   @visibleForTesting
-  bool get laserTickerActive => _laserTicker?.isActive ?? false;
+  bool get laserExpiryTimerActive => _laserExpiryTimer?.isActive ?? false;
 
   void setLaserEnabled(bool enabled) {
     if (_laserMode == enabled) return;
     _laserMode = enabled;
     if (!enabled) {
       _laserTrail.clear();
-      _laserTicker?.cancel();
-      _laserTicker = null;
+      _cancelLaserExpiry();
     }
     _notifyToolContext();
     _notifyActiveOverlay();
@@ -895,10 +897,7 @@ class CanvasController extends _CanvasCore
     } else if (mode == LaserPointerMode.lines) {
       // Do not connect a previous stationary dot to the next line gesture.
       _laserTrail.clear();
-      if (!_isDrawing) {
-        _laserTicker?.cancel();
-        _laserTicker = null;
-      }
+      if (!_isDrawing) _cancelLaserExpiry();
     }
     _persistLaserString(_prefLaserMode, mode.name);
     _notifyToolContext();
@@ -934,7 +933,7 @@ class CanvasController extends _CanvasCore
     if (_laserDuration == next) return;
     _laserDuration = next;
     _persistLaserInt(_prefLaserDuration, milliseconds);
-    _pruneLaserTrail();
+    if (_laserTrail.isNotEmpty && !_isDrawing) _scheduleLaserExpiry();
     _notifyToolContext();
     _notifyActiveOverlay();
     notifyListeners();
@@ -958,26 +957,57 @@ class CanvasController extends _CanvasCore
         .catchError((_) => false);
   }
 
-  void _pruneLaserTrail() {
-    final cutoff =
-        DateTime.now().millisecondsSinceEpoch - _laserDuration.inMilliseconds;
-    _laserTrail.removeWhere((sample) => sample.t < cutoff);
-    if (_laserTrail.isEmpty && !_isDrawing) {
-      _laserTicker?.cancel();
-      _laserTicker = null;
-    }
+  void _cancelLaserExpiry() {
+    _laserExpiryTimer?.cancel();
+    _laserExpiryTimer = null;
   }
 
-  void _addLaserPoint(Offset p) {
-    if (_laserPointerMode == LaserPointerMode.dot) _laserTrail.clear();
-    _laserTrail.add((point: p, t: DateTime.now().millisecondsSinceEpoch));
-    _notifyActiveOverlay();
-    _laserTicker ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
-      _pruneLaserTrail();
-      if (!_disposed) {
-        _notifyActiveOverlay();
-      }
+  void _beginLaserGesture(Offset point) {
+    _cancelLaserExpiry();
+    _laserTrail.clear();
+    _addLaserPoint(point);
+  }
+
+  void _scheduleLaserExpiry() {
+    _cancelLaserExpiry();
+    if (_laserTrail.isEmpty) return;
+    _laserExpiryTimer = Timer(_laserDuration, () {
+      _laserExpiryTimer = null;
+      if (_disposed) return;
+      _laserTrail.clear();
+      _notifyActiveOverlay();
     });
+  }
+
+  void _addLaserPoint(Offset point) {
+    if (_laserPointerMode == LaserPointerMode.dot) {
+      _laserTrail
+        ..clear()
+        ..add(point);
+      _notifyActiveOverlay();
+      return;
+    }
+
+    if (_laserTrail.isNotEmpty &&
+        (point - _laserTrail.last).distance * _scale <
+            _minLaserSampleDistancePx) {
+      _laserTrail[_laserTrail.length - 1] = point;
+      _notifyActiveOverlay();
+      return;
+    }
+    if (_laserTrail.length >= _maxLaserTrailPoints) {
+      final simplified = <Offset>[
+        for (var i = 0; i < _laserTrail.length; i += 2) _laserTrail[i],
+      ];
+      if (simplified.last != _laserTrail.last) {
+        simplified.add(_laserTrail.last);
+      }
+      _laserTrail
+        ..clear()
+        ..addAll(simplified);
+    }
+    _laserTrail.add(point);
+    _notifyActiveOverlay();
   }
 
   // ---- Regla virtual ----
@@ -1120,7 +1150,7 @@ class CanvasController extends _CanvasCore
       _isDrawing = true;
       _activeStroke = null;
       _activeEraserPath = [];
-      _addLaserPoint(worldPoint);
+      _beginLaserGesture(worldPoint);
       return;
     }
     if (tool == ToolType.select) return;
@@ -1265,9 +1295,10 @@ class CanvasController extends _CanvasCore
     _resetHold();
     _resetStrokeTiming();
     if (_laserMode && _activeStroke == null && _activeEraserPath.isEmpty) {
+      _scheduleLaserExpiry();
       _applyPendingHuaweiPenEraserToggle();
       _notifyActiveOverlay();
-      notifyListeners(); // la estela se desvanece sola
+      notifyListeners();
       return;
     }
     final active = _activeStroke;
@@ -1395,12 +1426,21 @@ class CanvasController extends _CanvasCore
   }
 
   void cancelStroke() {
+    final cancelledLaser =
+        _isDrawing &&
+        _laserMode &&
+        _activeStroke == null &&
+        _activeEraserPath.isEmpty;
     _resetHold();
     _resetStrokeTiming();
     _isDrawing = false;
     _activeStroke = null;
     _activePoints = [];
     _activeEraserPath = [];
+    if (cancelledLaser) {
+      _laserTrail.clear();
+      _cancelLaserExpiry();
+    }
     final eraserBefore = _eraserBefore;
     if (eraserBefore != null) {
       // Cancelado (p. ej. palma): se deshace lo borrado en el gesto.
@@ -2055,7 +2095,7 @@ class CanvasController extends _CanvasCore
     _disposed = true;
     _saveTimer?.cancel();
     _holdTimer?.cancel();
-    _laserTicker?.cancel();
+    _laserExpiryTimer?.cancel();
     // Red de seguridad: si la UI no llamó a flush(), guardar lo pendiente.
     if (_dirty) unawaited(saveNow());
     _toolContextNotifier.dispose();
