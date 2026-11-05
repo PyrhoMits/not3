@@ -341,7 +341,7 @@ class ActiveLayerPainter extends CustomPainter {
       paintActiveStroke(canvas, active, viewScale: scale);
     }
 
-    // Puntero láser: estela roja que se desvanece (no se guarda).
+    // Ephemeral laser presentation effect (never persisted).
     _paintLaser(canvas, controller, scale);
 
     // Lazo en progreso (trazo punteado del lazo).
@@ -585,22 +585,48 @@ class ActiveLayerPainter extends CustomPainter {
     );
   }
 
-  /// Dibuja la estela del láser: cada segmento con opacidad según su edad.
+  /// Paints the laser in world coordinates with screen-space sizing.
   static void _paintLaser(Canvas canvas, CanvasController c, double scale) {
     final trail = c.laserTrail;
     if (trail.isEmpty) return;
     final now = DateTime.now().millisecondsSinceEpoch;
-    final fade = CanvasController.laserFade.inMilliseconds;
-    _laserGlow.strokeWidth = 14 / scale;
-    _laserCore.strokeWidth = 5 / scale;
+    final fade = c.laserDuration.inMilliseconds;
+    final coreWidth = c.laserThickness / scale;
+    final glowWidth = c.laserThickness * (14 / 5) / scale;
+    _laserGlow.strokeWidth = glowWidth;
+    _laserGlow.maskFilter = MaskFilter.blur(
+      BlurStyle.normal,
+      6 * (c.laserThickness / CanvasController.defaultLaserThickness) / scale,
+    );
+    _laserCore.strokeWidth = coreWidth;
+    final color = c.laserColor;
+    if (c.laserPointerMode == LaserPointerMode.dot) {
+      final latest = trail.last;
+      final age = (now - latest.t).clamp(0, fade);
+      final alpha = 1 - age / fade;
+      if (alpha <= 0) return;
+      _laserGlow.color = color.withValues(alpha: 0.35 * alpha);
+      _laserCore.color = color.withValues(alpha: alpha);
+      canvas.drawCircle(
+        latest.point,
+        glowWidth / 2,
+        _laserGlow..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        latest.point,
+        coreWidth / 2,
+        _laserCore..style = PaintingStyle.fill,
+      );
+      _laserGlow.style = PaintingStyle.stroke;
+      _laserCore.style = PaintingStyle.stroke;
+      return;
+    }
     for (var i = 1; i < trail.length; i++) {
       final age = (now - trail[i].t).clamp(0, fade);
       final alpha = 1 - age / fade;
       if (alpha <= 0) continue;
-      _laserGlow.color = const Color(
-        0xFFFF1744,
-      ).withValues(alpha: 0.35 * alpha);
-      _laserCore.color = const Color(0xFFFF5252).withValues(alpha: alpha);
+      _laserGlow.color = color.withValues(alpha: 0.35 * alpha);
+      _laserCore.color = color.withValues(alpha: alpha);
       canvas.drawLine(trail[i - 1].point, trail[i].point, _laserGlow);
       canvas.drawLine(trail[i - 1].point, trail[i].point, _laserCore);
     }
@@ -954,6 +980,13 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
           tool: ToolType.eraser,
           timeStamp: event.timeStamp,
         );
+      } else if (c.laserMode) {
+        c.beginStroke(
+          world,
+          event.pressure,
+          tool: c.tool,
+          timeStamp: event.timeStamp,
+        );
       } else if (c.beginShapeEditGesture(world)) {
         _editingShape = true;
       } else if (c.tool == ToolType.select) {
@@ -1001,7 +1034,15 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       }
       return;
     }
-    if (c.beginShapeEditGesture(world)) {
+    if (c.laserMode) {
+      _drawingPointer = event.pointer;
+      c.beginStroke(
+        world,
+        event.pressure,
+        tool: c.tool,
+        timeStamp: event.timeStamp,
+      );
+    } else if (c.beginShapeEditGesture(world)) {
       _drawingPointer = event.pointer;
       _editingShape = true;
     } else if (c.tool == ToolType.select) {

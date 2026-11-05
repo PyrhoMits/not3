@@ -1960,6 +1960,60 @@ abstract class AppLocalizations {
   /// **'Laser pointer'**
   String get tbLaser;
 
+  /// No description provided for @laserOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Laser pointer on'**
+  String get laserOn;
+
+  /// No description provided for @laserEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Laser pointer'**
+  String get laserEnabled;
+
+  /// No description provided for @laserMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Display mode'**
+  String get laserMode;
+
+  /// No description provided for @laserLines.
+  ///
+  /// In en, this message translates to:
+  /// **'Lines'**
+  String get laserLines;
+
+  /// No description provided for @laserDot.
+  ///
+  /// In en, this message translates to:
+  /// **'Dot'**
+  String get laserDot;
+
+  /// No description provided for @laserColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Laser color'**
+  String get laserColor;
+
+  /// No description provided for @laserThickness.
+  ///
+  /// In en, this message translates to:
+  /// **'Thickness'**
+  String get laserThickness;
+
+  /// No description provided for @laserDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Visibility duration'**
+  String get laserDuration;
+
+  /// No description provided for @laserDurationValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{milliseconds} ms'**
+  String laserDurationValue(int milliseconds);
+
   /// No description provided for @tbInsertSticker.
   ///
   /// In en, this message translates to:

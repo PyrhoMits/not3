@@ -1080,6 +1080,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tbLaser => 'Laser pointer';
 
   @override
+  String get laserOn => 'Laser pointer on';
+
+  @override
+  String get laserEnabled => 'Laser pointer';
+
+  @override
+  String get laserMode => 'Display mode';
+
+  @override
+  String get laserLines => 'Lines';
+
+  @override
+  String get laserDot => 'Dot';
+
+  @override
+  String get laserColor => 'Laser color';
+
+  @override
+  String get laserThickness => 'Thickness';
+
+  @override
+  String get laserDuration => 'Visibility duration';
+
+  @override
+  String laserDurationValue(int milliseconds) {
+    return '$milliseconds ms';
+  }
+
+  @override
   String get tbInsertSticker => 'Insert sticker';
 
   @override

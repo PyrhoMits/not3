@@ -39,6 +39,7 @@ import 'editor/version_history_sheet.dart';
 import 'editor/editor_toolbar.dart';
 import 'editor/pages_panel.dart';
 import 'editor/selection_bar.dart';
+import 'editor/tool_visuals.dart';
 import 'theme/inklus_colors.dart';
 import 'theme/tokens.dart';
 import 'widgets/controller_selector.dart';
@@ -1458,8 +1459,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                                 : context.l10n.tbLaser,
                                             isSelected: on,
                                             onPressed: controller.toggleLaser,
-                                            icon: const Icon(
-                                              Icons.flashlight_on,
+                                            icon: LaserPointerGlyph(
+                                              color: on
+                                                  ? controller.laserColor
+                                                  : null,
                                             ),
                                           ),
                                     ),

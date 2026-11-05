@@ -529,6 +529,22 @@
   "tbMagnifier": "Zoom writing",
   "tbLaserOff": "Turn off laser pointer",
   "tbLaser": "Laser pointer",
+  "laserOn": "Laser pointer on",
+  "laserEnabled": "Laser pointer",
+  "laserMode": "Display mode",
+  "laserLines": "Lines",
+  "laserDot": "Dot",
+  "laserColor": "Laser color",
+  "laserThickness": "Thickness",
+  "laserDuration": "Visibility duration",
+  "laserDurationValue": "{milliseconds} ms",
+  "@laserDurationValue": {
+    "placeholders": {
+      "milliseconds": {
+        "type": "int"
+      }
+    }
+  },
   "tbInsertSticker": "Insert sticker",
   "tbPageTemplate": "Page template",
   "tbMoreTools": "More tools",

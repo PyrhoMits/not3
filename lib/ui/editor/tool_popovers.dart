@@ -215,6 +215,158 @@ class LassoPopover extends StatelessWidget {
   );
 }
 
+class LaserPopover extends StatelessWidget {
+  const LaserPopover({super.key, required this.canvas, required this.presets});
+
+  final CanvasController canvas;
+  final PenPresetsController presets;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+    valueListenable: canvas.toolContextNotifier,
+    builder: (context, _, _) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SwitchListTile(
+          key: const Key('laser-enabled'),
+          contentPadding: EdgeInsets.zero,
+          secondary: LaserPointerGlyph(color: canvas.laserColor),
+          title: Text(context.l10n.laserEnabled),
+          value: canvas.laserMode,
+          onChanged: canvas.setLaserEnabled,
+        ),
+        const SizedBox(height: Spacing.sm),
+        _SectionTitle(context.l10n.laserMode),
+        SegmentedButton<LaserPointerMode>(
+          showSelectedIcon: false,
+          segments: [
+            ButtonSegment(
+              value: LaserPointerMode.lines,
+              icon: const Icon(Icons.gesture),
+              label: Text(context.l10n.laserLines),
+            ),
+            ButtonSegment(
+              value: LaserPointerMode.dot,
+              icon: const Icon(Icons.circle, size: 12),
+              label: Text(context.l10n.laserDot),
+            ),
+          ],
+          selected: {canvas.laserPointerMode},
+          onSelectionChanged: (modes) =>
+              canvas.setLaserPointerMode(modes.first),
+        ),
+        const SizedBox(height: Spacing.lg),
+        _SectionTitle(context.l10n.laserColor),
+        _LaserColorGrid(canvas: canvas, presets: presets),
+        const SizedBox(height: Spacing.lg),
+        _SectionTitle(context.l10n.laserThickness),
+        Row(
+          children: [
+            Expanded(
+              child: Slider(
+                key: const Key('laser-thickness'),
+                min: CanvasController.minLaserThickness,
+                max: CanvasController.maxLaserThickness,
+                divisions: 19,
+                value: canvas.laserThickness,
+                label: canvas.laserThickness.toStringAsFixed(0),
+                onChanged: canvas.setLaserThickness,
+              ),
+            ),
+            SizedBox(
+              width: 40,
+              child: Text(
+                canvas.laserThickness.toStringAsFixed(0),
+                textAlign: TextAlign.end,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: Spacing.sm),
+        _SectionTitle(context.l10n.laserDuration),
+        Row(
+          children: [
+            Expanded(
+              child: Slider(
+                key: const Key('laser-duration'),
+                min: CanvasController.minLaserDuration.inMilliseconds
+                    .toDouble(),
+                max: CanvasController.maxLaserDuration.inMilliseconds
+                    .toDouble(),
+                divisions: 11,
+                value: canvas.laserDuration.inMilliseconds.toDouble(),
+                label: context.l10n.laserDurationValue(
+                  canvas.laserDuration.inMilliseconds,
+                ),
+                onChanged: (value) => canvas.setLaserDuration(
+                  Duration(milliseconds: value.round()),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 64,
+              child: Text(
+                context.l10n.laserDurationValue(
+                  canvas.laserDuration.inMilliseconds,
+                ),
+                textAlign: TextAlign.end,
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+class _LaserColorGrid extends StatelessWidget {
+  const _LaserColorGrid({required this.canvas, required this.presets});
+
+  final CanvasController canvas;
+  final PenPresetsController presets;
+
+  void _pick(Color color) {
+    presets.addRecentColor(color);
+    canvas.setLaserColor(color);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recent = presets.recentColors
+        .where((color) => !kDefaultPalette.contains(color))
+        .toList();
+    final colors = <Color>[
+      if (!kDefaultPalette.contains(canvas.laserColor) &&
+          !recent.contains(canvas.laserColor))
+        canvas.laserColor,
+      ...kDefaultPalette,
+      ...recent,
+    ];
+    return Wrap(
+      spacing: Spacing.xs,
+      runSpacing: Spacing.xs,
+      children: [
+        for (final color in colors)
+          ColorSwatchButton(
+            color: color,
+            selected: canvas.laserColor == color,
+            onTap: () => _pick(color),
+          ),
+        _CustomColorButton(
+          onTap: () async {
+            final color = await showCustomColorPicker(
+              context,
+              initialColor: canvas.laserColor,
+            );
+            if (color != null) _pick(color);
+          },
+        ),
+      ],
+    );
+  }
+}
+
 class _LassoFilterTile extends StatelessWidget {
   const _LassoFilterTile({
     super.key,

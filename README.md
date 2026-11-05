@@ -58,7 +58,7 @@ Not3 is distributed as an APK on [**GitHub Releases**](https://github.com/PyrhoM
 | Shapes | Hold at the end of a stroke to straighten it: lines, rectangles, triangles, ellipses |
 | Ruler and protractor | cm/mm measurements on the page, live angle, strokes snap to the edge |
 | Rich text | Bold, italic, underline, alignment, font family and size |
-| Laser pointer and magnifier | For presenting or writing in detail |
+| Laser pointer and magnifier | Configurable Lines/Dot laser for presenting; fixed zoom board for writing in detail |
 | Images | Insert from the device, move and resize |
 
 ### 🔤 Handwriting OCR

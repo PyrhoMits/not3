@@ -45,6 +45,7 @@ import 'package:not3/ui/notebook_library.dart';
 import 'package:not3/ui/editor/editor_toolbar.dart';
 import 'package:not3/ui/theme/app_theme.dart';
 import 'package:not3/logic/canvas_controller.dart';
+import 'package:not3/logic/pen_presets.dart';
 import 'package:not3/services/image_service.dart';
 import 'package:not3/ui/canvas/drawing_canvas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -366,6 +367,43 @@ void main() {
     testWidgets('settings $tag', (tester) async {
       await app(tester, const SettingsScreen(), dark: dark);
       await shot(tester, 'settings_$tag');
+    });
+
+    testWidgets('laser pointer popover $tag', (tester) async {
+      final canvas = CanvasController(StorageService(baseDir: tmp));
+      final presets = PenPresetsController(persist: false);
+      addTearDown(canvas.dispose);
+      addTearDown(presets.dispose);
+      await app(
+        tester,
+        Scaffold(
+          body: Align(
+            alignment: Alignment.topCenter,
+            child: EditorToolbar(
+              canvas: canvas,
+              presets: presets,
+              onBack: () {},
+              onEditTitle: () {},
+              onInsertImage: () {},
+              onTemplates: () {},
+              onInsertSticker: () {},
+              pagesOpen: false,
+              onTogglePages: () {},
+              layersOpen: false,
+              onToggleLayers: () {},
+              toolsCollapsed: false,
+              onToggleTools: () {},
+              trailing: const [],
+            ),
+          ),
+        ),
+        dark: dark,
+      );
+      await tester.tap(find.byTooltip('Laser pointer'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Laser pointer on'));
+      await settle(tester);
+      await shot(tester, 'laser_pointer_popover_$tag');
     });
   }
 
