@@ -31,7 +31,10 @@ void main() {
 
   test('sanitizes active content and injects an offline policy', () async {
     final result = await prepare('''
-<!doctype html><html><head><title>Safe</title></head><body>
+<!doctype html><html><head><title>Safe</title>
+<link rel="preconnect" href="https://fonts.example.com">
+<link rel="stylesheet" href="https://fonts.example.com/font.css">
+</head><body>
 <script>alert(1)</script><p onclick="alert(2)">Text</p>
 <a href="https://example.com" target="_blank">Link</a>
 </body></html>
@@ -40,6 +43,8 @@ void main() {
     expect(result.suggestedTitle, 'Article');
     expect(result.removedActiveContent, isTrue);
     expect(result.html, isNot(contains('<script')));
+    expect(result.html, isNot(contains('<link')));
+    expect(result.html, isNot(contains('fonts.example.com')));
     expect(result.html, isNot(contains('onclick')));
     expect(result.html, contains('Content-Security-Policy'));
     expect(result.html, contains('width=1191'));
@@ -58,17 +63,13 @@ void main() {
     expect(result.html, contains('loading="eager"'));
   });
 
-  test('rejects relative, remote, and linked resources', () async {
+  test('rejects relative and remote embedded resources', () async {
     await expectLater(
       prepare('<img src="images/picture.png">'),
       throwsA(failure(HtmlImportFailureKind.unsupportedResource)),
     );
     await expectLater(
       prepare('<style>body{background:url(https://example.com/a.png)}</style>'),
-      throwsA(failure(HtmlImportFailureKind.unsupportedResource)),
-    );
-    await expectLater(
-      prepare('<link rel="stylesheet" href="style.css"><p>Text</p>'),
       throwsA(failure(HtmlImportFailureKind.unsupportedResource)),
     );
   });

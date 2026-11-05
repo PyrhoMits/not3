@@ -131,14 +131,8 @@ class HtmlImportService {
 
   Future<(String, bool)> _sanitize(String source) async {
     final document = html_parser.parse(source);
-    final linkedResource = document.querySelector('link[href]');
-    if (linkedResource != null) {
-      throw HtmlImportException(
-        HtmlImportFailureKind.unsupportedResource,
-        linkedResource.attributes['href'],
-      );
-    }
     final forbidden = <String>{
+      'link',
       'script',
       'iframe',
       'frame',

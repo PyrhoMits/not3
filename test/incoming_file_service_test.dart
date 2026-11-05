@@ -18,7 +18,15 @@ void main() {
     expect(file.temporary, isTrue);
   });
 
-  test('routes archive and unsupported payloads', () {
+  test('routes HTML, archive, and unsupported payloads', () {
+    expect(
+      IncomingFile.fromChannel({
+        'path': '/cache/a.html',
+        'displayName': 'Article.html',
+        'kind': 'html',
+      })!.kind,
+      IncomingFileKind.html,
+    );
     expect(
       IncomingFile.fromChannel({
         'path': '/cache/a.bin',
@@ -47,6 +55,10 @@ void main() {
       expect(
         IncomingFile.fromChannel('/cache/incoming.inklus')!.kind,
         IncomingFileKind.archive,
+      );
+      expect(
+        IncomingFile.fromChannel('/cache/article.htm')!.kind,
+        IncomingFileKind.html,
       );
       expect(
         IncomingFile.fromChannel('/cache/shared.bin')!.kind,

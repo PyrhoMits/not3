@@ -2355,7 +2355,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get externalOpenUnsupported =>
-      'Not3 can open PDF, .inklus, or ZIP files.';
+      'Not3 can open PDF, HTML, .inklus, or ZIP files.';
 
   @override
   String get tplHalfLetter => 'Half Letter';

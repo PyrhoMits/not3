@@ -1292,6 +1292,6 @@
   },
   "menuTwoFingerUndo": "Undo with a two-finger tap",
   "saveFailed": "Couldn't save the note. Free up some space: it will retry automatically.",
-  "externalOpenUnsupported": "Not3 can open PDF, .inklus, or ZIP files.",
+  "externalOpenUnsupported": "Not3 can open PDF, HTML, .inklus, or ZIP files.",
   "tplHalfLetter": "Half Letter"
 }

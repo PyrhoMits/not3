@@ -4045,7 +4045,7 @@ abstract class AppLocalizations {
   /// No description provided for @externalOpenUnsupported.
   ///
   /// In en, this message translates to:
-  /// **'Not3 can open PDF, .inklus, or ZIP files.'**
+  /// **'Not3 can open PDF, HTML, .inklus, or ZIP files.'**
   String get externalOpenUnsupported;
 
   /// No description provided for @tplHalfLetter.

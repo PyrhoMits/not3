@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import '../constants.dart';
 import '../models/note.dart';
+import '../models/notebook.dart';
 import '../models/page.dart' as models;
 
 import 'dart:async';
@@ -10,6 +11,7 @@ import 'package:flutter/material.dart';
 
 import '../services/drive_sync_service.dart';
 import '../services/import_service.dart';
+import '../services/html_import_service.dart';
 import '../services/incoming_file_service.dart';
 import '../services/pdf_import_coordinator.dart';
 import '../services/storage_service.dart';
@@ -46,6 +48,7 @@ class NotebookLibraryScreen extends StatefulWidget {
   final VoidCallback? onToggleTheme;
   final StorageService? storage;
   final PdfImportCoordinator pdfImporter;
+  final HtmlImportService htmlImporter;
   final IncomingFileReceiver? incomingFileReceiver;
 
   const NotebookLibraryScreen({
@@ -53,6 +56,7 @@ class NotebookLibraryScreen extends StatefulWidget {
     this.onToggleTheme,
     this.storage,
     this.pdfImporter = const PdfImportCoordinator(),
+    this.htmlImporter = const HtmlImportService(),
     this.incomingFileReceiver,
   });
 
@@ -161,6 +165,8 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
       switch (incoming.kind) {
         case IncomingFileKind.pdf:
           await _importIncomingPdf(incoming);
+        case IncomingFileKind.html:
+          await _importIncomingHtml(incoming);
         case IncomingFileKind.archive:
           await _importIncomingArchive(incoming);
         case IncomingFileKind.unsupported:
@@ -317,6 +323,94 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
         displayName: incoming.displayName,
       ),
     );
+  }
+
+  Future<void> _importIncomingHtml(IncomingFile incoming) async {
+    Notebook? notebook;
+    try {
+      final prepared = await widget.htmlImporter.prepare(
+        HtmlPickedFile(path: incoming.path, displayName: incoming.displayName),
+      );
+      if (!mounted) return;
+      if (prepared.requiresLargeFileConfirmation) {
+        final sizeMiB = prepared.sourceBytes / (1024 * 1024);
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(context.l10n.htmlImportLargeTitle),
+            content: Text(
+              context.l10n.htmlImportLargeBody(sizeMiB.toStringAsFixed(1)),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(context.l10n.commonCancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(context.l10n.htmlImportAction),
+              ),
+            ],
+          ),
+        );
+        if (proceed != true) return;
+      }
+
+      notebook = await _storage.createNotebook(
+        title: prepared.suggestedTitle,
+        createInitialNote: false,
+      );
+      final note = await _storage.createHtmlNote(
+        notebook.id,
+        title: prepared.suggestedTitle,
+        sanitizedHtml: prepared.html,
+      );
+      await _reload();
+      if (!mounted) return;
+      if (prepared.removedActiveContent) {
+        _snack(context.l10n.htmlImportRemovedUnsafe);
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(_openNotebookById(notebook!.id, initialNoteId: note.id));
+      });
+    } on HtmlImportException catch (error) {
+      if (mounted) _snack(_htmlImportError(error));
+    } catch (error) {
+      if (notebook != null) {
+        try {
+          await _storage.deleteNotebook(notebook.id);
+          await _reload();
+        } catch (_) {
+          // Preserve the original import error if cleanup also fails.
+        }
+      }
+      if (mounted) _snack(context.l10n.htmlImportFailed('$error'));
+    }
+  }
+
+  String _htmlImportError(HtmlImportException error) => switch (error.kind) {
+    HtmlImportFailureKind.unsupportedPlatform => context.l10n.htmlAndroidOnly,
+    HtmlImportFailureKind.unsupportedFileType =>
+      context.l10n.htmlUnsupportedFileType,
+    HtmlImportFailureKind.missingFile => context.l10n.htmlFileMissing,
+    HtmlImportFailureKind.empty => context.l10n.htmlFileEmpty,
+    HtmlImportFailureKind.tooLarge => context.l10n.htmlFileTooLarge(
+      _htmlSizeMiB(error.details),
+    ),
+    HtmlImportFailureKind.tooComplex => context.l10n.htmlFileTooComplex,
+    HtmlImportFailureKind.invalidEncoding => context.l10n.htmlUtf8Required,
+    HtmlImportFailureKind.unsupportedResource =>
+      context.l10n.htmlUnsupportedResource,
+    HtmlImportFailureKind.oversizedImage => context.l10n.htmlOversizedImage,
+    HtmlImportFailureKind.invalidImage => context.l10n.htmlInvalidImage,
+  };
+
+  String _htmlSizeMiB(String? bytes) {
+    final length = int.tryParse(bytes ?? '');
+    return length == null
+        ? 'over 5'
+        : (length / (1024 * 1024)).toStringAsFixed(1);
   }
 
   Future<void> _runPdfImport({PdfPickedFile? file}) async {

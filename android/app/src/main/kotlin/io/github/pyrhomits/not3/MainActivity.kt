@@ -14,7 +14,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
-/// Receives PDFs and Not3 archives from file managers or sharing. Incoming
+/// Receives PDFs, standalone HTML, and Not3 archives from file managers or sharing. Incoming
 /// content is copied to app cache because provider URI grants may be temporary.
 class MainActivity : FlutterActivity() {
     private var channel: MethodChannel? = null
@@ -189,6 +189,7 @@ class MainActivity : FlutterActivity() {
         val kind = resolveKind(mimeType, displayName)
         val suffix = when (kind) {
             "pdf" -> ".pdf"
+            "html" -> if (displayName.endsWith(".htm", ignoreCase = true)) ".htm" else ".html"
             "archive" -> if (displayName.endsWith(".zip", ignoreCase = true)) ".zip" else ".inklus"
             else -> ".bin"
         }
@@ -235,6 +236,13 @@ class MainActivity : FlutterActivity() {
             return "pdf"
         }
         if (
+            lowerName.endsWith(".html") ||
+            lowerName.endsWith(".htm") ||
+            normalizedMime in htmlMimeTypes
+        ) {
+            return "html"
+        }
+        if (
             lowerName.endsWith(".inklus") ||
             lowerName.endsWith(".zip") ||
             normalizedMime in archiveMimeTypes
@@ -251,6 +259,10 @@ class MainActivity : FlutterActivity() {
             "application/zip",
             "application/x-zip-compressed",
             "application/x-inklus",
+        )
+        private val htmlMimeTypes = setOf(
+            "text/html",
+            "application/xhtml+xml",
         )
     }
 }
