@@ -123,6 +123,7 @@ class StorageService {
   static const _documentsFolder = 'documents';
   static const _notebooksFolder = 'notebooks';
   static const _notesFolder = 'notes';
+  static const _htmlFolder = 'html';
   static const _legacyFileName = 'current_document.json';
   static const _formatVersion = 2;
 
@@ -163,6 +164,65 @@ class StorageService {
     final folder = Directory('${base.path}/$_notesFolder');
     if (!await folder.exists()) await folder.create(recursive: true);
     return folder;
+  }
+
+  Future<Directory> _htmlNoteDir(Directory base, String noteId) async {
+    final folder = Directory('${base.path}/$_htmlFolder/$noteId');
+    if (!await folder.exists()) await folder.create(recursive: true);
+    return folder;
+  }
+
+  Future<File> htmlSourceFile(Page page) async {
+    final relative = page.htmlContent?.sourcePath;
+    if (relative == null || relative.isEmpty) {
+      throw StateError('Invalid HTML source path.');
+    }
+    if (relative.split('/').contains('..')) {
+      throw StateError('Invalid HTML source path.');
+    }
+    final base = await _baseDir();
+    late final File file;
+    if (relative.startsWith('/')) {
+      if (!relative.startsWith('${base.path}/')) {
+        throw StateError('HTML source is outside app storage.');
+      }
+      file = File(relative);
+    } else {
+      file = File('${base.path}/$relative');
+    }
+    if (!await file.exists()) return file;
+    final canonicalBase = await base.resolveSymbolicLinks();
+    final canonicalFile = await file.resolveSymbolicLinks();
+    if (!canonicalFile.startsWith('$canonicalBase/')) {
+      throw StateError('HTML source is outside app storage.');
+    }
+    return File(canonicalFile);
+  }
+
+  /// Returns the disposable MathJax render cache beside the immutable source.
+  Future<File> htmlMathCacheFile(Page page) async {
+    final source = await htmlSourceFile(page);
+    if (!await source.exists()) {
+      throw StateError('HTML source file is missing.');
+    }
+    return File('${source.parent.path}/math-cache.html');
+  }
+
+  /// Atomically replaces the disposable MathJax render cache.
+  Future<void> replaceHtmlMathCache(Page page, String sanitizedHtml) async {
+    final file = await htmlMathCacheFile(page);
+    await writeAtomic(file, utf8.encode(sanitizedHtml));
+  }
+
+  /// Replaces the source document. Runtime rendering must use
+  /// [replaceHtmlMathCache] so the original import remains recoverable.
+  @Deprecated('Use replaceHtmlMathCache for derived HTML output.')
+  Future<void> replaceHtmlSource(Page page, String sanitizedHtml) async {
+    final file = await htmlSourceFile(page);
+    if (!await file.exists()) {
+      throw StateError('HTML source file is missing.');
+    }
+    await writeAtomic(file, utf8.encode(sanitizedHtml));
   }
 
   Future<File> _indexFile(Directory base) async =>
@@ -832,19 +892,28 @@ class StorageService {
 
     // Copia profunda de cada Note vía roundtrip JSON
     final newNotes = <Note>[];
-    for (final note in nb.notes) {
-      final copy = Note.fromJson(
-        jsonDecode(jsonEncode(note.toJson())) as Map<String, dynamic>,
-      );
-      // Asignar IDs nuevos para evitar colisiones
-      final newNote = Note(
-        id: newId('note'),
-        title: copy.title,
-        createdAt: copy.createdAt,
-        updatedAt: copy.updatedAt,
-        pages: copy.pages,
-      );
-      newNotes.add(newNote);
+    try {
+      for (final note in nb.notes) {
+        final copy = Note.fromJson(
+          jsonDecode(jsonEncode(note.toJson())) as Map<String, dynamic>,
+        );
+        // Asignar IDs nuevos para evitar colisiones
+        final newNote = Note(
+          id: newId('note'),
+          title: copy.title,
+          createdAt: copy.createdAt,
+          updatedAt: copy.updatedAt,
+          pages: copy.pages,
+        );
+        await _copyHtmlSource(note, newNote);
+        newNotes.add(newNote);
+      }
+    } catch (_) {
+      final base = await _baseDir();
+      for (final note in newNotes) {
+        await _deleteHtmlForNote(base, note.id);
+      }
+      rethrow;
     }
 
     final newNb = Notebook(
@@ -962,6 +1031,38 @@ class StorageService {
       throw StateError('Notebook no encontrado: $notebookId');
     }
     return note;
+  }
+
+  /// Creates one dedicated continuous HTML note and owns its source file.
+  Future<Note> createHtmlNote(
+    String notebookId, {
+    required String title,
+    required String sanitizedHtml,
+  }) async {
+    final base = await _baseDir();
+    final note = Note.newBlank(title: title);
+    final relative = '$_htmlFolder/${note.id}/source.html';
+    final dir = await _htmlNoteDir(base, note.id);
+    await writeAtomic(
+      File('${dir.path}/source.html'),
+      utf8.encode(sanitizedHtml),
+    );
+    note.pages
+      ..clear()
+      ..add(Page.html(sourcePath: relative));
+    try {
+      await _saveNoteRaw(base, note);
+      final attached = await _editNotebook(notebookId, (json) {
+        json['noteIds'] = [..._noteIdsOf(json), note.id];
+        return true;
+      }, touch: true);
+      if (!attached) throw StateError('Notebook not found: $notebookId');
+      return note;
+    } catch (_) {
+      await _deleteNoteFile(note.id);
+      if (await dir.exists()) await dir.delete(recursive: true);
+      rethrow;
+    }
   }
 
   /// Guarda [note] tal cual (conserva su fecha) y la añade a [notebookId] si
@@ -1100,20 +1201,24 @@ class StorageService {
       pages: copy.pages,
     );
 
-    await _saveNoteRaw(await _baseDir(), newNote);
-    // Insertar después del original
-    final ok = await _editNotebook(notebookId, (json) {
-      final ids = _noteIdsOf(json);
-      final idx = ids.indexOf(noteId);
-      ids.insert(idx < 0 ? ids.length : idx + 1, newNote.id);
-      json['noteIds'] = ids;
-      return true;
-    }, touch: true);
-    if (!ok) {
+    try {
+      await _copyHtmlSource(original, newNote);
+      await _saveNoteRaw(await _baseDir(), newNote);
+      // Insertar después del original
+      final ok = await _editNotebook(notebookId, (json) {
+        final ids = _noteIdsOf(json);
+        final idx = ids.indexOf(noteId);
+        ids.insert(idx < 0 ? ids.length : idx + 1, newNote.id);
+        json['noteIds'] = ids;
+        return true;
+      }, touch: true);
+      if (!ok) throw StateError('Notebook no encontrado: $notebookId');
+      return newNote;
+    } catch (_) {
       await _deleteNoteFile(newNote.id);
-      throw StateError('Notebook no encontrado: $notebookId');
+      await _deleteHtmlForNote(await _baseDir(), newNote.id);
+      rethrow;
     }
-    return newNote;
   }
 
   /// Borra `notes/<id>.json` (deshace una nota recién creada si su cuaderno
@@ -1121,6 +1226,33 @@ class StorageService {
   Future<void> _deleteNoteFile(String id) async {
     final file = await _noteFile(await _baseDir(), id);
     if (await file.exists()) await file.delete();
+  }
+
+  Future<void> _copyHtmlSource(Note original, Note copy) async {
+    if (original.pages.length != 1 || !original.pages.single.isHtml) return;
+    final source = await htmlSourceFile(original.pages.single);
+    if (!await source.exists()) {
+      throw StateError('HTML source file is missing.');
+    }
+    final base = await _baseDir();
+    final dir = await _htmlNoteDir(base, copy.id);
+    final destination = File('${dir.path}/source.html');
+    try {
+      await source.copy(destination.path);
+    } catch (_) {
+      if (await dir.exists()) await dir.delete(recursive: true);
+      rethrow;
+    }
+    final relative = '$_htmlFolder/${copy.id}/source.html';
+    final oldPage = copy.pages.single;
+    copy.pages[0] = oldPage.copyWith(
+      htmlContent: oldPage.htmlContent!.copyWith(sourcePath: relative),
+    );
+  }
+
+  Future<void> _deleteHtmlForNote(Directory base, String noteId) async {
+    final dir = Directory('${base.path}/$_htmlFolder/$noteId');
+    if (await dir.exists()) await dir.delete(recursive: true);
   }
 
   // -------------------------------------------------------------------------
@@ -1340,13 +1472,23 @@ class StorageService {
     for (final nid in _noteIdsOf(json)) {
       final noteFile = files[nid]?.$1;
       if (noteFile != null && await noteFile.exists()) await noteFile.delete();
+      await _deleteHtmlForNote(base, nid);
     }
+    if (json.containsKey('pages')) await _deleteHtmlForNote(base, id);
     if (await file.exists()) await file.delete();
   }
 
   /// Vacía toda la papelera (elimina definitivamente todo).
   Future<void> emptyTrash() async {
     final base = await _baseDir();
+    final files = await _readTrash(base);
+    for (final entry in files.entries) {
+      final json = entry.value.$2;
+      if (json.containsKey('pages')) await _deleteHtmlForNote(base, entry.key);
+      for (final noteId in _noteIdsOf(json)) {
+        await _deleteHtmlForNote(base, noteId);
+      }
+    }
     final trashDir = _trashDir(base);
     if (await trashDir.exists()) await trashDir.delete(recursive: true);
     // Limpiar imágenes huérfanas.
@@ -1368,6 +1510,7 @@ class StorageService {
     'images',
     'restored', // imágenes extraídas de .inklus / Drive
     'pdf_imports',
+    _htmlFolder,
     'templates',
     'trash',
   ];

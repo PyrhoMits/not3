@@ -9,7 +9,9 @@ import 'package:not3/models/page.dart';
 import 'package:not3/models/stroke.dart';
 import 'package:not3/models/template.dart';
 import 'package:not3/models/note.dart';
+import 'package:not3/models/notebook.dart';
 import 'package:not3/services/backup_crypto.dart';
+import 'package:not3/services/app_paths.dart';
 import 'package:not3/services/inklus_format.dart';
 
 void main() {
@@ -20,6 +22,7 @@ void main() {
 
   setUp(() {
     tempDir = Directory.systemTemp.createTempSync('inklus_fmt_');
+    AppPaths.rootOverride = tempDir;
     extractDir = Directory('${tempDir.path}/restored');
     imageFile = File('${tempDir.path}/foto.png')
       ..writeAsBytesSync(Uint8List.fromList(List.filled(64, 7)));
@@ -28,6 +31,7 @@ void main() {
   });
 
   tearDown(() {
+    AppPaths.rootOverride = null;
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
@@ -92,7 +96,9 @@ void main() {
     });
 
     test('los archivos inexistentes se dejan con su ruta original', () async {
-      final bytes = await Not3Format.exportBytes(buildNotebook(missingImage: true));
+      final bytes = await Not3Format.exportBytes(
+        buildNotebook(missingImage: true),
+      );
       final doc = await Not3Format.importBytes(bytes, extractTo: extractDir);
 
       final img = doc.pages.first.images.first;
@@ -111,71 +117,146 @@ void main() {
 
     // --- A12: Tests de Note ---
 
-    test('exportNoteBytes/importNoteBytes roundtrip preserva contenido', () async {
-      final page = Page.blank(name: 'Nota P1');
-      page.strokes.add(Stroke(
-        id: 'st_note',
-        points: const [StrokePoint(0, 0, 0.5), StrokePoint(20, 30, 0.7)],
-        tool: ToolType.calligraphy,
-        colorValue: 0xFF8B5CF6,
-        size: 5,
-      ));
-      page.images.add(ImageItem(
-        id: 'img_note',
-        localPath: imageFile.path,
-        x: 50,
-        y: 50,
-        width: 100,
-        height: 80,
-      ));
+    test(
+      'exportNoteBytes/importNoteBytes roundtrip preserva contenido',
+      () async {
+        final page = Page.blank(name: 'Nota P1');
+        page.strokes.add(
+          Stroke(
+            id: 'st_note',
+            points: const [StrokePoint(0, 0, 0.5), StrokePoint(20, 30, 0.7)],
+            tool: ToolType.calligraphy,
+            colorValue: 0xFF8B5CF6,
+            size: 5,
+          ),
+        );
+        page.images.add(
+          ImageItem(
+            id: 'img_note',
+            localPath: imageFile.path,
+            x: 50,
+            y: 50,
+            width: 100,
+            height: 80,
+          ),
+        );
 
+        final note = Note(
+          id: 'note_fmt',
+          title: 'Nota de prueba',
+          createdAt: DateTime(2026, 8, 19),
+          updatedAt: DateTime(2026, 8, 19, 15),
+          pages: [page],
+        );
+
+        final bytes = await Not3Format.exportNoteBytes(note);
+        expect(bytes, isNotEmpty);
+
+        final restored = await Not3Format.importNoteBytes(
+          bytes,
+          extractTo: extractDir,
+        );
+
+        expect(restored.id, 'note_fmt');
+        expect(restored.title, 'Nota de prueba');
+        expect(restored.pages.length, 1);
+        expect(restored.pages.first.name, 'Nota P1');
+        expect(restored.pages.first.strokes.length, 1);
+        expect(restored.pages.first.strokes.first.tool, ToolType.calligraphy);
+
+        // Imagen se restaura a archivo local
+        final img = restored.pages.first.images.first;
+        expect(img.localPath, isNot(contains('inklus://')));
+        expect(File(img.localPath).existsSync(), isTrue);
+      },
+    );
+
+    test('exportNoteBytes/importNoteBytes preserves an HTML source', () async {
+      final htmlFile = File('${tempDir.path}/article.html')
+        ..writeAsStringSync('<!doctype html><p>Portable HTML</p>');
       final note = Note(
-        id: 'note_fmt',
-        title: 'Nota de prueba',
-        createdAt: DateTime(2026, 8, 19),
-        updatedAt: DateTime(2026, 8, 19, 15),
-        pages: [page],
+        id: 'note_html',
+        title: 'Article',
+        createdAt: DateTime(2026, 11, 5),
+        updatedAt: DateTime(2026, 11, 5),
+        pages: [Page.html(sourcePath: htmlFile.path)],
       );
 
       final bytes = await Not3Format.exportNoteBytes(note);
-      expect(bytes, isNotEmpty);
-
       final restored = await Not3Format.importNoteBytes(
         bytes,
         extractTo: extractDir,
       );
 
-      expect(restored.id, 'note_fmt');
-      expect(restored.title, 'Nota de prueba');
-      expect(restored.pages.length, 1);
-      expect(restored.pages.first.name, 'Nota P1');
-      expect(restored.pages.first.strokes.length, 1);
-      expect(restored.pages.first.strokes.first.tool, ToolType.calligraphy);
-
-      // Imagen se restaura a archivo local
-      final img = restored.pages.first.images.first;
-      expect(img.localPath, isNot(contains('inklus://')));
-      expect(File(img.localPath).existsSync(), isTrue);
+      expect(restored.pages.single.isHtml, isTrue);
+      final restoredFile = File(restored.pages.single.htmlContent!.sourcePath);
+      expect(restoredFile.existsSync(), isTrue);
+      expect(restoredFile.readAsStringSync(), contains('Portable HTML'));
     });
 
-    test('exportNoteBytes genera un .inklus válido para importBytes (compat)', () async {
-      // Un Note exportado debe poder importarse también con importBytes (Document)
+    test('v2 notebook archive preserves an HTML source', () async {
+      final htmlFile = File('${tempDir.path}/v2-article.html')
+        ..writeAsStringSync('<!doctype html><p>Notebook HTML</p>');
       final note = Note(
-        id: 'note_compat',
-        title: 'Compat',
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
-        pages: [Page.blank()],
+        id: 'note_html_v2',
+        title: 'Article',
+        createdAt: DateTime(2026, 11, 5),
+        updatedAt: DateTime(2026, 11, 5),
+        pages: [Page.html(sourcePath: htmlFile.path)],
+      );
+      final notebook = Notebook(
+        id: 'notebook_html_v2',
+        title: 'HTML notebook',
+        notes: [note],
       );
 
-      final bytes = await Not3Format.exportNoteBytes(note);
-      final doc = await Not3Format.importBytes(bytes, extractTo: extractDir);
+      final bytes = await Not3Format.exportNotebookBytes(notebook);
+      final restored = await Not3Format.importNotebookBytes(
+        bytes,
+        extractTo: extractDir,
+      );
 
-      // El Document importado tiene el mismo id y contenido
-      expect(doc.id, 'note_compat');
-      expect(doc.title, 'Compat');
-      expect(doc.pages.length, 1);
+      final restoredPage = restored.notes.single.pages.single;
+      expect(restoredPage.isHtml, isTrue);
+      expect(
+        File(restoredPage.htmlContent!.sourcePath).readAsStringSync(),
+        contains('Notebook HTML'),
+      );
     });
+
+    test('HTML export fails instead of creating a broken archive', () async {
+      final note = Note(
+        id: 'note_missing_html',
+        title: 'Missing',
+        createdAt: DateTime(2026, 11, 5),
+        updatedAt: DateTime(2026, 11, 5),
+        pages: [Page.html(sourcePath: '${tempDir.path}/missing.html')],
+      );
+
+      await expectLater(Not3Format.exportNoteBytes(note), throwsStateError);
+    });
+
+    test(
+      'exportNoteBytes genera un .inklus válido para importBytes (compat)',
+      () async {
+        // Un Note exportado debe poder importarse también con importBytes (Document)
+        final note = Note(
+          id: 'note_compat',
+          title: 'Compat',
+          createdAt: DateTime(2026, 1, 1),
+          updatedAt: DateTime(2026, 1, 1),
+          pages: [Page.blank()],
+        );
+
+        final bytes = await Not3Format.exportNoteBytes(note);
+        final doc = await Not3Format.importBytes(bytes, extractTo: extractDir);
+
+        // El Document importado tiene el mismo id y contenido
+        expect(doc.id, 'note_compat');
+        expect(doc.title, 'Compat');
+        expect(doc.pages.length, 1);
+      },
+    );
   });
 
   test('una copia cifrada no se abre como .inklus: FormatException', () async {

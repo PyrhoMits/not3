@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'id.dart';
+import 'html_content.dart';
 import 'image_item.dart';
 import 'stroke.dart';
 import 'template.dart';
@@ -26,27 +27,26 @@ class Layer {
     bool? visible,
     bool? locked,
     double? opacity,
-  }) =>
-      Layer(
-        name: name ?? this.name,
-        visible: visible ?? this.visible,
-        locked: locked ?? this.locked,
-        opacity: opacity ?? this.opacity,
-      );
+  }) => Layer(
+    name: name ?? this.name,
+    visible: visible ?? this.visible,
+    locked: locked ?? this.locked,
+    opacity: opacity ?? this.opacity,
+  );
 
   factory Layer.fromJson(Map<String, dynamic> json) => Layer(
-        name: json['name'] as String? ?? 'Capa',
-        visible: json['visible'] as bool? ?? true,
-        locked: json['locked'] as bool? ?? false,
-        opacity: (json['opacity'] as num?)?.toDouble() ?? 1.0,
-      );
+    name: json['name'] as String? ?? 'Capa',
+    visible: json['visible'] as bool? ?? true,
+    locked: json['locked'] as bool? ?? false,
+    opacity: (json['opacity'] as num?)?.toDouble() ?? 1.0,
+  );
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'visible': visible,
-        'locked': locked,
-        if (opacity < 1.0) 'opacity': opacity,
-      };
+    'name': name,
+    'visible': visible,
+    'locked': locked,
+    if (opacity < 1.0) 'opacity': opacity,
+  };
 }
 
 /// Una página del cuaderno: conjunto de trazos e imágenes sobre una plantilla.
@@ -61,6 +61,7 @@ class Page {
   final List<ImageItem> images;
   final List<TextItem> textItems;
   PageTemplate template;
+  HtmlContent? htmlContent;
 
   /// Lista de capas de esta página. Siempre hay al menos una.
   List<Layer> layers;
@@ -74,11 +75,12 @@ class Page {
     required this.strokes,
     required this.images,
     required this.template,
+    this.htmlContent,
     List<Layer>? layers,
     List<TextItem>? textItems,
     this.bookmarked = false,
-  })  : layers = layers ?? [Layer(name: 'Capa 1')],
-        textItems = textItems ?? [];
+  }) : layers = layers ?? [Layer(name: 'Capa 1')],
+       textItems = textItems ?? [];
 
   factory Page.blank({String? id, String? name, PageTemplate? template}) =>
       Page(
@@ -105,10 +107,31 @@ class Page {
         imagePath: path,
         infiniteFill: false,
         customWidth: w,
-        customHeight: width == 0 ? PageTemplate.sheetHeight : w * height / width,
+        customHeight: width == 0
+            ? PageTemplate.sheetHeight
+            : w * height / width,
       ),
     );
   }
+
+  factory Page.html({required String sourcePath, String? id, String? name}) {
+    final content = HtmlContent(sourcePath: sourcePath);
+    return Page(
+      id: id ?? _newId(),
+      name: name ?? 'HTML document',
+      strokes: [],
+      images: [],
+      template: PageTemplate(
+        type: TemplateType.custom,
+        infiniteFill: false,
+        customWidth: content.logicalWidth,
+        customHeight: content.contentHeight,
+      ),
+      htmlContent: content,
+    );
+  }
+
+  bool get isHtml => htmlContent != null;
 
   static String _newId() => newId('pg');
 
@@ -118,48 +141,65 @@ class Page {
     List<Stroke>? strokes,
     List<ImageItem>? images,
     PageTemplate? template,
+    HtmlContent? htmlContent,
     List<Layer>? layers,
     List<TextItem>? textItems,
-  }) =>
-      Page(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        strokes: strokes ?? this.strokes,
-        images: images ?? this.images,
-        template: template ?? this.template,
-        layers: layers ?? this.layers,
-        textItems: textItems ?? this.textItems,
-        bookmarked: bookmarked,
-      );
+  }) => Page(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    strokes: strokes ?? this.strokes,
+    images: images ?? this.images,
+    template: template ?? this.template,
+    htmlContent: htmlContent ?? this.htmlContent,
+    layers: layers ?? this.layers,
+    textItems: textItems ?? this.textItems,
+    bookmarked: bookmarked,
+  );
 
-  factory Page.fromJson(Map<String, dynamic> json) => Page(
-        id: json['id'] as String,
-        name: json['name'] as String? ?? 'Página',
-        strokes: (json['strokes'] as List? ?? [])
-            .map((s) => Stroke.fromJson(s as Map<String, dynamic>))
-            .toList(),
-        images: (json['images'] as List? ?? [])
-            .map((i) => ImageItem.fromJson(i as Map<String, dynamic>))
-            .toList(),
-        template: PageTemplate.fromJson(
-            json['template'] as Map<String, dynamic>? ?? const {}),
-        layers: (json['layers'] as List?)
-            ?.map((l) => Layer.fromJson(l as Map<String, dynamic>))
-            .toList(),
-        textItems: (json['textItems'] as List? ?? [])
-            .map((t) => TextItem.fromJson(t as Map<String, dynamic>))
-            .toList(),
-        bookmarked: json['bookmarked'] as bool? ?? false,
-      );
+  factory Page.fromJson(Map<String, dynamic> json) {
+    final htmlContent = json['htmlContent'] is Map<String, dynamic>
+        ? HtmlContent.fromJson(json['htmlContent'] as Map<String, dynamic>)
+        : null;
+    final template = htmlContent == null
+        ? PageTemplate.fromJson(
+            json['template'] as Map<String, dynamic>? ?? const {},
+          )
+        : PageTemplate(
+            type: TemplateType.custom,
+            infiniteFill: false,
+            customWidth: htmlContent.logicalWidth,
+            customHeight: htmlContent.contentHeight,
+          );
+    return Page(
+      id: json['id'] as String,
+      name: json['name'] as String? ?? 'Página',
+      strokes: (json['strokes'] as List? ?? [])
+          .map((s) => Stroke.fromJson(s as Map<String, dynamic>))
+          .toList(),
+      images: (json['images'] as List? ?? [])
+          .map((i) => ImageItem.fromJson(i as Map<String, dynamic>))
+          .toList(),
+      template: template,
+      htmlContent: htmlContent,
+      layers: (json['layers'] as List?)
+          ?.map((l) => Layer.fromJson(l as Map<String, dynamic>))
+          .toList(),
+      textItems: (json['textItems'] as List? ?? [])
+          .map((t) => TextItem.fromJson(t as Map<String, dynamic>))
+          .toList(),
+      bookmarked: json['bookmarked'] as bool? ?? false,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'strokes': strokes.map((s) => s.toJson()).toList(),
-        'images': images.map((i) => i.toJson()).toList(),
-        'template': template.toJson(),
-        'layers': layers.map((l) => l.toJson()).toList(),
-        'textItems': textItems.map((t) => t.toJson()).toList(),
-        if (bookmarked) 'bookmarked': true,
-      };
+    'id': id,
+    'name': name,
+    'strokes': strokes.map((s) => s.toJson()).toList(),
+    'images': images.map((i) => i.toJson()).toList(),
+    'template': template.toJson(),
+    if (htmlContent != null) 'htmlContent': htmlContent!.toJson(),
+    'layers': layers.map((l) => l.toJson()).toList(),
+    'textItems': textItems.map((t) => t.toJson()).toList(),
+    if (bookmarked) 'bookmarked': true,
+  };
 }

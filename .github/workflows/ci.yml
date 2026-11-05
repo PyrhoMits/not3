@@ -8,14 +8,14 @@ on:
     branches: [main]
 
 env:
-  # Misma versión que exige pubspec.yaml (sdk ^3.13 → Flutter 3.47).
+  # Match the version required by pubspec.yaml (SDK ^3.13 → Flutter 3.47).
   FLUTTER_VERSION: '3.47.x'
 
 jobs:
-  # Falla si algún commit (o su historial) contiene claves, tokens o
-  # credenciales. Los client IDs de OAuth y las SHA-1 son públicos y no cuentan.
+  # Fails if any commit (or its history) contains keys, tokens, or credentials.
+  # OAuth client IDs and SHA-1 fingerprints are public and are not considered secrets.
   secret-scan:
-    name: Escaneo de secretos
+    name: Secret scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
-      - name: Test (con cobertura)
+      - name: Test (with coverage)
         run: flutter test --coverage
 
       - uses: actions/upload-artifact@v4
@@ -77,7 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Dependencias de escritorio
+      - name: Install desktop dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build libgtk-3-dev xvfb
@@ -94,16 +94,16 @@ jobs:
       - name: Build Linux (release)
         run: flutter build linux --release
 
-      # Flujos críticos de punta a punta (bienvenida → cuaderno → lápiz →
-      # guardado) sobre la app de escritorio, con pantalla virtual.
+      # Critical end-to-end flows (welcome → notebook → pen → save) on the
+      # desktop app using a virtual display.
       - name: Integration tests (Linux + Xvfb)
         run: xvfb-run -a -s "-screen 0 1920x1080x24" flutter test integration_test -d linux
 
   release:
-    name: Release firmado (tags v*)
+    name: Signed release (v* tags)
     if: startsWith(github.ref, 'refs/tags/v')
-    # No depende de build-linux: su test de integración con Xvfb es sensible al
-    # entorno de CI y no debe impedir publicar la release.
+    # Does not depend on build-linux: its Xvfb integration test is sensitive to
+    # the CI environment and must not block publishing a release.
     needs: [analyze-and-test]
     runs-on: ubuntu-latest
     permissions:
@@ -111,7 +111,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Dependencias de escritorio
+      - name: Install desktop dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build libgtk-3-dev
@@ -122,9 +122,9 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
-      # Secretos necesarios: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+      # Required secrets: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
       # ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD.
-      - name: Preparar keystore
+      - name: Prepare keystore
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -132,7 +132,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           if [ -z "$KEYSTORE_B64" ]; then
-            echo "::error::Faltan los secretos de firma (ANDROID_KEYSTORE_BASE64...)"
+            echo "::error::Signing secrets are missing (ANDROID_KEYSTORE_BASE64...)"
             exit 1
           fi
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload-keystore.jks"
@@ -146,14 +146,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # El tag debe coincidir con la versión de pubspec.yaml, y las notas de
-      # la release son la sección de esa versión en CHANGELOG.md.
-      - name: Notas de la versión (CHANGELOG)
+      # The tag must match the version in pubspec.yaml. Release notes come from
+      # that version's section in CHANGELOG.md.
+      - name: Prepare release notes (CHANGELOG)
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           PUBSPEC=$(grep '^version:' pubspec.yaml | sed -E 's/version: *([^+]*).*/\1/')
           if [ "$VERSION" != "$PUBSPEC" ]; then
-            echo "::error::El tag $GITHUB_REF_NAME no coincide con pubspec.yaml ($PUBSPEC)"
+            echo "::error::Tag $GITHUB_REF_NAME does not match pubspec.yaml ($PUBSPEC)"
             exit 1
           fi
           awk -v v="$VERSION" '
@@ -162,32 +162,32 @@ jobs:
             found {print}
           ' CHANGELOG.md > release_notes.md
           if [ ! -s release_notes.md ]; then
-            echo "::error::CHANGELOG.md no tiene la sección [$VERSION]"
+            echo "::error::CHANGELOG.md has no section for [$VERSION]"
             exit 1
           fi
           cat >> release_notes.md <<'NOTES'
 
           ---
-          ## Descargas
+          ## Downloads
 
-          | Plataforma | Archivo |
+          | Platform | File |
           |---|---|
-          | Android: si dudas, usa este (32+64 bits, funciona en todos) | `app-release.apk` |
-          | Android (casi todas las tablets y teléfonos) | `app-arm64-v8a-release.apk` |
-          | Android antiguos de 32 bits | `app-armeabi-v7a-release.apk` |
-          | Android x86_64 / emuladores | `app-x86_64-release.apk` |
+          | Android: recommended if unsure (32+64 bit, works on all devices) | `app-release.apk` |
+          | Android (most tablets and phones) | `app-arm64-v8a-release.apk` |
+          | Older 32-bit Android devices | `app-armeabi-v7a-release.apk` |
+          | Android x86_64 / emulators | `app-x86_64-release.apk` |
           | Linux (portable) | `Not3-x86_64.AppImage` |
-          | Linux (carpeta) | `inklus-linux-x64.tar.gz` |
+          | Linux (folder archive) | `inklus-linux-x64.tar.gz` |
 
-          **Android:** abre el APK; Android pedirá permiso para instalar apps de origen desconocido. Se instala encima de la versión anterior sin perder las notas.
+          **Android:** Open the APK. Android will ask you to allow installation from unknown sources. Installing over the previous version preserves your notes.
           **Linux:** `chmod +x Not3-x86_64.AppImage && ./Not3-x86_64.AppImage`.
           NOTES
 
       - name: Build APK + AAB (release)
         run: |
           flutter build apk --release --split-per-abi
-          # Universal 32+64 bits: para móviles con userland de 32 bits sobre CPU arm64
-          # (el APK arm64 se rechaza con "app ya no disponible para esta versión de Android")
+          # Universal 32+64 bit APK: supports devices with a 32-bit userland on
+          # an arm64 CPU (the arm64-only APK is rejected as unavailable).
           flutter build apk --release --target-platform android-arm,android-arm64
           flutter build appbundle --release
 
@@ -203,7 +203,7 @@ jobs:
           [Desktop Entry]
           Type=Application
           Name=Not3
-          Comment=Notas manuscritas con stylus
+          Comment=Handwritten notes with a stylus
           Exec=inklus
           Icon=inklus
           Categories=Office;Utility;

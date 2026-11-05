@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'package:flutter/services.dart';
 
-enum IncomingFileKind { pdf, archive, unsupported }
+enum IncomingFileKind { pdf, html, archive, unsupported }
 
 class IncomingFile {
   const IncomingFile({
@@ -46,6 +46,8 @@ class IncomingFile {
     switch (rawKind?.toLowerCase()) {
       case 'pdf':
         return IncomingFileKind.pdf;
+      case 'html':
+        return IncomingFileKind.html;
       case 'archive':
         return IncomingFileKind.archive;
       case 'unsupported':
@@ -53,6 +55,9 @@ class IncomingFile {
     }
     final lower = name.toLowerCase();
     if (lower.endsWith('.pdf')) return IncomingFileKind.pdf;
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+      return IncomingFileKind.html;
+    }
     if (lower.endsWith('.inklus') || lower.endsWith('.zip')) {
       return IncomingFileKind.archive;
     }
