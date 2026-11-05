@@ -699,8 +699,6 @@ class ActiveLayerPainter extends CustomPainter {
   static void _paintLaser(Canvas canvas, CanvasController c, double scale) {
     final trail = c.laserTrail;
     if (trail.isEmpty) return;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final fade = c.laserDuration.inMilliseconds;
     final rimWidth = c.laserThickness / scale;
     final hotCoreWidth = max(1.2, c.laserThickness * 0.34) / scale;
     final glowWidth = c.laserThickness * (14 / 5) / scale;
@@ -717,24 +715,21 @@ class ActiveLayerPainter extends CustomPainter {
         : Color.lerp(color, Colors.white, 0.72)!;
     if (c.laserPointerMode == LaserPointerMode.dot) {
       final latest = trail.last;
-      final age = (now - latest.t).clamp(0, fade);
-      final alpha = 1 - age / fade;
-      if (alpha <= 0) return;
-      _laserGlow.color = color.withValues(alpha: 0.5 * alpha);
-      _laserCore.color = color.withValues(alpha: 0.9 * alpha);
-      _laserHotCore.color = hotColor.withValues(alpha: 0.96 * alpha);
+      _laserGlow.color = color.withValues(alpha: 0.5);
+      _laserCore.color = color.withValues(alpha: 0.9);
+      _laserHotCore.color = hotColor.withValues(alpha: 0.96);
       canvas.drawCircle(
-        latest.point,
+        latest,
         glowWidth / 2,
         _laserGlow..style = PaintingStyle.fill,
       );
       canvas.drawCircle(
-        latest.point,
+        latest,
         rimWidth / 2,
         _laserCore..style = PaintingStyle.fill,
       );
       canvas.drawCircle(
-        latest.point,
+        latest,
         hotCoreWidth / 2,
         _laserHotCore..style = PaintingStyle.fill,
       );
@@ -743,31 +738,40 @@ class ActiveLayerPainter extends CustomPainter {
       _laserHotCore.style = PaintingStyle.stroke;
       return;
     }
-    final hotPath = Path();
-    var hotPathStarted = false;
-    var hotAlpha = 0.0;
+    if (trail.length == 1) {
+      _laserGlow.color = color.withValues(alpha: 0.5);
+      _laserCore.color = color.withValues(alpha: 0.9);
+      _laserHotCore.color = hotColor.withValues(alpha: 0.96);
+      canvas.drawCircle(
+        trail.single,
+        glowWidth / 2,
+        _laserGlow..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        trail.single,
+        rimWidth / 2,
+        _laserCore..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        trail.single,
+        hotCoreWidth / 2,
+        _laserHotCore..style = PaintingStyle.fill,
+      );
+      _laserGlow.style = PaintingStyle.stroke;
+      _laserCore.style = PaintingStyle.stroke;
+      _laserHotCore.style = PaintingStyle.stroke;
+      return;
+    }
+    final path = Path()..moveTo(trail.first.dx, trail.first.dy);
     for (var i = 1; i < trail.length; i++) {
-      final age = (now - trail[i].t).clamp(0, fade);
-      final alpha = 1 - age / fade;
-      if (alpha <= 0) {
-        hotPathStarted = false;
-        continue;
-      }
-      _laserGlow.color = color.withValues(alpha: 0.5 * alpha);
-      _laserCore.color = color.withValues(alpha: 0.9 * alpha);
-      canvas.drawLine(trail[i - 1].point, trail[i].point, _laserGlow);
-      canvas.drawLine(trail[i - 1].point, trail[i].point, _laserCore);
-      if (!hotPathStarted) {
-        hotPath.moveTo(trail[i - 1].point.dx, trail[i - 1].point.dy);
-        hotPathStarted = true;
-      }
-      hotPath.lineTo(trail[i].point.dx, trail[i].point.dy);
-      hotAlpha = max(hotAlpha, alpha);
+      path.lineTo(trail[i].dx, trail[i].dy);
     }
-    if (hotAlpha > 0) {
-      _laserHotCore.color = hotColor.withValues(alpha: 0.96 * hotAlpha);
-      canvas.drawPath(hotPath, _laserHotCore);
-    }
+    _laserGlow.color = color.withValues(alpha: 0.5);
+    _laserCore.color = color.withValues(alpha: 0.9);
+    _laserHotCore.color = hotColor.withValues(alpha: 0.96);
+    canvas.drawPath(path, _laserGlow);
+    canvas.drawPath(path, _laserCore);
+    canvas.drawPath(path, _laserHotCore);
   }
 }
 

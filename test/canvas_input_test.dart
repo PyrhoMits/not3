@@ -340,7 +340,7 @@ void main() {
     await finish(tester);
   });
 
-  testWidgets('el puntero láser no deja trazos y su estela se desvanece', (
+  testWidgets('laser leaves no ink and its complete trail expires together', (
     tester,
   ) async {
     await pumpCanvas(tester);
@@ -353,11 +353,7 @@ void main() {
     );
     expect(c.page.strokes, isEmpty);
     expect(c.laserTrail, isNotEmpty);
-    // La estela usa el reloj real (DateTime): esperar de verdad.
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 900)),
-    );
-    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 800));
     expect(c.laserTrail, isEmpty);
     c.toggleLaser();
     await finish(tester);
