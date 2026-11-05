@@ -39,12 +39,9 @@ import '../l10n/l10n.dart';
 import '../services/app_errors.dart';
 import '../models/text_layout.dart';
 
-/// Biblioteca de cuadernos (pantalla de inicio).
+/// App library containing every notebook.
 ///
-/// Muestra la lista de cuadernos guardados con una miniatura de su primera
-/// página y permite crear, abrir, renombrar, duplicar, eliminar, buscar,
-/// ordenar y asignar color de portada. Al tocar un cuaderno se navega al
-/// editor ([HomeScreen]); al volver, se refresca la lista.
+/// This screen creates, opens, imports, searches and customizes notebooks.
 class NotebookLibraryScreen extends StatefulWidget {
   final VoidCallback? onToggleTheme;
   final StorageService? storage;
@@ -342,6 +339,7 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
       }
       final notebook = await _storage.createNotebook(
         title: result.suggestedTitle,
+        initialNoteTitle: result.suggestedTitle,
         pages: [
           for (final (index, page) in result.pages.indexed)
             models.Page.background(
@@ -355,11 +353,15 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
       attached = true;
       if (!mounted) return;
       await _reload();
-      if (file == null) {
-        await _openNotebookById(notebook.id);
-      } else {
-        unawaited(_openNotebookById(notebook.id));
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(
+          _openNotebookById(
+            notebook.id,
+            initialNoteId: notebook.notes.single.id,
+          ),
+        );
+      });
     } catch (error) {
       if (result != null && !attached) await widget.pdfImporter.discard(result);
       if (mounted) _snack(pdfImportErrorMessage(context, error));
@@ -495,11 +497,18 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
     }
   }
 
-  Future<void> _openNotebookById(String id) async {
+  Future<void> _openNotebookById(String id, {String? initialNoteId}) async {
     final nb = await _storage.loadNotebook(id);
     if (!mounted || nb == null) return;
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => NoteListScreen(notebook: nb)),
+      MaterialPageRoute<void>(
+        builder: (_) => NoteListScreen(
+          notebook: nb,
+          storage: _storage,
+          pdfImporter: widget.pdfImporter,
+          initialNoteId: initialNoteId,
+        ),
+      ),
     );
     // No limpiar _thumbs: la caché versionada se invalida
     // automáticamente si el notebook fue modificado (updatedAt).
@@ -837,8 +846,7 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
                 label: Text(context.l10n.createTitle),
               ),
               OutlinedButton.icon(
-                onPressed:
-                    _importingPdf || !widget.pdfImporter.isSupported
+                onPressed: _importingPdf || !widget.pdfImporter.isSupported
                     ? null
                     : _importPdf,
                 icon: const Icon(Icons.picture_as_pdf_outlined),
@@ -975,8 +983,7 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
                 label: Text(context.l10n.createAction),
               ),
               OutlinedButton.icon(
-                onPressed:
-                    _importingPdf || !widget.pdfImporter.isSupported
+                onPressed: _importingPdf || !widget.pdfImporter.isSupported
                     ? null
                     : _importPdf,
                 icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),

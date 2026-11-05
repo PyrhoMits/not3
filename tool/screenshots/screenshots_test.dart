@@ -122,9 +122,9 @@ void main() {
     final s = StorageService.instance;
     if ((await s.loadIndex()).isNotEmpty) return;
     for (final (t, c) in [
-      ('Matemáticas', 0xFF1E88E5),
-      ('Diario', 0xFFE53935),
-      ('Física II', 0xFF43A047),
+      ('Mathematics', 0xFF1E88E5),
+      ('Journal', 0xFFE53935),
+      ('Physics II', 0xFF43A047),
       ('Ideas', 0xFFFDD835),
     ]) {
       await s.createNotebook(
@@ -352,7 +352,14 @@ void main() {
         final metas = await StorageService.instance.loadIndex();
         return StorageService.instance.loadNotebook(metas.first.id);
       });
-      await app(tester, NoteListScreen(notebook: nb!), dark: dark);
+      await app(
+        tester,
+        NoteListScreen(
+          notebook: nb!,
+          pdfImporter: const PdfImportCoordinator(supported: true),
+        ),
+        dark: dark,
+      );
       await shot(tester, 'notes_$tag');
     });
 

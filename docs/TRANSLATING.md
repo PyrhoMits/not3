@@ -16,4 +16,4 @@ Content stored in data (default titles, page/layer names) is translated when dis
 ## Style
 
 Use a friendly, direct English tone. Keep interface terms consistent
-(notebook/note/page, lasso, eraser, ruler).
+(library/notebook/note/page, lasso, eraser, ruler).

@@ -416,11 +416,11 @@ void main() {
       expect(loaded!.notes.length, 1);
     });
 
-    test('deleteNote no elimina el último note', () async {
+    test('deleteNote permits an empty notebook', () async {
       final nb = await storage.createNotebook(title: 'Test');
       await storage.deleteNote(nb.id, nb.notes.first.id);
       final loaded = await storage.loadNotebook(nb.id);
-      expect(loaded!.notes.length, 1);
+      expect(loaded!.notes, isEmpty);
     });
 
     test('duplicateNote crea una copia después del original', () async {

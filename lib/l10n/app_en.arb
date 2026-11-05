@@ -65,7 +65,7 @@
   "driveSignOutBody": "Backups will stop being uploaded to Google Drive. Copies already in Drive are kept.",
   "driveSignedOut": "Signed out",
   "driveUploaded": "{count, plural, =0{No notebooks have sync enabled} =1{1 note uploaded to Drive} other{{count} notes uploaded to Drive}}",
-  "driveRestoreBody": "Notes on this device are only replaced if the Drive copy is newer. Notes missing here go back to their notebook (or to a new \"Recovered from Drive\" one).",
+  "driveRestoreBody": "Notes on this device are only replaced if the Drive copy is newer. Notes missing here go back to their notebook (or to a new \"Recovered from Drive\" notebook).",
   "backupSaveTitle": "Save Not3 backup",
   "backupSaved": "Backup saved",
   "driveSignInIncomplete": "Sign-in did not complete",
@@ -208,13 +208,13 @@
   "libNavAll": "All",
   "libNavRecent": "Recent",
   "libNavFavorites": "Favorites",
-  "libNavFolders": "Folders",
+  "libNavFolders": "Smart views",
   "libImport": "Import .inklus",
   "libTrash": "Trash",
   "libLightMode": "Light mode",
   "libDarkMode": "Dark mode",
   "libMoreOptions": "More options",
-  "libMyNotebooks": "My notebooks",
+  "libMyNotebooks": "Library",
   "libClearFilter": "Clear filter",
   "libSearchHint": "Search by name or tag",
   "libSearchInNotes": "Search inside notes (text and handwriting)",
@@ -299,7 +299,7 @@
       }
     }
   },
-  "libEmptyHint": "Create a new notebook or import an existing one\\nto get started.",
+  "libEmptyHint": "Create a new notebook or import a PDF\\nto get started.",
   "noteRenameTitle": "Rename note",
   "noteDeleteTitle": "Delete note",
   "noteNew": "New note",
@@ -309,6 +309,35 @@
   "noteEmptyHint": "Create your first note to start writing.",
   "noteCreateAction": "Create note",
   "noteOptions": "Options",
+  "noteMoveToNotebook": "Move to notebook",
+  "noteMoveTitle": "Choose a notebook",
+  "noteMoveHint": "The selected notes will be moved here.",
+  "noteCreateNotebook": "New notebook",
+  "noteSelectAll": "Select all",
+  "noteSelectedCount": "{count, plural, =1{1 note selected} other{{count} notes selected}}",
+  "@noteSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noteMoved": "{count, plural, =1{Note moved} other{{count} notes moved}}",
+  "@noteMoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noteMoveFailed": "Could not move the notes: {error}",
+  "@noteMoveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "timeNow": "just now",
   "noteTplInfinite": "Infinite",
   "noteTplSheet": "Fixed sheet",
@@ -513,7 +542,7 @@
   "pgOptions": "Page options",
   "pgNew": "New page",
   "tagTitle": "Notebook tags",
-  "tagSubtitle": "To find it and group it in smart folders",
+  "tagSubtitle": "Use tags to find this notebook in Smart views",
   "tagActive": "Active tags",
   "tagOthers": "Other tags",
   "tagNew": "New tag…",
@@ -1009,8 +1038,8 @@
   "statsRecord": "Record",
   "statsActivity": "Activity — last 30 days",
   "statsDaysWithPages": "Days with new pages",
-  "smartTitle": "Smart folders",
-  "smartSubtitle": "Organize your notebooks automatically",
+  "smartTitle": "Smart views",
+  "smartSubtitle": "Filter your notebooks automatically",
   "smartByColor": "By color",
   "smartByTag": "By tag",
   "onbSkip": "Skip",
@@ -1043,7 +1072,7 @@
   "onb3Body": "Tap a tool to use it and tap it again to see its options: thickness, color, partial eraser, shapes…",
   "onb4Body": "Everything is saved on this device, with no accounts or ads. If you want, you can back up to your Google Drive.",
   "remEmptyBody": "Create reminders linked to your notebooks so you never forget anything.",
-  "statsEmptyBody": "Start writing in your notebooks and your statistics will appear here.",
+  "statsEmptyBody": "Start writing in your notes and your statistics will appear here.",
   "remOverdue": " · overdue",
   "statsDays": "{count, plural, =1{1 day} other{{count} days}}",
   "@statsDays": {
@@ -1098,7 +1127,7 @@
       }
     }
   },
-  "errNotNot3": "The file is not an .inklus notebook or an Not3 backup.",
+  "errNotNot3": "The file is not an .inklus notebook or a Not3 backup.",
   "errNotNot3File": "Not a valid .inklus notebook",
   "errNotNot3V2": "Not a valid .inklus v2 notebook",
   "errCatalogTooLarge": "Catalog is too large",
@@ -1170,7 +1199,7 @@
     }
   },
   "driveRecovered": "Recovered from Drive",
-  "packClassicName": "Classic notebooks",
+  "packClassicName": "Classic paper",
   "packClassicDesc": "Wide and narrow ruling, 5 mm grid, dots and staff.",
   "packTechName": "Technical paper",
   "packTechDesc": "Fine graph-paper grid and column planner, in soft tones.",

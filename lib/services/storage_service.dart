@@ -751,20 +751,32 @@ class StorageService {
   /// Crea un Notebook nuevo con un Note en blanco.
   Future<Notebook> createNotebook({
     String? title,
+    String? initialNoteTitle,
     int? colorValue,
     String coverStyle = 'simple',
     String? coverImagePath,
     List<String>? tags,
     PageTemplate? template,
     List<Page>? pages,
+    bool createInitialNote = true,
   }) async {
-    final note = Note.newBlank();
-    if (pages != null && pages.isNotEmpty) {
-      note.pages
-        ..clear()
-        ..addAll(pages);
-    } else if (template != null && note.pages.isNotEmpty) {
-      note.pages.first.template = template;
+    if (!createInitialNote &&
+        (initialNoteTitle != null || template != null || pages != null)) {
+      throw ArgumentError(
+        'An empty notebook cannot have initial note content.',
+      );
+    }
+    final notes = <Note>[];
+    if (createInitialNote) {
+      final note = Note.newBlank(title: initialNoteTitle);
+      if (pages != null && pages.isNotEmpty) {
+        note.pages
+          ..clear()
+          ..addAll(pages);
+      } else if (template != null && note.pages.isNotEmpty) {
+        note.pages.first.template = template;
+      }
+      notes.add(note);
     }
     final notebook = Notebook(
       id: newId('nb'),
@@ -773,7 +785,7 @@ class StorageService {
       coverStyle: coverStyle,
       coverImagePath: coverImagePath,
       tags: tags,
-      notes: [note],
+      notes: notes,
     );
     await saveNotebook(notebook);
     return notebook;
@@ -930,9 +942,14 @@ class StorageService {
     String notebookId, {
     String? title,
     PageTemplate? template,
+    List<Page>? pages,
   }) async {
     final note = Note.newBlank(title: title);
-    if (template != null && note.pages.isNotEmpty) {
+    if (pages != null && pages.isNotEmpty) {
+      note.pages
+        ..clear()
+        ..addAll(pages);
+    } else if (template != null && note.pages.isNotEmpty) {
       note.pages.first.template = template;
     }
     await _saveNoteRaw(await _baseDir(), note);
@@ -975,11 +992,11 @@ class StorageService {
   /// Elimina un Note de un Notebook (a la papelera).
   Future<void> deleteNote(String notebookId, String noteId) async {
     final base = await _baseDir();
-    // Quitar de la lista (nunca el último note).
+    // Quitar de la lista. Un contenedor vacío es válido.
     String? notebookTitle;
     final removed = await _editNotebook(notebookId, (json) {
       final ids = _noteIdsOf(json);
-      if (ids.length <= 1 || !ids.remove(noteId)) return false;
+      if (!ids.remove(noteId)) return false;
       json['noteIds'] = ids;
       notebookTitle = json['title'] as String?;
       return true;
@@ -996,6 +1013,74 @@ class StorageService {
 
     // Limpiar imágenes huérfanas en background.
     unawaited(collectOrphanedImages());
+  }
+
+  /// Moves existing notes between two containers without rewriting their
+  /// potentially large content files. Note identity, content and timestamps
+  /// are preserved.
+  Future<void> moveNotes(
+    String sourceNotebookId,
+    String destinationNotebookId,
+    Iterable<String> noteIds,
+  ) async {
+    if (sourceNotebookId == destinationNotebookId) {
+      throw ArgumentError('Source and destination must be different.');
+    }
+    final requested = noteIds.toSet();
+    if (requested.isEmpty) return;
+
+    final base = await _baseDir();
+    final sourceFile = await _notebookFile(base, sourceNotebookId);
+    final destinationFile = await _notebookFile(base, destinationNotebookId);
+
+    await _notebookQueue.run(() async {
+      if (!await sourceFile.exists() || !await destinationFile.exists()) {
+        throw StateError('Source or destination notebook was not found.');
+      }
+      final sourceRaw = await sourceFile.readAsString();
+      final destinationRaw = await destinationFile.readAsString();
+      final source = jsonDecode(sourceRaw) as Map<String, dynamic>;
+      final destination = jsonDecode(destinationRaw) as Map<String, dynamic>;
+      final sourceIds = _noteIdsOf(source);
+      final destinationIds = _noteIdsOf(destination);
+
+      if (!sourceIds.toSet().containsAll(requested)) {
+        throw StateError(
+          'One or more notes do not belong to the source notebook.',
+        );
+      }
+      if (destinationIds.any(requested.contains)) {
+        throw StateError(
+          'One or more notes already belong to the destination notebook.',
+        );
+      }
+
+      final ordered = sourceIds.where(requested.contains).toList();
+      destination['noteIds'] = [...destinationIds, ...ordered];
+      source['noteIds'] = sourceIds
+          .where((id) => !requested.contains(id))
+          .toList();
+
+      // Destination first: an interrupted move may temporarily reference a
+      // note twice, but can never leave its content orphaned.
+      await writeAtomic(destinationFile, jsonEncode(destination));
+      try {
+        await writeAtomic(sourceFile, jsonEncode(source));
+      } catch (_) {
+        await writeAtomic(destinationFile, destinationRaw);
+        rethrow;
+      }
+    });
+
+    final now = DateTime.now();
+    await _updateIndex(base, (metas) {
+      for (var i = 0; i < metas.length; i++) {
+        final meta = metas[i];
+        if (meta.id == sourceNotebookId || meta.id == destinationNotebookId) {
+          metas[i] = meta.copyWith(updatedAt: now);
+        }
+      }
+    });
   }
 
   /// Duplica un Note dentro del mismo Notebook.

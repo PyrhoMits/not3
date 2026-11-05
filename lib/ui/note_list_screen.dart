@@ -9,39 +9,76 @@ import 'theme/tokens.dart';
 
 import '../models/note.dart';
 import '../models/notebook.dart';
+import '../models/page.dart' as models;
 import '../models/template.dart';
+import '../services/drive_sync_service.dart';
 import '../services/export_service.dart';
 import '../services/image_service.dart';
+import '../services/pdf_import_coordinator.dart';
+import '../services/search_service.dart';
 import '../services/storage_service.dart';
 import 'home_screen.dart';
 import 'widgets/dialogs.dart';
 import '../l10n/l10n.dart';
 import '../utils/date_utils.dart' as date_util;
 import 'widgets/notebook_covers.dart';
+import 'widgets/pdf_import_progress.dart';
 
-/// Pantalla que muestra la lista de apuntes (notes) dentro de un cuaderno.
+/// Displays the notes inside one notebook.
 ///
-/// Permite crear, renombrar, eliminar, duplicar y reordenar notas.
-/// Al tocar una nota se navega al editor ([HomeScreen]).
+/// The persisted container is still named [Notebook] for file compatibility.
+/// Users can create, import, rename, duplicate, delete and move notes here.
 class NoteListScreen extends StatefulWidget {
   final Notebook notebook;
+  final StorageService? storage;
+  final SearchService? search;
+  final PdfImportCoordinator pdfImporter;
+  final String? initialNoteId;
 
-  const NoteListScreen({super.key, required this.notebook});
+  const NoteListScreen({
+    super.key,
+    required this.notebook,
+    this.storage,
+    this.search,
+    this.pdfImporter = const PdfImportCoordinator(),
+    this.initialNoteId,
+  });
 
   @override
   State<NoteListScreen> createState() => _NoteListScreenState();
 }
 
 class _NoteListScreenState extends State<NoteListScreen> {
-  final StorageService _storage = StorageService.instance;
+  late final StorageService _storage;
+  late final SearchService _search;
   final ImageService _imageService = ImageService();
   late Notebook _notebook;
   final Map<String, Future<Uint8List>> _thumbs = {};
+  final Set<String> _selectedNoteIds = {};
+  bool _importingPdf = false;
+
+  bool get _selecting => _selectedNoteIds.isNotEmpty;
 
   @override
   void initState() {
     super.initState();
+    _storage = widget.storage ?? StorageService.instance;
+    _search =
+        widget.search ??
+        (widget.storage == null
+            ? SearchService.instance
+            : SearchService(storage: _storage));
     _notebook = widget.notebook;
+    final initialNoteId = widget.initialNoteId;
+    if (initialNoteId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final note = _notebook.notes
+            .where((candidate) => candidate.id == initialNoteId)
+            .firstOrNull;
+        if (note != null) unawaited(_openNote(note));
+      });
+    }
   }
 
   Future<Uint8List> _thumbFor(Note note) =>
@@ -91,7 +128,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
   Future<void> _openNote(Note note) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => HomeScreen(note: note, notebookId: _notebook.id),
+        builder: (_) => HomeScreen(
+          note: note,
+          notebookId: _notebook.id,
+          storage: _storage,
+          search: _search,
+          pdfImporter: widget.pdfImporter,
+        ),
       ),
     );
     await _reload();
@@ -111,6 +154,149 @@ class _NoteListScreenState extends State<NoteListScreen> {
   Future<void> _duplicateNote(Note note) async {
     await _storage.duplicateNote(_notebook.id, note.id);
     await _reload();
+  }
+
+  Future<void> _importPdf() async {
+    if (_importingPdf) return;
+    setState(() => _importingPdf = true);
+    PdfImportResult? result;
+    var attached = false;
+    try {
+      result = await runPdfImportWithProgress(context, widget.pdfImporter);
+      if (result == null || !mounted) return;
+      final note = await _storage.createNote(
+        _notebook.id,
+        title: result.suggestedTitle,
+        pages: [
+          for (final (index, page) in result.pages.indexed)
+            models.Page.background(
+              name: '${index + 1}',
+              path: page.path,
+              width: page.width,
+              height: page.height,
+            ),
+        ],
+      );
+      attached = true;
+      await _reload();
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_openNote(note));
+        });
+      }
+    } catch (error) {
+      if (result != null && !attached) await widget.pdfImporter.discard(result);
+      if (mounted) showSnack(context, pdfImportErrorMessage(context, error));
+    } finally {
+      if (mounted) setState(() => _importingPdf = false);
+    }
+  }
+
+  void _toggleSelection(String noteId) {
+    setState(() {
+      if (!_selectedNoteIds.add(noteId)) _selectedNoteIds.remove(noteId);
+    });
+  }
+
+  void _clearSelection() => setState(_selectedNoteIds.clear);
+
+  Future<String?> _pickDestinationNotebook() async {
+    final metas =
+        (await _storage.loadIndex())
+            .where((meta) => meta.id != _notebook.id)
+            .toList()
+          ..sort(
+            (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+          );
+    if (!mounted) return null;
+    const createNew = '__create_new_notebook__';
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.drive_file_move_outlined),
+              title: Text(context.l10n.noteMoveTitle),
+              subtitle: Text(context.l10n.noteMoveHint),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.create_new_folder_outlined),
+              title: Text(context.l10n.noteCreateNotebook),
+              onTap: () => Navigator.pop(context, createNew),
+            ),
+            for (final meta in metas)
+              ListTile(
+                leading: const Icon(Icons.folder_outlined),
+                title: Text(displayTitle(context.l10n, meta.title)),
+                onTap: () => Navigator.pop(context, meta.id),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected != createNew) return selected;
+    if (!mounted) return null;
+    final notebookCount = (await _storage.loadIndex()).length;
+    if (!mounted) return null;
+    final name = await _promptText(
+      titulo: context.l10n.createTitle,
+      hint: context.l10n.createNameHint,
+      prefilled: context.l10n.createDefaultName(notebookCount + 1),
+    );
+    if (name == null) return null;
+    final notebook = await _storage.createNotebook(
+      title: name,
+      createInitialNote: false,
+    );
+    return notebook.id;
+  }
+
+  Future<void> _moveNotes(Set<String> noteIds) async {
+    if (noteIds.isEmpty) return;
+    final destinationId = await _pickDestinationNotebook();
+    if (destinationId == null || !mounted) return;
+    try {
+      await _storage.moveNotes(_notebook.id, destinationId, noteIds);
+      await _search.moveNotesToNotebook(noteIds, destinationId);
+      final destination = await _storage.loadNotebook(destinationId);
+      final meta = (await _storage.loadIndex())
+          .where((candidate) => candidate.id == destinationId)
+          .firstOrNull;
+      if (destination != null &&
+          meta != null &&
+          meta.isSyncEnabled &&
+          DriveSyncService.instance.isSignedIn) {
+        unawaited(_syncMovedNotes(destination, noteIds, meta.title));
+      }
+      await _reload();
+      if (!mounted) return;
+      _clearSelection();
+      showSnack(context, context.l10n.noteMoved(noteIds.length));
+    } catch (error) {
+      if (mounted) showSnack(context, context.l10n.noteMoveFailed('$error'));
+    }
+  }
+
+  Future<void> _syncMovedNotes(
+    Notebook destination,
+    Set<String> noteIds,
+    String notebookTitle,
+  ) async {
+    for (final note in destination.notes.where((n) => noteIds.contains(n.id))) {
+      try {
+        await DriveSyncService.instance.backupNote(
+          note,
+          notebookId: destination.id,
+          notebookTitle: notebookTitle,
+        );
+      } catch (_) {
+        return;
+      }
+    }
   }
 
   Future<void> _deleteNote(Note note) async {
@@ -244,42 +430,89 @@ class _NoteListScreenState extends State<NoteListScreen> {
   @override
   Widget build(BuildContext context) {
     final count = _notebook.notes.length;
-    return Not3Page(
-      title: _notebook.title,
-      subtitle: context.l10n.noteCount(count),
-      maxWidth: double.infinity,
-      actions: [
-        IconButton(
-          tooltip: context.l10n.libRenameTitle,
-          icon: const Icon(Icons.edit_outlined),
-          onPressed: _renameNotebook,
-        ),
-      ],
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createNote,
-        icon: const Icon(Icons.add),
-        label: Text(context.l10n.noteNew),
-      ),
-      slivers: [
-        if (count == 0)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: EmptyState(
-              icon: Icons.note_add_outlined,
-              title: context.l10n.noteEmptyTitle,
-              message: context.l10n.noteEmptyHint,
-              actions: [
-                FilledButton.icon(
-                  onPressed: _createNote,
-                  icon: const Icon(Icons.add),
-                  label: Text(context.l10n.noteCreateAction),
+    return PopScope(
+      canPop: !_selecting,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _selecting) _clearSelection();
+      },
+      child: Not3Page(
+        title: _selecting
+            ? context.l10n.noteSelectedCount(_selectedNoteIds.length)
+            : _notebook.title,
+        subtitle: _selecting ? null : context.l10n.noteCount(count),
+        maxWidth: double.infinity,
+        headerTrailing: null,
+        actions: _selecting
+            ? [
+                IconButton(
+                  tooltip: context.l10n.noteSelectAll,
+                  icon: const Icon(Icons.select_all),
+                  onPressed: () => setState(() {
+                    _selectedNoteIds
+                      ..clear()
+                      ..addAll(_notebook.notes.map((note) => note.id));
+                  }),
+                ),
+                IconButton(
+                  tooltip: context.l10n.noteMoveToNotebook,
+                  icon: const Icon(Icons.drive_file_move_outlined),
+                  onPressed: () => _moveNotes(Set.of(_selectedNoteIds)),
+                ),
+                IconButton(
+                  tooltip: context.l10n.commonClose,
+                  icon: const Icon(Icons.close),
+                  onPressed: _clearSelection,
+                ),
+              ]
+            : [
+                IconButton(
+                  tooltip: context.l10n.libRenameTitle,
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: _renameNotebook,
                 ),
               ],
-            ),
-          )
-        else
-          _buildNoteGrid(),
-      ],
+        floatingActionButton: _selecting
+            ? null
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _importingPdf || !widget.pdfImporter.isSupported
+                        ? null
+                        : _importPdf,
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    label: Text(context.l10n.pdfImportAction),
+                  ),
+                  const SizedBox(height: Spacing.sm),
+                  FloatingActionButton.extended(
+                    onPressed: _createNote,
+                    icon: const Icon(Icons.add),
+                    label: Text(context.l10n.noteNew),
+                  ),
+                ],
+              ),
+        slivers: [
+          if (count == 0)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyState(
+                icon: Icons.note_add_outlined,
+                title: context.l10n.noteEmptyTitle,
+                message: context.l10n.noteEmptyHint,
+                actions: [
+                  FilledButton.icon(
+                    onPressed: _createNote,
+                    icon: const Icon(Icons.add),
+                    label: Text(context.l10n.noteCreateAction),
+                  ),
+                ],
+              ),
+            )
+          else
+            _buildNoteGrid(),
+        ],
+      ),
     );
   }
 
@@ -301,7 +534,15 @@ class _NoteListScreenState extends State<NoteListScreen> {
           child: InkWell(
             onTap: () {
               unawaited(HapticFeedback.selectionClick());
-              _openNote(note);
+              if (_selecting) {
+                _toggleSelection(note.id);
+              } else {
+                _openNote(note);
+              }
+            },
+            onLongPress: () {
+              unawaited(HapticFeedback.selectionClick());
+              _toggleSelection(note.id);
             },
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -343,47 +584,83 @@ class _NoteListScreenState extends State<NoteListScreen> {
                         ),
                       ),
                       // Menú contextual flotante
-                      Positioned(
-                        top: Spacing.xs,
-                        right: Spacing.xs,
-                        child: MenuAnchor(
-                          menuChildren: [
-                            MenuItemButton(
-                              leadingIcon: const Icon(Icons.edit_outlined),
-                              onPressed: () => _renameNote(note),
-                              child: Text(context.l10n.libRename),
-                            ),
-                            MenuItemButton(
-                              leadingIcon: const Icon(Icons.copy_outlined),
-                              onPressed: () => _duplicateNote(note),
-                              child: Text(context.l10n.libDuplicate),
-                            ),
-                            const Divider(),
-                            MenuItemButton(
-                              leadingIcon: Icon(
-                                Icons.delete_outline,
-                                color: context.inklus.danger,
+                      if (!_selecting)
+                        Positioned(
+                          top: Spacing.xs,
+                          right: Spacing.xs,
+                          child: MenuAnchor(
+                            menuChildren: [
+                              MenuItemButton(
+                                leadingIcon: const Icon(Icons.edit_outlined),
+                                onPressed: () => _renameNote(note),
+                                child: Text(context.l10n.libRename),
                               ),
-                              onPressed: () => _deleteNote(note),
-                              child: Text(
-                                context.l10n.libDelete,
-                                style: TextStyle(color: context.inklus.danger),
+                              MenuItemButton(
+                                leadingIcon: const Icon(Icons.copy_outlined),
+                                onPressed: () => _duplicateNote(note),
+                                child: Text(context.l10n.libDuplicate),
                               ),
+                              MenuItemButton(
+                                leadingIcon: const Icon(
+                                  Icons.drive_file_move_outlined,
+                                ),
+                                onPressed: () => _moveNotes({note.id}),
+                                child: Text(context.l10n.noteMoveToNotebook),
+                              ),
+                              const Divider(),
+                              MenuItemButton(
+                                leadingIcon: Icon(
+                                  Icons.delete_outline,
+                                  color: context.inklus.danger,
+                                ),
+                                onPressed: () => _deleteNote(note),
+                                child: Text(
+                                  context.l10n.libDelete,
+                                  style: TextStyle(
+                                    color: context.inklus.danger,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            builder: (context, menu, _) => IconButton(
+                              tooltip: context.l10n.noteOptions,
+                              style: IconButton.styleFrom(
+                                backgroundColor: context.colors.surface
+                                    .withValues(alpha: 0.85),
+                                foregroundColor: context.colors.onSurface,
+                              ),
+                              icon: const Icon(Icons.more_vert),
+                              onPressed: () =>
+                                  menu.isOpen ? menu.close() : menu.open(),
                             ),
-                          ],
-                          builder: (context, menu, _) => IconButton(
-                            tooltip: context.l10n.noteOptions,
-                            style: IconButton.styleFrom(
-                              backgroundColor: context.colors.surface
-                                  .withValues(alpha: 0.85),
-                              foregroundColor: context.colors.onSurface,
-                            ),
-                            icon: const Icon(Icons.more_vert),
-                            onPressed: () =>
-                                menu.isOpen ? menu.close() : menu.open(),
                           ),
                         ),
-                      ),
+                      if (_selectedNoteIds.contains(note.id))
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: context.colors.primary.withValues(
+                                  alpha: 0.12,
+                                ),
+                                border: Border.all(
+                                  color: context.colors.primary,
+                                  width: 3,
+                                ),
+                              ),
+                              child: Align(
+                                alignment: Alignment.topLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(Spacing.sm),
+                                  child: Icon(
+                                    Icons.check_circle,
+                                    color: context.colors.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

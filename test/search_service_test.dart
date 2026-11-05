@@ -20,20 +20,32 @@ void main() {
 
   Note noteWithText(String title, String text) {
     final n = Note.newBlank(title: title);
-    n.pages.first.textItems.add(TextItem(id: 't', x: 0, y: 0, width: 100, text: text));
+    n.pages.first.textItems.add(
+      TextItem(id: 't', x: 0, y: 0, width: 100, text: text),
+    );
     return n;
   }
 
   test('ignora mayúsculas y acentos', () async {
-    await search.indexNote('nb', noteWithText('Álgebra', 'Ecuación de segundo grado'));
+    await search.indexNote(
+      'nb',
+      noteWithText('Álgebra', 'Ecuación de segundo grado'),
+    );
     expect(search.search('ECUACION').single.matches.single.pageIndex, 0);
-    expect(search.search('algebra').single.matches.first.source, SearchSource.title);
+    expect(
+      search.search('algebra').single.matches.first.source,
+      SearchSource.title,
+    );
   });
 
   test('la escritura reconocida se conserva al reindexar', () async {
     final note = noteWithText('Física', 'hola');
     await search.indexNote('nb', note);
-    await search.setHandwriting(note.id, note.pages.first.id, 'velocidad angular');
+    await search.setHandwriting(
+      note.id,
+      note.pages.first.id,
+      'velocidad angular',
+    );
     await search.indexNote('nb', note); // p. ej. al volver a abrir la nota
     final m = search.search('angular').single.matches.single;
     expect(m.source, SearchSource.handwriting);
@@ -46,6 +58,25 @@ void main() {
     await reopened.load();
     expect(reopened.search('covalente'), isNotEmpty);
   });
+
+  test(
+    'moving a note updates its notebook without losing handwriting',
+    () async {
+      final note = noteWithText('Physics', 'velocity');
+      await search.indexNote('source', note);
+      await search.setHandwriting(
+        note.id,
+        note.pages.first.id,
+        'angular motion',
+      );
+
+      await search.moveNotesToNotebook([note.id], 'destination');
+
+      final result = search.search('angular').single;
+      expect(result.notebookId, 'destination');
+      expect(result.matches.single.source, SearchSource.handwriting);
+    },
+  );
 
   test('solo en una nota', () async {
     final a = noteWithText('A', 'manzana');

@@ -72,7 +72,7 @@ ui/
                              version_history_sheet (local copies + Drive revisions),
                              anchored_popover, selection_bar, pages_panel, editor_shortcuts,
                              tool_visuals (icon+name per tool)
-  notebook_library.dart    home: side navigation (All/Recent/Favorites/Folders/
+  notebook_library.dart    home: side navigation (All/Recent/Favorites/Smart views/
                              Marketplace), search (+ in content), grid/list
   marketplace_screen.dart  browse / install packs
   home_screen.dart         editor: EditorToolbar + canvas + SelectionBar + PagesPanel + zoom/pages
@@ -167,11 +167,11 @@ Summary in [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md).
 - Every call to `GoogleSignIn.instance` is preceded by `await _ensureInitialized()` (`initialize(serverClientId:)` once; retryable if it fails).
 - `restoreSession()` (silent, One Tap) is called on startup in `NotebookLibraryScreen`.
 - `restoreLibrary(storage)` (Settings → "Restore from Drive"): last-write-wins per note; ones that don't exist locally go to a new notebook "Recovered from Drive". `_BearerClient` applies a 60 s timeout.
-- Backup: `Not3/<Notebook>/<Note>.inklus` in Drive (a folder per notebook and a file per note, both identified by `appProperties` `notebookId`/`noteId`, not by name: renaming only renames; old `<id>.inklus` copies at the root are located and relocated on upload). `restoreLibrary` returns each note to its notebook according to the folder. ☁️ status per note **and** per notebook. `lastSignInIssue` stores the detail when Android reports "cancelled" (usually an unregistered SHA-1) and the UI shows it. Upsert, doesn't duplicate in the app's own `Not3Format` (document + **embedded images** → the backup is self-contained). Restore: lists the folder, imports each `.inklus` (extracts images to `<appSupport>/inklus/restored/<id>/`) and picks the most recent by `updatedAt`. `googleapis` 16 (`drive/v3.dart`): `files.create/update` with `uploadMedia: commons.Media`; download with GET `alt=media` via `_BearerClient` (http).
+- Backup: `Not3/<Notebook>/<Note>.inklus` in Drive (a Drive folder per notebook and a file per note, both identified by `appProperties` `notebookId`/`noteId`, not by name: renaming only renames; old `<id>.inklus` copies at the root are located and relocated on upload). `restoreLibrary` returns each note to its notebook. ☁️ status exists per note and per notebook. `lastSignInIssue` stores the detail when Android reports "cancelled" (usually an unregistered SHA-1) and the UI shows it. Upsert doesn't duplicate in the app's own `Not3Format` (document + **embedded images** → the backup is self-contained). Restore lists the Drive folder, imports each `.inklus` (extracts images to `<appSupport>/inklus/restored/<id>/`) and picks the most recent by `updatedAt`. `googleapis` 16 (`drive/v3.dart`): `files.create/update` with `uploadMedia: commons.Media`; download with GET `alt=media` via `_BearerClient` (http).
 - Automatic backup = silent (if the scope isn't authorized it's skipped, local already protects you); 'Upload now' uses `promptForConsent: true` (may show consent).
 - The UI finds out via `controller.onRemoteSync` (callback on every local save; `HomeScreen` batches it: at most one upload every 20 s + on exit) and `controller.replaceNote(note)` after restoring.
 - Leaving the editor: `_goBack()`/`PopScope` do `await controller.flush()` before the `pop` (the library reads the already-updated index); `HomeScreen.dispose` does `controller.dispose()`.
-- Export (editor ⋮ menu): page PNG/PDF, **notebook PDF** (`renderNotebookPdf`) and **.inklus copy** (`Not3Format.exportBytes` → `FilePicker.saveFile`).
+- Export (editor ⋮ menu): page PNG/PDF, **note PDF** (`renderNotebookPdf`, retained internal name) and **.inklus copy** (`Not3Format.exportBytes` → `FilePicker.saveFile`).
 
 ## 🔐 Secrets
 
@@ -191,7 +191,7 @@ Summary in [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md).
 
 ## Data model (JSON)
 
-`Notebook{id,title,noteIds[],color,coverStyle,coverImagePath,tags}` → `Note{id,title,createdAt,updatedAt,pages[]}` → `Page{id,name,template,strokes[],images[],textItems[],layers[]}` → `Stroke{id,tool,color,size,points[{x,y,p}],fillColor,layer,shape,th,sm,sl}` (`Document` = legacy format, migration only), `ImageItem{id,path,x,y,w,h,rotation,layer}`, `TextItem{id,x,y,w,text,fontSize,color,layer}`, `PageTemplate{type,lineColor,spacing,imagePath,infiniteFill,customW,customH}`, `Layer{name,visible,locked}`. Strokes and images in **world coordinates**; layers filter visibility.
+User-facing hierarchy: **Library → Notebook → Note → Page**. The persisted model matches the UI terminology: `Notebook{id,title,noteIds[],color,coverStyle,coverImagePath,tags}` → `Note{id,title,createdAt,updatedAt,pages[]}` → `Page{id,name,template,strokes[],images[],textItems[],layers[]}` → `Stroke{id,tool,color,size,points[{x,y,p}],fillColor,layer,shape,shapeAnchors,th,sm,sl}` (`Document` = legacy format, migration only), `ImageItem{id,path,x,y,w,h,rotation,layer}`, `TextItem{id,x,y,w,text,fontSize,color,layer}`, `PageTemplate{type,lineColor,spacing,imagePath,infiniteFill,customW,customH}`, `Layer{name,visible,locked}`. Strokes and images are in **world coordinates**; layers filter visibility.
 
 ## Business rules
 
@@ -204,6 +204,6 @@ Summary in [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md).
 ## Design decisions (made; open an issue before proposing changes)
 
 - **Everything free, no premium.** Not3 is open source and will have no paid features. GoodNotes/Samsung Notes/Notability premium features are implemented here for free.
-- **Drive conflicts: last-write-wins**. When two devices edit the same notebook, the document with the most recent `updatedAt` wins. It's simpler than per-page merge and avoids unintentional content loss. The user can see all versions in Drive (☁️ menu → "View versions") and restore whichever they want.
+- **Drive conflicts: last-write-wins**. When two devices edit the same note, the document with the most recent `updatedAt` wins. It's simpler than per-page merge and avoids unintentional content loss. The user can see all versions in Drive (☁️ menu → "View versions") and restore whichever they want.
 - **Backup encryption: AES-256-GCM + PBKDF2-HMAC-SHA256 (100k)** with `cryptography` (it replaced the original XOR). Format `[salt 16][nonce 12][ciphertext][tag 16]`, in `BackupCrypto`. The key is derived from the UTF-8 bytes of the password; decryption retries with `codeUnits` to open old backups.
-- **Selective sync**: `NotebookMeta.syncEnabled` (null = true by default for compatibility). Automatic backup only uploads notebooks with sync enabled.
+- **Selective sync**: `NotebookMeta.syncEnabled` (null = true by default for compatibility). Automatic backup only uploads notes from notebooks with sync enabled.
