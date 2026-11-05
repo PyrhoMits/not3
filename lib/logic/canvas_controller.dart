@@ -123,6 +123,12 @@ class CanvasController extends _CanvasCore
   List<Offset> _activeEraserPath = [];
   bool _isDrawing = false;
 
+  // A Huawei M-Pencil shortcut changes the selected tool persistently, but
+  // never in the middle of an input gesture. Two shortcuts received during
+  // the same gesture cancel each other.
+  bool _pendingHuaweiPenEraserToggle = false;
+  bool _huaweiEraserLatched = false;
+
   // In-progress stroke timing. [t] is stored in milliseconds relative to the
   // stroke start, as expected by the ink model. Prefer the monotonic pointer
   // event `timeStamp`, with the wall clock as a fallback.
@@ -552,6 +558,8 @@ class CanvasController extends _CanvasCore
 
   Stroke? get activeStroke => _activeStroke;
   bool get isDrawing => _isDrawing;
+  bool get huaweiEraserLatched => _huaweiEraserLatched;
+  bool get hasPendingHuaweiPenEraserToggle => _pendingHuaweiPenEraserToggle;
   List<Offset> get activeEraserPath => _activeEraserPath;
   String? get selectedImageId => _selectedImageId;
   bool get canUndo => _undoStack.canUndo;
@@ -589,7 +597,36 @@ class CanvasController extends _CanvasCore
 
   void setTool(ToolType tool) {
     if (_laserMode) setLaserEnabled(false);
+    _pendingHuaweiPenEraserToggle = false;
+    _huaweiEraserLatched = false;
     if (_tool == tool) return;
+    _setSelectedTool(tool);
+  }
+
+  /// Applies the MatePad 11 M-Pencil shortcut without touching document or
+  /// undo state. Other tools intentionally enter Eraser first, then Pen.
+  void toggleHuaweiPenEraser() {
+    if (_isDrawing || _lassoPath.isNotEmpty) {
+      _pendingHuaweiPenEraserToggle = !_pendingHuaweiPenEraserToggle;
+      return;
+    }
+    _applyHuaweiPenEraserToggle();
+  }
+
+  void _applyHuaweiPenEraserToggle() {
+    _pendingHuaweiPenEraserToggle = false;
+    final next = _tool == ToolType.eraser ? ToolType.pen : ToolType.eraser;
+    _huaweiEraserLatched = next == ToolType.eraser;
+    if (_laserMode) setLaserEnabled(false);
+    if (_tool == next) return;
+    _setSelectedTool(next);
+  }
+
+  void _applyPendingHuaweiPenEraserToggle() {
+    if (_pendingHuaweiPenEraserToggle) _applyHuaweiPenEraserToggle();
+  }
+
+  void _setSelectedTool(ToolType tool) {
     _tool = tool;
     _selectedImageId = null;
     _notifyToolContext();
@@ -1218,6 +1255,7 @@ class CanvasController extends _CanvasCore
   void endStroke() {
     if (_lassoPath.isNotEmpty) {
       endLasso();
+      _applyPendingHuaweiPenEraserToggle();
       return;
     }
     if (!_isDrawing) return;
@@ -1227,6 +1265,7 @@ class CanvasController extends _CanvasCore
     _resetHold();
     _resetStrokeTiming();
     if (_laserMode && _activeStroke == null && _activeEraserPath.isEmpty) {
+      _applyPendingHuaweiPenEraserToggle();
       _notifyActiveOverlay();
       notifyListeners(); // la estela se desvanece sola
       return;
@@ -1276,6 +1315,7 @@ class CanvasController extends _CanvasCore
     } else if (eraserPath.isNotEmpty) {
       _commitEraser();
     }
+    _applyPendingHuaweiPenEraserToggle();
     _notifyActiveOverlay();
     _touch();
   }
@@ -1370,6 +1410,7 @@ class CanvasController extends _CanvasCore
         ..addAll(eraserBefore);
       _touchLive();
     }
+    _applyPendingHuaweiPenEraserToggle();
     _notifyActiveOverlay();
     notifyListeners();
   }

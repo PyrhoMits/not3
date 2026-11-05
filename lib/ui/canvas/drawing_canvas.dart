@@ -13,6 +13,7 @@ import '../../logic/editor_performance_recorder.dart';
 import '../../logic/palm_rejection.dart';
 import '../../logic/shape_detector.dart';
 import '../../logic/snap_guides.dart';
+import '../../logic/stylus_input.dart';
 import '../../logic/stroke_engine.dart';
 import '../../models/image_item.dart';
 import '../../models/page.dart';
@@ -1100,16 +1101,8 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
         _rejectPalmInProgress();
       }
       _drawingPointer = event.pointer;
-      // Goma física del lápiz (invertedStylus) o botón lateral del S-Pen
-      // pulsado = borrador para este trazo.
-      final eraserButton =
-          kind == PointerDeviceKind.invertedStylus ||
-          (kind == PointerDeviceKind.stylus &&
-              // Algunos lápices (p. ej. el de la Lenovo) reportan el botón
-              // lateral como primario y otras veces como secundario.
-              (event.buttons &
-                      (kPrimaryStylusButton | kSecondaryStylusButton)) !=
-                  0);
+      // A physical eraser end or held button affects this contact only.
+      final eraserButton = isPhysicalStylusEraser(kind, event.buttons);
       if (eraserButton) {
         c.beginStroke(
           world,

@@ -74,6 +74,76 @@ void main() {
     });
   });
 
+  group('Huawei M-Pencil Pen/Eraser toggle', () {
+    test(
+      'toggles Pen and Eraser without changing tool settings or history',
+      () {
+        c
+          ..setTool(ToolType.pen)
+          ..setColor(const Color(0xFF123456))
+          ..setToolSize(7);
+        final contentVersion = c.contentVersion;
+
+        c.toggleHuaweiPenEraser();
+        expect(c.tool, ToolType.eraser);
+        expect(c.huaweiEraserLatched, isTrue);
+        c.setToolSize(42);
+
+        c.toggleHuaweiPenEraser();
+        expect(c.tool, ToolType.pen);
+        expect(c.huaweiEraserLatched, isFalse);
+        expect(c.color, const Color(0xFF123456));
+        expect(c.toolSize, 7);
+        c.setTool(ToolType.eraser);
+        expect(c.toolSize, 42);
+        expect(c.canUndo, isFalse);
+        expect(c.contentVersion, contentVersion);
+      },
+    );
+
+    test('another tool enters Eraser first and then returns to Pen', () {
+      c.setTool(ToolType.highlighter);
+      c.toggleHuaweiPenEraser();
+      expect(c.tool, ToolType.eraser);
+      c.toggleHuaweiPenEraser();
+      expect(c.tool, ToolType.pen);
+    });
+
+    test('active stroke queues one toggle until completion', () {
+      c.beginStroke(Offset.zero, 0.5, tool: ToolType.pen);
+      c.toggleHuaweiPenEraser();
+      expect(c.tool, ToolType.pen);
+      expect(c.hasPendingHuaweiPenEraserToggle, isTrue);
+      c.addStrokePoint(const Offset(20, 0), 0.5);
+      c.endStroke();
+
+      expect(c.page.strokes, hasLength(1));
+      expect(c.page.strokes.single.tool, ToolType.pen);
+      expect(c.tool, ToolType.eraser);
+      expect(c.hasPendingHuaweiPenEraserToggle, isFalse);
+    });
+
+    test('two queued toggles cancel and cancellation applies one toggle', () {
+      c.beginStroke(Offset.zero, 0.5, tool: ToolType.pen);
+      c.toggleHuaweiPenEraser();
+      c.toggleHuaweiPenEraser();
+      c.cancelStroke();
+      expect(c.tool, ToolType.pen);
+
+      c.beginStroke(Offset.zero, 0.5, tool: ToolType.pen);
+      c.toggleHuaweiPenEraser();
+      c.cancelStroke();
+      expect(c.tool, ToolType.eraser);
+    });
+
+    test('explicit toolbar selection clears the Huawei latch', () {
+      c.toggleHuaweiPenEraser();
+      expect(c.huaweiEraserLatched, isTrue);
+      c.setTool(ToolType.eraser);
+      expect(c.huaweiEraserLatched, isFalse);
+    });
+  });
+
   group('granular performance notifications', () {
     test('active points only invalidate the active overlay until commit', () {
       var active = 0;

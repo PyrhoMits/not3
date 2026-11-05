@@ -9,6 +9,7 @@ import '../../constants.dart';
 import '../../l10n/l10n.dart';
 import '../../logic/canvas_controller.dart';
 import '../../logic/palm_rejection.dart';
+import '../../logic/stylus_input.dart';
 import '../../models/stroke.dart';
 import '../theme/inklus_colors.dart';
 import '../theme/tokens.dart';
@@ -249,11 +250,7 @@ class _ZoomWritingBoardState extends State<_ZoomWritingBoard> {
       }
     }
 
-    final physicalEraser =
-        kind == PointerDeviceKind.invertedStylus ||
-        (kind == PointerDeviceKind.stylus &&
-            (event.buttons & (kPrimaryStylusButton | kSecondaryStylusButton)) !=
-                0);
+    final physicalEraser = isPhysicalStylusEraser(kind, event.buttons);
     final tool = physicalEraser ? ToolType.eraser : widget.controller.tool;
     if (!_supportsWriting(tool)) return;
 

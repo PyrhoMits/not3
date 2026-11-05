@@ -23,6 +23,7 @@ import '../services/ocr_language.dart';
 import '../services/ocr_correction_store.dart';
 import '../services/ocr_service.dart';
 import '../services/pdf_import_coordinator.dart';
+import '../services/huawei_stylus_shortcut_service.dart';
 import '../models/page.dart' as model show Page;
 import '../services/image_service.dart';
 import '../services/import_service.dart';
@@ -98,6 +99,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late final SearchService _search;
   final VersionHistoryService _versions = VersionHistoryService();
   late final CanvasController _controller;
+  final HuaweiStylusShortcutService _stylusShortcuts =
+      HuaweiStylusShortcutService.instance;
+  StreamSubscription<HuaweiStylusShortcut>? _stylusShortcutSubscription;
 
   /// Plumas favoritas (color y grosor propios por pluma, persistentes).
   final PenPresetsController _presets = PenPresetsController();
@@ -187,6 +191,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       initial: widget.note,
       notebookId: widget.notebookId,
     );
+    _stylusShortcutSubscription = _stylusShortcuts.events.listen((shortcut) {
+      if (shortcut == HuaweiStylusShortcut.togglePenEraser) {
+        _controller.toggleHuaweiPenEraser();
+      }
+    });
+    unawaited(_stylusShortcuts.start());
     // Replica automática a Drive en cada guardado local (solo si hay sesión
     // y el scope ya está autorizado; nunca muestra UI).
     // A8: ahora se sincroniza cada Note individualmente (no el Document).
@@ -1300,6 +1310,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// guardar ya lo que quede del debounce.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    unawaited(
+      _stylusShortcuts.setAppActive(state == AppLifecycleState.resumed),
+    );
     if (state != AppLifecycleState.resumed) unawaited(_controller.flush());
   }
 
@@ -1320,6 +1333,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _syncService.onSyncComplete = null;
     }
     _controller.bottomBarContextNotifier.removeListener(_syncPresets);
+    unawaited(_stylusShortcutSubscription?.cancel());
+    unawaited(_stylusShortcuts.stop());
     _presets.dispose();
     // dispose() del controlador guarda lo pendiente si _goBack no lo hizo.
     _controller.dispose();
