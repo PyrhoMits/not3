@@ -10,7 +10,9 @@ import 'package:flutter/services.dart';
 import '../../constants.dart';
 import '../../logic/canvas_controller.dart';
 import '../../logic/editor_performance_recorder.dart';
+import '../../logic/lasso.dart';
 import '../../logic/palm_rejection.dart';
+import '../../logic/shape_detector.dart';
 import '../../logic/snap_guides.dart';
 import '../../logic/stroke_engine.dart';
 import '../../models/image_item.dart';
@@ -353,6 +355,8 @@ class ActiveLayerPainter extends CustomPainter {
       canvas.drawPath(path, _lassoPaint);
     }
 
+    _paintShapeEditing(canvas, controller, scale);
+
     // Selección del lazo: trazos resaltados + recuadro de toda la selección
     // (también imágenes y cajas de texto).
     final selectedStrokes = controller.selectedStrokes;
@@ -483,6 +487,103 @@ class ActiveLayerPainter extends CustomPainter {
   static final Paint _laserCore = Paint()
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round;
+
+  static void _paintShapeEditing(
+    Canvas canvas,
+    CanvasController controller,
+    double scale,
+  ) {
+    final stroke = controller.activeShapeEditStroke;
+    final handles = controller.shapeEditingHandles;
+    if (stroke == null || handles == null) return;
+    final fill = Paint()..color = kAccentColor;
+    final ring = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2 / scale
+      ..color = Colors.white;
+    final guide = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5 / scale
+      ..color = kAccentColor.withValues(alpha: 0.8);
+
+    final bounds = polygonBounds(handles.anchors);
+    canvas.drawLine(bounds.topCenter, handles.rotate, guide);
+    for (final anchor in handles.anchors) {
+      canvas.drawCircle(anchor, handles.radius, fill);
+      canvas.drawCircle(anchor, handles.radius, ring);
+    }
+    canvas.drawCircle(handles.rotate, handles.radius, fill);
+    canvas.drawCircle(handles.rotate, handles.radius, ring);
+
+    final polygon =
+        stroke.shapeType == ShapeType.rectangle.name ||
+        stroke.shapeType == ShapeType.triangle.name;
+    if (polygon) {
+      final angles = ShapeDetector.polygonAngles(handles.anchors);
+      final center =
+          handles.anchors.fold<Offset>(
+            Offset.zero,
+            (sum, anchor) => sum + anchor,
+          ) /
+          handles.anchors.length.toDouble();
+      for (var i = 0; i < handles.anchors.length; i++) {
+        final fromCenter = handles.anchors[i] - center;
+        final direction = fromCenter.distance == 0
+            ? const Offset(0, -1)
+            : fromCenter / fromCenter.distance;
+        _drawShapeLabel(
+          canvas,
+          '${(angles[i] * 180 / pi).round()}°',
+          handles.anchors[i] + direction * (22 / scale),
+          scale,
+        );
+      }
+    }
+
+    final rotation = controller.shapeRotationDelta;
+    if (rotation != null) {
+      final degrees = (rotation * 180 / pi).round();
+      _drawShapeLabel(
+        canvas,
+        '${degrees >= 0 ? '+' : ''}$degrees°',
+        handles.rotate + Offset(0, -24 / scale),
+        scale,
+      );
+    }
+  }
+
+  static void _drawShapeLabel(
+    Canvas canvas,
+    String text,
+    Offset center,
+    double scale,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 12 / scale,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final padding = 4 / scale;
+    final rect = Rect.fromCenter(
+      center: center,
+      width: painter.width + padding * 2,
+      height: painter.height + padding,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, Radius.circular(4 / scale)),
+      Paint()..color = const Color(0xCC263238),
+    );
+    painter.paint(
+      canvas,
+      Offset(center.dx - painter.width / 2, center.dy - painter.height / 2),
+    );
+  }
 
   /// Dibuja la estela del láser: cada segmento con opacidad según su edad.
   static void _paintLaser(Canvas canvas, CanvasController c, double scale) {
@@ -630,6 +731,7 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
 
   // ---- Mover trazos seleccionados (herramienta select) ----
   bool _movingStrokes = false;
+  bool _editingShape = false;
   Offset _strokeMoveStartWorld = Offset.zero;
   List<Stroke> _strokesBeforeMove = [];
 
@@ -852,6 +954,8 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
           tool: ToolType.eraser,
           timeStamp: event.timeStamp,
         );
+      } else if (c.beginShapeEditGesture(world)) {
+        _editingShape = true;
       } else if (c.tool == ToolType.select) {
         _handleSelectDown(event.localPosition, world, event.pointer);
       } else {
@@ -890,9 +994,17 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
         c.cancelStroke();
         _drawingPointer = null;
       }
+      if (_editingShape) {
+        c.cancelShapeEditGesture();
+        _editingShape = false;
+        _drawingPointer = null;
+      }
       return;
     }
-    if (c.tool == ToolType.select) {
+    if (c.beginShapeEditGesture(world)) {
+      _drawingPointer = event.pointer;
+      _editingShape = true;
+    } else if (c.tool == ToolType.select) {
       _handleSelectDown(event.localPosition, world, event.pointer);
     } else if (c.fingerDrawingEnabled || c.tool == ToolType.text) {
       // (la herramienta de texto responde al dedo aunque sea "solo lápiz")
@@ -912,7 +1024,12 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
   void _rejectPalmInProgress() {
     final c = widget.controller;
     if (_drawingPointer != null && _touchPointers.contains(_drawingPointer)) {
-      c.cancelStroke();
+      if (_editingShape) {
+        c.cancelShapeEditGesture();
+        _editingShape = false;
+      } else {
+        c.cancelStroke();
+      }
       _drawingPointer = null;
     }
     if (_transforming) {
@@ -933,6 +1050,7 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       _movingImage ||
       _resizingImage ||
       _rotatingImage ||
+      _editingShape ||
       _movingStrokes ||
       _scalingSelection ||
       _rotatingSelection;
@@ -950,6 +1068,14 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       return;
     }
     if (event.pointer != _drawingPointer) return;
+    if (_editingShape) {
+      final world = widget.controller.viewportToWorld(
+        event.localPosition,
+        _viewport,
+      );
+      widget.controller.updateShapeEditGesture(world);
+      return;
+    }
     if (_selectGestureActive) {
       _handleSelectMove(event.localPosition);
       return;
@@ -1005,6 +1131,12 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     if (event.pointer != _drawingPointer) return;
     _drawingPointer = null;
 
+    if (_editingShape) {
+      widget.controller.endShapeEditGesture();
+      _editingShape = false;
+      return;
+    }
+
     if (_scalingSelection || _rotatingSelection) {
       widget.controller.commitTransformSelection(_transformStrokesBefore);
       _scalingSelection = false;
@@ -1037,6 +1169,12 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     }
     _touchPointers.remove(event.pointer);
     if (event.pointer != _drawingPointer) return;
+    if (_editingShape) {
+      widget.controller.cancelShapeEditGesture();
+      _editingShape = false;
+      _drawingPointer = null;
+      return;
+    }
     if (_movingStrokes) {
       _cancelStrokeMove();
       return;
@@ -1063,11 +1201,13 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
   /// En modo solo lápiz, un dedo desplaza la página (como GoodNotes).
   bool get _oneFingerPans =>
       !widget.controller.fingerDrawingEnabled &&
+      !widget.controller.isShapeEditGestureActive &&
       widget.controller.tool != ToolType.select;
 
   bool get _gestureBlocked =>
       _palm.stylusDown ||
       _rejectedPointers.isNotEmpty ||
+      widget.controller.isShapeEditGestureActive ||
       _rulerPointers.isNotEmpty;
 
   // -------------------------------------------------------------------------
@@ -1180,6 +1320,16 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     final selectedId = controller.selectedImageId;
     final selectedStrokes = controller.selectedStrokes;
     final handleWorld = 30 / controller.scale;
+
+    if (controller.selectShapeAt(world)) {
+      controller.selectImage(null);
+      controller.clearLassoSelection();
+    }
+    if (controller.activeShapeEditStroke != null &&
+        controller.beginShapeEditGesture(world)) {
+      _editingShape = true;
+      return;
+    }
 
     // 0) ¿Hay selección del lazo? Detectar asas o mover.
     if (controller.hasLassoSelection && selectedId == null) {

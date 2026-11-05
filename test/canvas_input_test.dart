@@ -263,6 +263,18 @@ void main() {
     await pen.up();
     await tester.pump();
     expect(c.page.strokes.single.shapeType, 'line');
+    expect(c.activeShapeEditStroke, same(c.page.strokes.single));
+    expect(c.shapeEditingHandles?.anchors, hasLength(2));
+
+    final outside = await tester.startGesture(
+      const Offset(700, 500),
+      kind: PointerDeviceKind.stylus,
+      pointer: 24,
+    );
+    await outside.up();
+    await tester.pump();
+    expect(c.activeShapeEditStroke, isNull);
+    expect(c.page.strokes, hasLength(1));
     await finish(tester);
   });
 
@@ -299,6 +311,32 @@ void main() {
       pointer: 21,
     );
     expect(c.page.strokes.single.shapeType, isNull);
+    await finish(tester);
+  });
+
+  testWidgets('shape editing controls paint in light and dark themes', (
+    tester,
+  ) async {
+    c.setShapeDetection(true);
+    c.beginStroke(Offset.zero, 0.5, tool: ToolType.pen);
+    for (var x = 10.0; x <= 200; x += 10) {
+      c.addStrokePoint(Offset(x, 0), 0.5);
+    }
+    c.endStroke();
+    expect(c.activeShapeEditStroke, isNotNull);
+
+    for (final brightness in [Brightness.light, Brightness.dark]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: brightness),
+          home: Scaffold(
+            body: DrawingCanvas(controller: c, imageService: ImageService()),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    }
     await finish(tester);
   });
 

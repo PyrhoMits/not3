@@ -46,28 +46,29 @@ void main() {
 
   List<String> ids() => c.page.strokes.map((s) => s.id).toList();
 
-  group('Borrador temporal', () {
+  group('eraser tool persistence', () {
     void erase() {
       c.beginStroke(const Offset(0, 0), 0.5, tool: ToolType.eraser);
       c.addStrokePoint(const Offset(50, 0), 0.5);
       c.endStroke();
     }
 
-    test('vuelve a la herramienta anterior tras borrar', () {
-      c.setTool(ToolType.highlighter);
+    test('toolbar eraser stays selected across consecutive gestures', () {
       c.setTool(ToolType.eraser);
       erase();
-      expect(c.tool, ToolType.highlighter);
-    });
-
-    test('se queda si el ajuste está apagado', () {
-      c.setEraserAutoRevert(false);
-      c.setTool(ToolType.eraser);
+      expect(c.tool, ToolType.eraser);
       erase();
       expect(c.tool, ToolType.eraser);
     });
 
-    test('la goma física no cambia la herramienta', () {
+    test('explicitly selecting another tool exits eraser mode', () {
+      c.setTool(ToolType.eraser);
+      erase();
+      c.setTool(ToolType.highlighter);
+      expect(c.tool, ToolType.highlighter);
+    });
+
+    test('physical stylus eraser does not change the toolbar tool', () {
       erase();
       expect(c.tool, ToolType.pen);
     });

@@ -9,8 +9,9 @@ import '../utils/geometry_utils.dart';
 class DetectedShape {
   final ShapeType type;
   final List<StrokePoint> normalizedPoints;
+  final List<Offset> anchors;
 
-  const DetectedShape(this.type, this.normalizedPoints);
+  const DetectedShape(this.type, this.normalizedPoints, this.anchors);
 }
 
 enum ShapeType { line, rectangle, circle, arrow, triangle }
@@ -36,7 +37,10 @@ class ShapeDetector {
   /// Con [lineOnly] (resaltador) solo se reconocen rectas: el marcador se
   /// usa para subrayar/resaltar renglones, no para dibujar figuras, y sale
   /// más tembloroso (trazo ancho), así que la tolerancia es mayor.
-  static DetectedShape? detect(List<StrokePoint> points, {bool lineOnly = false}) {
+  static DetectedShape? detect(
+    List<StrokePoint> points, {
+    bool lineOnly = false,
+  }) {
     if (points.length < _minPoints) return null;
 
     final first = points.first.offset;
@@ -44,7 +48,13 @@ class ShapeDetector {
     final totalLength = pathLength(points);
 
     // ¿Es una línea recta o flecha?
-    final lineResult = _detectLine(points, first, last, totalLength, lineOnly: lineOnly);
+    final lineResult = _detectLine(
+      points,
+      first,
+      last,
+      totalLength,
+      lineOnly: lineOnly,
+    );
     if (lineResult != null || lineOnly) return lineResult;
 
     // ¿Es un rectángulo?
@@ -62,10 +72,107 @@ class ShapeDetector {
     return null;
   }
 
+  /// Rebuilds the sampled render path from ordered semantic [anchors].
+  static List<StrokePoint> pointsFromAnchors(
+    ShapeType type,
+    List<Offset> anchors,
+  ) {
+    switch (type) {
+      case ShapeType.line:
+      case ShapeType.arrow:
+        if (anchors.length != 2) return const [];
+        return [
+          StrokePoint.fromOffset(anchors[0], 0.5),
+          StrokePoint.fromOffset(anchors[1], 0.5),
+        ];
+      case ShapeType.rectangle:
+        return anchors.length == 4 ? _closedPolygon(anchors) : const [];
+      case ShapeType.triangle:
+        return anchors.length == 3 ? _closedPolygon(anchors) : const [];
+      case ShapeType.circle:
+        if (anchors.length != 4) return const [];
+        final center = (anchors[0] + anchors[1] + anchors[2] + anchors[3]) / 4;
+        final horizontal = (anchors[0] - anchors[2]) / 2;
+        final vertical = (anchors[1] - anchors[3]) / 2;
+        return [
+          for (var i = 0; i <= 72; i++)
+            StrokePoint.fromOffset(
+              center +
+                  horizontal * cos(i / 72 * 2 * pi) +
+                  vertical * sin(i / 72 * 2 * pi),
+              0.5,
+            ),
+        ];
+    }
+  }
+
+  /// Derives editable anchors for a legacy recognized stroke.
+  static List<Offset>? deriveAnchors(Stroke stroke) {
+    final type = ShapeType.values.where(
+      (value) => value.name == stroke.shapeType,
+    );
+    if (type.isEmpty || stroke.points.length < 2) return null;
+    switch (type.first) {
+      case ShapeType.line:
+      case ShapeType.arrow:
+        return [stroke.points.first.offset, stroke.points.last.offset];
+      case ShapeType.rectangle:
+        return _samplePolygonAnchors(stroke.points, 4);
+      case ShapeType.triangle:
+        return _samplePolygonAnchors(stroke.points, 3);
+      case ShapeType.circle:
+        final last = stroke.points.length - 1;
+        if (last < 4) return null;
+        return [
+          stroke.points[0].offset,
+          stroke.points[(last / 4).round()].offset,
+          stroke.points[(last / 2).round()].offset,
+          stroke.points[(last * 3 / 4).round()].offset,
+        ];
+    }
+  }
+
+  static List<Offset>? _samplePolygonAnchors(
+    List<StrokePoint> points,
+    int count,
+  ) {
+    final sampledLength = points.length - 1;
+    if (sampledLength < count) return null;
+    return [
+      for (var i = 0; i < count; i++)
+        points[(sampledLength * i / count).round()].offset,
+    ];
+  }
+
+  /// Internal angles for an ordered polygon, in radians.
+  static List<double> polygonAngles(List<Offset> vertices) {
+    if (vertices.length < 3) return const [];
+    return [
+      for (var i = 0; i < vertices.length; i++)
+        _internalAngle(
+          vertices[(i - 1 + vertices.length) % vertices.length],
+          vertices[i],
+          vertices[(i + 1) % vertices.length],
+        ),
+    ];
+  }
+
+  static double _internalAngle(Offset previous, Offset vertex, Offset next) {
+    final a = previous - vertex;
+    final b = next - vertex;
+    if (a.distance == 0 || b.distance == 0) return 0;
+    final cosine = ((a.dx * b.dx + a.dy * b.dy) / (a.distance * b.distance))
+        .clamp(-1.0, 1.0);
+    return acos(cosine);
+  }
+
   /// Polígono cerrado con lados densificados: [perfect_freehand] necesita
   /// varios puntos por lado para que las esquinas salgan nítidas y el
   /// grosor sea uniforme (con solo los vértices, redondea y deforma).
-  static List<StrokePoint> _closedPolygon(List<Offset> vertices, {int perSide = 12}) {
+  static List<StrokePoint> _closedPolygon(
+    List<Offset> vertices, {
+    int perSide = 12,
+  }) {
     final out = <StrokePoint>[];
     for (var i = 0; i < vertices.length; i++) {
       final a = vertices[i];
@@ -83,7 +190,10 @@ class ShapeDetector {
       (points.first.offset - points.last.offset).distance < totalLength * 0.15;
 
   /// Detecta un triángulo: trazo cerrado con exactamente 3 esquinas.
-  static DetectedShape? _detectTriangle(List<StrokePoint> points, double totalLength) {
+  static DetectedShape? _detectTriangle(
+    List<StrokePoint> points,
+    double totalLength,
+  ) {
     if (points.length < 15 || !_isClosed(points, totalLength)) return null;
     final rect = boundingBoxFromPoints(points);
     if (rect.shortestSide < 30) return null;
@@ -97,11 +207,16 @@ class ShapeDetector {
     }
     if (merged.length != 3) return null;
     // Los lados deben ser rectos: la longitud dibujada ≈ perímetro.
-    final perimeter = (merged[0] - merged[1]).distance +
+    final perimeter =
+        (merged[0] - merged[1]).distance +
         (merged[1] - merged[2]).distance +
         (merged[2] - merged[0]).distance;
     if (totalLength > perimeter * 1.25) return null;
-    return DetectedShape(ShapeType.triangle, _closedPolygon(merged));
+    return DetectedShape(
+      ShapeType.triangle,
+      _closedPolygon(merged),
+      List<Offset>.unmodifiable(merged),
+    );
   }
 
   /// Detecta si el trazo es una línea recta o una flecha.
@@ -150,10 +265,8 @@ class ShapeDetector {
       }
     }
 
-    return DetectedShape(
-      type,
-      [StrokePoint.fromOffset(first, 0.5), StrokePoint.fromOffset(end, 0.5)],
-    );
+    final anchors = [first, end];
+    return DetectedShape(type, pointsFromAnchors(type, anchors), anchors);
   }
 
   /// Detecta si hay una cabeza de flecha al final del trazo.
@@ -207,14 +320,26 @@ class ShapeDetector {
     // inicio del trazo, que _findCorners no ve): con 3 de 4 un triángulo
     // rectángulo se confundía con un rectángulo.
     final candidates = [points.first.offset, ...corners];
-    final matched = cornersExpected.where((expected) => candidates
-        .any((c) => (c - expected).distance < rect.shortestSide * 0.2)).length;
+    final matched = cornersExpected
+        .where(
+          (expected) => candidates.any(
+            (c) => (c - expected).distance < rect.shortestSide * 0.2,
+          ),
+        )
+        .length;
 
     if (matched == 4) {
       // Cerrado y con lados densificados (antes faltaba el cuarto lado).
+      final anchors = [
+        rect.topLeft,
+        rect.topRight,
+        rect.bottomRight,
+        rect.bottomLeft,
+      ];
       return DetectedShape(
         ShapeType.rectangle,
-        _closedPolygon([rect.topLeft, rect.topRight, rect.bottomRight, rect.bottomLeft]),
+        _closedPolygon(anchors),
+        anchors,
       );
     }
     return null;
@@ -246,14 +371,19 @@ class ShapeDetector {
       // Casi redonda → círculo perfecto; si no, elipse del tamaño dibujado.
       final round = (rx - ry).abs() < max(rx, ry) * 0.12;
       final r = (rx + ry) / 2;
-      final ellipsePoints = <StrokePoint>[];
-      for (var i = 0; i <= 72; i++) {
-        final angle = (i / 72) * 2 * pi;
-        final p = center +
-            Offset(cos(angle) * (round ? r : rx), sin(angle) * (round ? r : ry));
-        ellipsePoints.add(StrokePoint.fromOffset(p, 0.5));
-      }
-      return DetectedShape(ShapeType.circle, ellipsePoints);
+      final width = round ? r : rx;
+      final height = round ? r : ry;
+      final anchors = [
+        center + Offset(width, 0),
+        center + Offset(0, height),
+        center - Offset(width, 0),
+        center - Offset(0, height),
+      ];
+      return DetectedShape(
+        ShapeType.circle,
+        pointsFromAnchors(ShapeType.circle, anchors),
+        anchors,
+      );
     }
     return null;
   }

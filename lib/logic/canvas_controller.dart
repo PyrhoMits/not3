@@ -30,6 +30,7 @@ import 'undo_stack.dart';
 
 part 'canvas_layers.dart';
 part 'canvas_selection.dart';
+part 'canvas_shape_editing.dart';
 part 'canvas_view.dart';
 
 /// Controlador central del lienzo.
@@ -90,7 +91,7 @@ class CanvasPageChange {
 enum ControllerNotice { stylusDetected, pageDeleted }
 
 class CanvasController extends _CanvasCore
-    with _CanvasLayers, _CanvasView, _CanvasSelection {
+    with _CanvasLayers, _CanvasView, _CanvasSelection, _CanvasShapeEditing {
   final StorageService _storage;
 
   // ignore: prefer_final_fields (se reemplaza al restaurar desde la nube)
@@ -429,17 +430,11 @@ class CanvasController extends _CanvasCore
   bool get continuousScroll => _continuousScroll;
 
   static const _prefTwoFingerUndo = 'two_finger_undo';
-  static const _prefEraserAutoRevert = 'eraser_auto_revert';
   bool _twoFingerUndo = false;
-  bool _eraserAutoRevert = true;
-  ToolType _toolBeforeEraser = ToolType.pen;
 
   /// Toque rápido con dos dedos = deshacer (apagado por defecto: al
   /// desplazar la página borraba el último trazo).
   bool get twoFingerUndo => _twoFingerUndo;
-
-  /// Tras un trazo de borrador se vuelve a la herramienta anterior.
-  bool get eraserAutoRevert => _eraserAutoRevert;
 
   void setTwoFingerUndo(bool value) {
     if (value == _twoFingerUndo) return;
@@ -447,15 +442,6 @@ class CanvasController extends _CanvasCore
     notifyListeners();
     SharedPreferences.getInstance()
         .then((p) => p.setBool(_prefTwoFingerUndo, value))
-        .catchError((_) => false);
-  }
-
-  void setEraserAutoRevert(bool value) {
-    if (value == _eraserAutoRevert) return;
-    _eraserAutoRevert = value;
-    notifyListeners();
-    SharedPreferences.getInstance()
-        .then((p) => p.setBool(_prefEraserAutoRevert, value))
         .catchError((_) => false);
   }
 
@@ -597,7 +583,6 @@ class CanvasController extends _CanvasCore
 
   void setTool(ToolType tool) {
     if (_tool == tool) return;
-    if (tool == ToolType.eraser) _toolBeforeEraser = _tool;
     _tool = tool;
     _selectedImageId = null;
     _notifyToolContext();
@@ -679,7 +664,6 @@ class CanvasController extends _CanvasCore
       _fingerDrawingUserSet = prefs.getBool(_prefFingerDrawingUserSet) ?? false;
       _continuousScroll = prefs.getBool(_prefContinuousScroll) ?? true;
       _twoFingerUndo = prefs.getBool(_prefTwoFingerUndo) ?? false;
-      _eraserAutoRevert = prefs.getBool(_prefEraserAutoRevert) ?? true;
       final savedLassoFilter = prefs.getString(_prefLassoSelectionFilter);
       if (savedLassoFilter != null) {
         try {
@@ -727,6 +711,7 @@ class CanvasController extends _CanvasCore
   Timer? _holdTimer;
   Offset? _holdAnchor;
   String? _heldShapeType; // figura aplicada al mantener (trazo en curso)
+  List<Offset>? _heldShapeAnchors;
 
   /// Tiempo quieto al final del trazo para enderezar la figura.
   static const holdToShapeDelay = Duration(milliseconds: 900);
@@ -760,6 +745,7 @@ class CanvasController extends _CanvasCore
       ..clear()
       ..addAll(shape.normalizedPoints);
     _heldShapeType = shape.type.name;
+    _heldShapeAnchors = shape.anchors;
     if (_hapticEnabled) HapticFeedback.lightImpact();
     _notifyActiveOverlay();
     notifyListeners();
@@ -770,6 +756,7 @@ class CanvasController extends _CanvasCore
     _holdTimer = null;
     _holdAnchor = null;
     _heldShapeType = null;
+    _heldShapeAnchors = null;
   }
 
   // ---- Puntero láser ----
@@ -1086,6 +1073,7 @@ class CanvasController extends _CanvasCore
     if (!_isDrawing) return;
     _isDrawing = false;
     final heldShape = _heldShapeType;
+    final heldShapeAnchors = _heldShapeAnchors;
     _resetHold();
     _resetStrokeTiming();
     if (_laserMode && _activeStroke == null && _activeEraserPath.isEmpty) {
@@ -1108,7 +1096,10 @@ class CanvasController extends _CanvasCore
       // Figuras: si ya se enderezó al mantener, solo se etiqueta; en modo
       // "siempre" se detecta ahora al soltar.
       if (heldShape != null) {
-        finalStroke = finalStroke.copyWith(shapeType: heldShape);
+        finalStroke = finalStroke.copyWith(
+          shapeType: heldShape,
+          shapeAnchors: heldShapeAnchors,
+        );
       } else if (_shapeMode == ShapeMode.always &&
           active.tool != ToolType.eraser) {
         final shape = ShapeDetector.detect(
@@ -1120,6 +1111,7 @@ class CanvasController extends _CanvasCore
           finalStroke = finalStroke.copyWith(
             points: shape.normalizedPoints,
             shapeType: shape.type.name,
+            shapeAnchors: shape.anchors,
           );
         }
       }
@@ -1130,17 +1122,12 @@ class CanvasController extends _CanvasCore
           strokesAddedAt: [page.strokes.length - 1],
         ),
       );
+      if (finalStroke.shapeType != null) activateShapeEditing(finalStroke);
     } else if (eraserPath.isNotEmpty) {
       _commitEraser();
     }
     _notifyActiveOverlay();
     _touch();
-    // Borrador de la barra: tras el trazo se vuelve a la herramienta anterior.
-    if (_eraserAutoRevert &&
-        eraserPath.isNotEmpty &&
-        _tool == ToolType.eraser) {
-      setTool(_toolBeforeEraser);
-    }
   }
 
   /// Estado de los trazos al empezar el gesto del borrador (null = no borrando).
@@ -1183,6 +1170,7 @@ class CanvasController extends _CanvasCore
     page.strokes
       ..clear()
       ..addAll(after);
+    if (activeShapeEditStroke == null) clearShapeEditing();
     _touchLive();
   }
 
@@ -1317,6 +1305,7 @@ class CanvasController extends _CanvasCore
     _selectedImageId = null;
     _editingTextId = null;
     _editingTextBefore = null;
+    clearShapeEditing();
     _notifyActiveOverlay();
     _notifyTextEdit();
   }
@@ -1359,6 +1348,7 @@ class CanvasController extends _CanvasCore
   void _resetPageState() {
     _selectedImageId = null;
     _selectedStrokes = [];
+    clearShapeEditing();
     _clearItemSelection();
     _lassoPath = [];
     _editingTextId = null;
@@ -1430,6 +1420,7 @@ class CanvasController extends _CanvasCore
     _undoStack.push(action);
     _selectedImageId = null;
     _selectedStrokes = [];
+    clearShapeEditing();
     _editingTextId = null;
     _notifyActiveOverlay();
     _notifyTextEdit();

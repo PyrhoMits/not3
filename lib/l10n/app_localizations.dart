@@ -3808,12 +3808,6 @@ abstract class AppLocalizations {
   /// **'Undo with a two-finger tap'**
   String get menuTwoFingerUndo;
 
-  /// No description provided for @popEraserAutoRevert.
-  ///
-  /// In en, this message translates to:
-  /// **'Return to the previous tool after erasing'**
-  String get popEraserAutoRevert;
-
   /// No description provided for @saveFailed.
   ///
   /// In en, this message translates to:

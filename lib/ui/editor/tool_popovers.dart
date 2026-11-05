@@ -151,12 +151,6 @@ class EraserPopover extends StatelessWidget {
             EraserMode.stroke => context.l10n.popEraseStroke,
             EraserMode.highlighterOnly => context.l10n.popEraseHighlighter,
           }, style: context.text.bodySmall),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: canvas.eraserAutoRevert,
-            onChanged: canvas.setEraserAutoRevert,
-            title: Text(context.l10n.popEraserAutoRevert),
-          ),
           const SizedBox(height: Spacing.lg),
           _SectionTitle(context.l10n.popSize),
           SizePicker(canvas: canvas),

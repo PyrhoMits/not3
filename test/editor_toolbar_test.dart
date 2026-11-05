@@ -257,6 +257,27 @@ void main() {
     expect(tester.getSize(eraserPaint), const Size.square(Sizes.toolIcon));
   });
 
+  testWidgets('eraser options no longer offer automatic tool reversion', (
+    tester,
+  ) async {
+    await pumpToolbar(tester, width: 1280);
+
+    await tester.tap(find.byTooltip('Eraser'));
+    await tester.pump();
+    expect(canvas.tool, ToolType.eraser);
+
+    await tester.tap(find.byTooltip('Eraser'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Return to the previous tool after erasing'),
+      findsNothing,
+    );
+    expect(find.text('Partial'), findsOneWidget);
+    expect(find.text('Stroke'), findsOneWidget);
+    expect(find.text('Highlighter'), findsOneWidget);
+  });
+
   testWidgets('selected pen still opens its options popover', (tester) async {
     await pumpToolbar(tester, width: 1280);
 

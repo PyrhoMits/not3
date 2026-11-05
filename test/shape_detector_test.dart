@@ -13,7 +13,13 @@ List<StrokePoint> polygon(List<Offset> vertices, {int perSide = 20}) {
     final a = vertices[i], b = vertices[(i + 1) % vertices.length];
     for (var k = 0; k < perSide; k++) {
       final p = Offset.lerp(a, b, k / perSide)!;
-      pts.add(StrokePoint(p.dx + rnd.nextDouble() * 2, p.dy + rnd.nextDouble() * 2, 0.5));
+      pts.add(
+        StrokePoint(
+          p.dx + rnd.nextDouble() * 2,
+          p.dy + rnd.nextDouble() * 2,
+          0.5,
+        ),
+      );
     }
   }
   pts.add(StrokePoint(vertices.first.dx, vertices.first.dy, 0.5));
@@ -22,19 +28,34 @@ List<StrokePoint> polygon(List<Offset> vertices, {int perSide = 20}) {
 
 void main() {
   test('rectángulo: la figura queda CERRADA (4 lados)', () {
-    final shape = ShapeDetector.detect(polygon(const [
-      Offset(0, 0), Offset(300, 0), Offset(300, 200), Offset(0, 200),
-    ]));
+    final shape = ShapeDetector.detect(
+      polygon(const [
+        Offset(0, 0),
+        Offset(300, 0),
+        Offset(300, 200),
+        Offset(0, 200),
+      ]),
+    );
     expect(shape?.type, ShapeType.rectangle);
     final pts = shape!.normalizedPoints;
-    expect(pts.first.offset, pts.last.offset, reason: 'antes faltaba el 4º lado');
+    expect(
+      pts.first.offset,
+      pts.last.offset,
+      reason: 'antes faltaba el 4º lado',
+    );
     expect(pts.length, greaterThan(20), reason: 'lados densificados');
+    expect(shape.anchors, hasLength(4));
+    expect(shape.anchors.first, pts.first.offset);
   });
 
   test('óvalo alargado se mantiene como elipse (no círculo)', () {
     final pts = [
       for (var i = 0; i <= 60; i++)
-        StrokePoint(200 + cos(i / 60 * 2 * pi) * 200, 100 + sin(i / 60 * 2 * pi) * 80, 0.5),
+        StrokePoint(
+          200 + cos(i / 60 * 2 * pi) * 200,
+          100 + sin(i / 60 * 2 * pi) * 80,
+          0.5,
+        ),
     ];
     final shape = ShapeDetector.detect(pts);
     expect(shape?.type, ShapeType.circle);
@@ -46,11 +67,19 @@ void main() {
   });
 
   test('triángulo', () {
-    final shape = ShapeDetector.detect(polygon(const [
-      Offset(150, 0), Offset(300, 260), Offset(0, 260),
-    ], perSide: 25));
+    final shape = ShapeDetector.detect(
+      polygon(const [
+        Offset(150, 0),
+        Offset(300, 260),
+        Offset(0, 260),
+      ], perSide: 25),
+    );
     expect(shape?.type, ShapeType.triangle);
-    expect(shape!.normalizedPoints.first.offset, shape.normalizedPoints.last.offset);
+    expect(
+      shape!.normalizedPoints.first.offset,
+      shape.normalizedPoints.last.offset,
+    );
+    expect(shape.anchors, hasLength(3));
   });
 
   test('triángulo rectángulo NO se vuelve rectángulo', () {
@@ -59,7 +88,10 @@ void main() {
       [Offset(0, 0), Offset(300, 250), Offset(0, 250)],
       [Offset(300, 0), Offset(300, 250), Offset(0, 250)],
     ]) {
-      expect(ShapeDetector.detect(polygon(v, perSide: 25))?.type, ShapeType.triangle);
+      expect(
+        ShapeDetector.detect(polygon(v, perSide: 25))?.type,
+        ShapeType.triangle,
+      );
     }
   });
 
@@ -71,7 +103,9 @@ void main() {
     return [
       for (var i = 0; i <= 40; i++)
         StrokePoint.fromOffset(
-            to * (i / 40) + normal * (sin(i / 40 * 2 * pi) * wobble), 0.5),
+          to * (i / 40) + normal * (sin(i / 40 * 2 * pi) * wobble),
+          0.5,
+        ),
     ];
   }
 
@@ -82,13 +116,19 @@ void main() {
     final shape = ShapeDetector.detect(pts, lineOnly: true);
     expect(shape?.type, ShapeType.line);
     expect(shape!.normalizedPoints.length, 2);
-    expect(shape.normalizedPoints.last.y, shape.normalizedPoints.first.y,
-        reason: 'casi horizontal → horizontal exacta');
+    expect(
+      shape.normalizedPoints.last.y,
+      shape.normalizedPoints.first.y,
+      reason: 'casi horizontal → horizontal exacta',
+    );
   });
 
   test('resaltador: nunca devuelve figuras (solo rectas)', () {
     final pts = polygon(const [
-      Offset(0, 0), Offset(300, 0), Offset(300, 200), Offset(0, 200),
+      Offset(0, 0),
+      Offset(300, 0),
+      Offset(300, 200),
+      Offset(0, 200),
     ]);
     expect(ShapeDetector.detect(pts, lineOnly: true), isNull);
   });
@@ -99,5 +139,30 @@ void main() {
     final a = shape!.normalizedPoints.first, b = shape.normalizedPoints.last;
     expect((b.x - a.x).abs(), greaterThan(250));
     expect((b.y - a.y).abs(), greaterThan(250));
+    expect(shape.anchors, [a.offset, b.offset]);
+  });
+
+  test('ellipse anchors are ordered right, bottom, left, top', () {
+    final shape = ShapeDetector.detect([
+      for (var i = 0; i <= 72; i++)
+        StrokePoint.fromOffset(
+          Offset(
+            100 + cos(i / 72 * 2 * pi) * 80,
+            60 + sin(i / 72 * 2 * pi) * 40,
+          ),
+          0.5,
+        ),
+    ])!;
+
+    expect(shape.type, ShapeType.circle);
+    for (final pair in <(Offset, Offset)>[
+      (shape.anchors[0], const Offset(180, 60)),
+      (shape.anchors[1], const Offset(100, 100)),
+      (shape.anchors[2], const Offset(20, 60)),
+      (shape.anchors[3], const Offset(100, 20)),
+    ]) {
+      expect(pair.$1.dx, closeTo(pair.$2.dx, 1e-8));
+      expect(pair.$1.dy, closeTo(pair.$2.dy, 1e-8));
+    }
   });
 }
