@@ -52,7 +52,7 @@ void main() {
     expect(result.html, isNot(contains('target="_blank"')));
   });
 
-  test('accepts a decodable embedded raster image and makes it eager', () async {
+  test('reserves embedded image geometry and enables lazy decoding', () async {
     const png =
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk'
         '+A8AAQUBAScY42YAAAAASUVORK5CYII=';
@@ -60,7 +60,10 @@ void main() {
       '<html><body><img loading="lazy" src="data:image/png;base64,$png"></body></html>',
     );
 
-    expect(result.html, contains('loading="eager"'));
+    expect(result.html, contains('loading="lazy"'));
+    expect(result.html, contains('decoding="async"'));
+    expect(result.html, contains('width="1"'));
+    expect(result.html, contains('height="1"'));
   });
 
   test('rejects relative and remote embedded resources', () async {

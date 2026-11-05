@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../logic/canvas_controller.dart';
+import '../logic/html_stroke_index.dart';
 import '../logic/html_viewport_transform.dart';
 import '../logic/stylus_input.dart';
 import '../l10n/l10n.dart';
@@ -66,6 +67,8 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
   Offset? _scrollAnchor;
   double _scrollStartX = 0;
   double _scrollStartY = 0;
+  HtmlStrokeIndex? _strokeIndex;
+  int _strokeIndexVersion = -1;
 
   @override
   void initState() {
@@ -183,17 +186,42 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
     event.preventDefault();
     Not3Html.postMessage(JSON.stringify({type: 'link', href: href}));
   }, true);
-  const images = Array.from(document.images).map((image) =>
-    image.complete ? Promise.resolve() : new Promise((resolve) => {
-      image.addEventListener('load', resolve, {once: true});
-      image.addEventListener('error', resolve, {once: true});
-    })
-  );
+  const installSectionCulling = () => {
+    const originalHeight = height();
+    const candidates = Array.from(document.querySelectorAll('section, article'))
+      .filter((element) => {
+        const parent = element.parentElement;
+        return !parent || !parent.closest('section, article');
+      });
+    const applied = [];
+    for (const element of candidates) {
+      const measured = element.getBoundingClientRect().height;
+      if (!Number.isFinite(measured) || measured < 1) continue;
+      element.style.contentVisibility = 'auto';
+      element.style.containIntrinsicSize =
+        'auto ' + measured.toFixed(3) + 'px';
+      applied.push(element);
+    }
+    const optimizedHeight = height();
+    if (Math.abs(optimizedHeight - originalHeight) > 1) {
+      for (const element of applied) {
+        element.style.removeProperty('content-visibility');
+        element.style.removeProperty('contain-intrinsic-size');
+      }
+    }
+  };
   const fonts = document.fonts && document.fonts.ready
     ? document.fonts.ready.catch(() => {}) : Promise.resolve();
-  Promise.all([fonts, ...images]).then(() =>
-    requestAnimationFrame(() => requestAnimationFrame(() => report('ready')))
-  );
+  fonts.then(() => requestAnimationFrame(() => {
+    installSectionCulling();
+    requestAnimationFrame(() => report('ready'));
+  }));
+  if (window.ResizeObserver) {
+    window.__not3ResizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(() => report('resize'));
+    });
+    window.__not3ResizeObserver.observe(document.documentElement);
+  }
 })();
 ''');
   }
@@ -214,28 +242,30 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
           if (_canvas.page.strokes.isEmpty && measured > 0) {
             _canvas.setHtmlContentHeight(measured);
           }
-          setState(() {
-            _ready = true;
-            _scrollX = (message['x'] as num?)?.toDouble() ?? 0;
-            _scrollY = (message['y'] as num?)?.toDouble() ?? 0;
-            _visibleCssWidth =
-                (message['viewportWidth'] as num?)?.toDouble() ??
-                _visibleCssWidth;
-          });
+          _updateViewportFromMessage(message);
+          setState(() => _ready = true);
           _updateCanvasView();
         case 'scroll':
-          setState(() {
-            _scrollX = (message['x'] as num?)?.toDouble() ?? _scrollX;
-            _scrollY = (message['y'] as num?)?.toDouble() ?? _scrollY;
-            _visibleCssWidth =
-                (message['viewportWidth'] as num?)?.toDouble() ??
-                _visibleCssWidth;
-          });
+          _updateViewportFromMessage(message);
+          _updateCanvasView();
+        case 'resize':
+          final measured = (message['height'] as num?)?.toDouble() ?? 0;
+          if (_canvas.page.strokes.isEmpty && measured > 0) {
+            _canvas.setHtmlContentHeight(measured);
+          }
+          _updateViewportFromMessage(message);
           _updateCanvasView();
       }
     } catch (_) {
       // Ignore malformed messages from imported content.
     }
+  }
+
+  void _updateViewportFromMessage(Map<String, dynamic> message) {
+    _scrollX = (message['x'] as num?)?.toDouble() ?? _scrollX;
+    _scrollY = (message['y'] as num?)?.toDouble() ?? _scrollY;
+    _visibleCssWidth =
+        (message['viewportWidth'] as num?)?.toDouble() ?? _visibleCssWidth;
   }
 
   HtmlViewportTransform get _transform => HtmlViewportTransform(
@@ -322,7 +352,6 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
       if (web != null) {
         unawaited(web.runJavaScript('window.scrollTo($nextX, $nextY)'));
       }
-      setState(() {});
     }
   }
 
@@ -362,6 +391,15 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
     _movingSelection = false;
     _selectionStart = null;
     _selectionBefore = const [];
+  }
+
+  HtmlStrokeIndex get _currentStrokeIndex {
+    final version = _canvas.renderContentNotifier.value;
+    if (_strokeIndex == null || _strokeIndexVersion != version) {
+      _strokeIndex = HtmlStrokeIndex(_canvas.page.strokes);
+      _strokeIndexVersion = version;
+    }
+    return _strokeIndex!;
   }
 
   Future<void> _confirmExternalLink(Uri uri) async {
@@ -487,11 +525,20 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
           fit: StackFit.expand,
           children: [
             WebViewWidget(controller: web),
-            IgnorePointer(
-              child: ListenableBuilder(
-                listenable: _canvas.renderContentNotifier,
-                builder: (_, _) =>
-                    CustomPaint(painter: _HtmlCommittedInkPainter(_canvas)),
+            RepaintBoundary(
+              child: IgnorePointer(
+                child: ListenableBuilder(
+                  listenable: Listenable.merge([
+                    _canvas.renderContentNotifier,
+                    _canvas.viewportNotifier,
+                  ]),
+                  builder: (_, _) => CustomPaint(
+                    painter: _HtmlCommittedInkPainter(
+                      _canvas,
+                      _currentStrokeIndex,
+                    ),
+                  ),
+                ),
               ),
             ),
             if (!_readMode)
@@ -505,7 +552,10 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
                   fit: StackFit.expand,
                   children: [
                     ListenableBuilder(
-                      listenable: _canvas.activeOverlayNotifier,
+                      listenable: Listenable.merge([
+                        _canvas.activeOverlayNotifier,
+                        _canvas.viewportNotifier,
+                      ]),
                       builder: (_, _) => CustomPaint(
                         painter: ActiveLayerPainter(controller: _canvas),
                       ),
@@ -535,9 +585,10 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
 }
 
 class _HtmlCommittedInkPainter extends CustomPainter {
-  _HtmlCommittedInkPainter(this.canvas);
+  _HtmlCommittedInkPainter(this.canvas, this.index);
 
   final CanvasController canvas;
+  final HtmlStrokeIndex index;
 
   @override
   void paint(Canvas target, Size size) {
@@ -560,7 +611,7 @@ class _HtmlCommittedInkPainter extends CustomPainter {
           height: canvas.sheetSize.height,
         ),
       );
-    for (final stroke in canvas.page.strokes) {
+    for (final stroke in index.visible(visible)) {
       final layer = stroke.layerIndex < canvas.page.layers.length
           ? canvas.page.layers[stroke.layerIndex]
           : null;

@@ -65,6 +65,7 @@ class HtmlImportService {
   static const maximumBytes = 5 * 1024 * 1024;
   static const maximumMarkupMarkers = 50000;
   static const maximumImagePixels = 32 * 1000 * 1000;
+  static const maximumTotalImagePixels = 64 * 1000 * 1000;
   static const maximumImageAxis = 8192;
 
   bool get isSupported => Platform.isAndroid;
@@ -131,6 +132,7 @@ class HtmlImportService {
 
   Future<(String, bool)> _sanitize(String source) async {
     final document = html_parser.parse(source);
+    final imageBudget = _ImageBudget();
     final forbidden = <String>{
       'link',
       'script',
@@ -177,13 +179,7 @@ class HtmlImportService {
       }
 
       final style = element.attributes['style'];
-      if (style != null) await _validateCss(style);
-
-      if (element.localName == 'img') {
-        // The editor measures the final document only after every embedded
-        // image settles. Off-screen lazy images would otherwise never settle.
-        element.attributes['loading'] = 'eager';
-      }
+      if (style != null) await _validateCss(style, imageBudget);
 
       if (element.localName == 'a') {
         final href = element.attributes['href'];
@@ -214,7 +210,8 @@ class HtmlImportService {
         if (element.localName == 'img' &&
             attribute == 'src' &&
             value.startsWith('data:image/')) {
-          await _validateDataImage(value);
+          final dimensions = await _validateDataImage(value, imageBudget);
+          _prepareLazyImage(element, dimensions);
           continue;
         }
         throw HtmlImportException(
@@ -224,7 +221,7 @@ class HtmlImportService {
       }
     }
     for (final style in document.querySelectorAll('style')) {
-      await _validateCss(style.text);
+      await _validateCss(style.text, imageBudget);
     }
 
     final html = document.documentElement ?? dom.Element.tag('html');
@@ -270,7 +267,7 @@ body { box-sizing: border-box; overflow-wrap: anywhere; }
         const {'http', 'https', 'mailto'}.contains(uri.scheme);
   }
 
-  static Future<void> _validateCss(String css) async {
+  static Future<void> _validateCss(String css, _ImageBudget budget) async {
     final lower = css.toLowerCase();
     if (lower.contains('@import') ||
         RegExp(r'position\s*:\s*(fixed|sticky)').hasMatch(lower)) {
@@ -284,7 +281,7 @@ body { box-sizing: border-box; overflow-wrap: anywhere; }
     ).allMatches(css)) {
       final value = match.group(1)?.trim() ?? '';
       if (value.toLowerCase().startsWith('data:image/')) {
-        await _validateDataImage(value);
+        await _validateDataImage(value, budget);
       } else if (!RegExp(
         r'^data:font/(woff2?|ttf|otf)(?:;[^,]*)?,',
         caseSensitive: false,
@@ -297,7 +294,10 @@ body { box-sizing: border-box; overflow-wrap: anywhere; }
     }
   }
 
-  static Future<void> _validateDataImage(String uri) async {
+  static Future<_ImageDimensions> _validateDataImage(
+    String uri,
+    _ImageBudget budget,
+  ) async {
     final comma = uri.indexOf(',');
     if (comma < 0) {
       throw const HtmlImportException(HtmlImportFailureKind.invalidImage);
@@ -334,6 +334,8 @@ body { box-sizing: border-box; overflow-wrap: anywhere; }
           '${width}x$height',
         );
       }
+      budget.add(width * height);
+      return _ImageDimensions(width, height);
     } on HtmlImportException {
       rethrow;
     } catch (_) {
@@ -341,6 +343,33 @@ body { box-sizing: border-box; overflow-wrap: anywhere; }
     } finally {
       descriptor?.dispose();
       buffer?.dispose();
+    }
+  }
+
+  static void _prepareLazyImage(
+    dom.Element element,
+    _ImageDimensions dimensions,
+  ) {
+    element.attributes
+      ..['loading'] = 'lazy'
+      ..['decoding'] = 'async';
+
+    final parsedWidth = int.tryParse(element.attributes['width'] ?? '');
+    final parsedHeight = int.tryParse(element.attributes['height'] ?? '');
+    final width = parsedWidth != null && parsedWidth > 0 ? parsedWidth : null;
+    final height = parsedHeight != null && parsedHeight > 0
+        ? parsedHeight
+        : null;
+    if (width == null && height == null) {
+      element.attributes
+        ..['width'] = '${dimensions.width}'
+        ..['height'] = '${dimensions.height}';
+    } else if (width != null && width > 0 && height == null) {
+      element.attributes['height'] =
+          '${(width * dimensions.height / dimensions.width).round().clamp(1, 1000000)}';
+    } else if (height != null && height > 0 && width == null) {
+      element.attributes['width'] =
+          '${(height * dimensions.width / dimensions.height).round().clamp(1, 1000000)}';
     }
   }
 
@@ -366,5 +395,26 @@ body { box-sizing: border-box; overflow-wrap: anywhere; }
       builder.add(chunk);
     }
     return builder.takeBytes();
+  }
+}
+
+class _ImageDimensions {
+  const _ImageDimensions(this.width, this.height);
+
+  final int width;
+  final int height;
+}
+
+class _ImageBudget {
+  int _pixels = 0;
+
+  void add(int pixels) {
+    _pixels += pixels;
+    if (_pixels > HtmlImportService.maximumTotalImagePixels) {
+      throw HtmlImportException(
+        HtmlImportFailureKind.oversizedImage,
+        'total=$_pixels',
+      );
+    }
   }
 }
