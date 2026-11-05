@@ -429,17 +429,11 @@ class CanvasController extends _CanvasCore
   bool get continuousScroll => _continuousScroll;
 
   static const _prefTwoFingerUndo = 'two_finger_undo';
-  static const _prefEraserAutoRevert = 'eraser_auto_revert';
   bool _twoFingerUndo = false;
-  bool _eraserAutoRevert = true;
-  ToolType _toolBeforeEraser = ToolType.pen;
 
   /// Toque rápido con dos dedos = deshacer (apagado por defecto: al
   /// desplazar la página borraba el último trazo).
   bool get twoFingerUndo => _twoFingerUndo;
-
-  /// Tras un trazo de borrador se vuelve a la herramienta anterior.
-  bool get eraserAutoRevert => _eraserAutoRevert;
 
   void setTwoFingerUndo(bool value) {
     if (value == _twoFingerUndo) return;
@@ -447,15 +441,6 @@ class CanvasController extends _CanvasCore
     notifyListeners();
     SharedPreferences.getInstance()
         .then((p) => p.setBool(_prefTwoFingerUndo, value))
-        .catchError((_) => false);
-  }
-
-  void setEraserAutoRevert(bool value) {
-    if (value == _eraserAutoRevert) return;
-    _eraserAutoRevert = value;
-    notifyListeners();
-    SharedPreferences.getInstance()
-        .then((p) => p.setBool(_prefEraserAutoRevert, value))
         .catchError((_) => false);
   }
 
@@ -597,7 +582,6 @@ class CanvasController extends _CanvasCore
 
   void setTool(ToolType tool) {
     if (_tool == tool) return;
-    if (tool == ToolType.eraser) _toolBeforeEraser = _tool;
     _tool = tool;
     _selectedImageId = null;
     _notifyToolContext();
@@ -679,7 +663,6 @@ class CanvasController extends _CanvasCore
       _fingerDrawingUserSet = prefs.getBool(_prefFingerDrawingUserSet) ?? false;
       _continuousScroll = prefs.getBool(_prefContinuousScroll) ?? true;
       _twoFingerUndo = prefs.getBool(_prefTwoFingerUndo) ?? false;
-      _eraserAutoRevert = prefs.getBool(_prefEraserAutoRevert) ?? true;
       final savedLassoFilter = prefs.getString(_prefLassoSelectionFilter);
       if (savedLassoFilter != null) {
         try {
@@ -1135,12 +1118,6 @@ class CanvasController extends _CanvasCore
     }
     _notifyActiveOverlay();
     _touch();
-    // Borrador de la barra: tras el trazo se vuelve a la herramienta anterior.
-    if (_eraserAutoRevert &&
-        eraserPath.isNotEmpty &&
-        _tool == ToolType.eraser) {
-      setTool(_toolBeforeEraser);
-    }
   }
 
   /// Estado de los trazos al empezar el gesto del borrador (null = no borrando).

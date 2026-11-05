@@ -2202,9 +2202,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuTwoFingerUndo => 'Undo with a two-finger tap';
 
   @override
-  String get popEraserAutoRevert => 'Return to the previous tool after erasing';
-
-  @override
   String get saveFailed =>
       'Couldn\'t save the note. Free up some space: it will retry automatically.';
 
