@@ -3820,6 +3820,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save the note. Free up some space: it will retry automatically.'**
   String get saveFailed;
 
+  /// No description provided for @externalOpenUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Not3 can open PDF, .inklus, or ZIP files.'**
+  String get externalOpenUnsupported;
+
   /// No description provided for @tplHalfLetter.
   ///
   /// In en, this message translates to:

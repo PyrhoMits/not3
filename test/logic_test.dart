@@ -6,12 +6,52 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:not3/logic/eraser.dart';
 import 'package:not3/logic/shape_detector.dart';
 import 'package:not3/logic/snap_guides.dart';
+import 'package:not3/logic/stroke_engine.dart';
 import 'package:not3/logic/undo_stack.dart';
 import 'package:not3/models/image_item.dart';
 import 'package:not3/models/stroke.dart';
 import 'package:not3/models/text_item.dart';
 
 void main() {
+  group('active stroke display sampling', () {
+    test('removes sub-pixel duplicates without changing the model', () {
+      final points = [
+        for (var i = 0; i < 100; i++) StrokePoint(i * 0.01, 0, 0.5, i),
+      ];
+
+      final display = StrokeEngine.pointsForActiveDisplay(points, viewScale: 1);
+
+      expect(display.length, lessThan(points.length));
+      expect(identical(display.first, points.first), isTrue);
+      expect(identical(display.last, points.last), isTrue);
+      expect(points, hasLength(100));
+    });
+
+    test('bounds long previews and preserves pressure extrema', () {
+      final points = [
+        for (var i = 0; i < 5000; i++)
+          StrokePoint(
+            i.toDouble(),
+            sin(i / 20),
+            i == 123 ? 0.0 : (i == 4321 ? 1.0 : 0.5),
+            i,
+          ),
+      ];
+
+      final display = StrokeEngine.pointsForActiveDisplay(
+        points,
+        viewScale: 1,
+        maxPoints: 256,
+      );
+
+      expect(display.length, lessThanOrEqualTo(256));
+      expect(display, contains(same(points[123])));
+      expect(display, contains(same(points[4321])));
+      expect(identical(display.first, points.first), isTrue);
+      expect(identical(display.last, points.last), isTrue);
+    });
+  });
+
   group('StrokeEraser', () {
     test('no borra trazos intactos', () {
       final strokes = [
@@ -26,11 +66,7 @@ void main() {
           size: 3,
         ),
       ];
-      final survivors = StrokeEraser.erase(
-        strokes,
-        [const Offset(50, 50)],
-        10,
-      );
+      final survivors = StrokeEraser.erase(strokes, [const Offset(50, 50)], 10);
       expect(survivors.length, 1);
       expect(survivors.first.id, 's1');
     });
@@ -51,11 +87,7 @@ void main() {
           size: 3,
         ),
       ];
-      final survivors = StrokeEraser.erase(
-        strokes,
-        [const Offset(100, 0)],
-        20,
-      );
+      final survivors = StrokeEraser.erase(strokes, [const Offset(100, 0)], 20);
       // Debería generar 2 fragmentos (0-50 y 150-200)
       expect(survivors.length, 2);
     });
@@ -64,7 +96,13 @@ void main() {
   group('UndoStack', () {
     test('push y undo devuelven la acción', () {
       final stack = UndoStack();
-      final s1 = Stroke(id: 's1', points: [], tool: ToolType.pen, colorValue: 0, size: 3);
+      final s1 = Stroke(
+        id: 's1',
+        points: [],
+        tool: ToolType.pen,
+        colorValue: 0,
+        size: 3,
+      );
       final action = CanvasAction(strokesAdded: [s1]);
       stack.push(action);
       expect(stack.canUndo, isTrue);
@@ -78,7 +116,13 @@ void main() {
 
     test('redo restaura la acción', () {
       final stack = UndoStack();
-      final s1 = Stroke(id: 's1', points: [], tool: ToolType.pen, colorValue: 0, size: 3);
+      final s1 = Stroke(
+        id: 's1',
+        points: [],
+        tool: ToolType.pen,
+        colorValue: 0,
+        size: 3,
+      );
       final action = CanvasAction(strokesAdded: [s1]);
       stack.push(action);
       stack.undo();
@@ -89,8 +133,20 @@ void main() {
 
     test('push después de undo limpia el redo', () {
       final stack = UndoStack();
-      final s1 = Stroke(id: 's1', points: [], tool: ToolType.pen, colorValue: 0, size: 3);
-      final s2 = Stroke(id: 's2', points: [], tool: ToolType.pen, colorValue: 0, size: 3);
+      final s1 = Stroke(
+        id: 's1',
+        points: [],
+        tool: ToolType.pen,
+        colorValue: 0,
+        size: 3,
+      );
+      final s2 = Stroke(
+        id: 's2',
+        points: [],
+        tool: ToolType.pen,
+        colorValue: 0,
+        size: 3,
+      );
       final a1 = CanvasAction(strokesAdded: [s1]);
       final a2 = CanvasAction(strokesAdded: [s2]);
       stack.push(a1);
@@ -102,10 +158,7 @@ void main() {
 
   group('ShapeDetector', () {
     test('detecta una línea recta', () {
-      final points = List.generate(
-        30,
-        (i) => StrokePoint(i * 10.0, 0, 0.5),
-      );
+      final points = List.generate(30, (i) => StrokePoint(i * 10.0, 0, 0.5));
       final result = ShapeDetector.detect(points);
       expect(result, isNotNull);
       expect(result!.type, ShapeType.line);
@@ -209,8 +262,15 @@ void main() {
   group('TextItem formato', () {
     test('serializa formato y permite quitar el enlace', () {
       final t = TextItem(
-        id: 't', x: 0, y: 0, width: 200, text: 'Hola',
-        bold: true, italic: true, align: 'center', fontFamily: 'serif',
+        id: 't',
+        x: 0,
+        y: 0,
+        width: 200,
+        text: 'Hola',
+        bold: true,
+        italic: true,
+        align: 'center',
+        fontFamily: 'serif',
         linkToPageId: 'p1',
       );
       final back = TextItem.fromJson(t.toJson());
@@ -218,8 +278,11 @@ void main() {
       expect(back.italic, isTrue);
       expect(back.align, 'center');
       expect(back.fontFamily, 'serif');
-      expect(back.copyWith(clearLink: true).linkToPageId, isNull,
-          reason: 'antes "Quitar enlace" no quitaba nada');
+      expect(
+        back.copyWith(clearLink: true).linkToPageId,
+        isNull,
+        reason: 'antes "Quitar enlace" no quitaba nada',
+      );
     });
   });
 }

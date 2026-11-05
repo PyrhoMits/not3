@@ -41,6 +41,7 @@ mixin _CanvasLayers on _CanvasCore {
   void setActiveLayer(int index) {
     if (index < 0 || index >= page.layers.length) return;
     _activeLayerIndex = index;
+    _notifyLayerMetadata();
     notifyListeners();
   }
 
@@ -48,7 +49,8 @@ mixin _CanvasLayers on _CanvasCore {
     final name = 'Capa ${page.layers.length + 1}';
     page.layers.add(Layer(name: name));
     _activeLayerIndex = page.layers.length - 1;
-    _touch();
+    _notifyLayerMetadata();
+    _touch(invalidateThumbnail: false);
   }
 
   void removeLayer(int index) {
@@ -57,30 +59,35 @@ mixin _CanvasLayers on _CanvasCore {
     if (_activeLayerIndex >= page.layers.length) {
       _activeLayerIndex = page.layers.length - 1;
     }
+    _notifyLayerMetadata();
     _touch();
   }
 
   void toggleLayerVisibility(int index) {
     if (index < 0 || index >= page.layers.length) return;
     page.layers[index].visible = !page.layers[index].visible;
+    _notifyLayerMetadata();
     _touch();
   }
 
   void toggleLayerLocked(int index) {
     if (index < 0 || index >= page.layers.length) return;
     page.layers[index].locked = !page.layers[index].locked;
-    _touch();
+    _notifyLayerMetadata();
+    _touch(invalidateThumbnail: false);
   }
 
   void renameLayer(int index, String name) {
     if (index < 0 || index >= page.layers.length) return;
     page.layers[index].name = name;
-    _touch();
+    _notifyLayerMetadata();
+    _touch(invalidateThumbnail: false);
   }
 
   void setLayerOpacity(int index, double opacity) {
     if (index < 0 || index >= page.layers.length) return;
     page.layers[index].opacity = opacity.clamp(0.0, 1.0);
+    _notifyLayerMetadata();
     _touch();
   }
 }

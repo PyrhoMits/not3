@@ -112,12 +112,12 @@ class StrokeEngine {
 
   /// Opciones para un trazo confirmado (respeta sus ajustes guardados).
   static StrokeOptions optionsForStroke(Stroke stroke) => optionsFor(
-        stroke.tool,
-        stroke.size,
-        thinning: stroke.thinning,
-        smoothing: stroke.smoothing,
-        streamline: stroke.streamline,
-      );
+    stroke.tool,
+    stroke.size,
+    thinning: stroke.thinning,
+    smoothing: stroke.smoothing,
+    streamline: stroke.streamline,
+  );
 
   /// Polígono (lista de puntos) que envuelve el trazo, listo para rellenar.
   /// Cacheado por instancia de [Stroke].
@@ -163,9 +163,68 @@ class StrokeEngine {
     );
   }
 
+  /// A bounded, screen-space representation used only while a stroke is
+  /// being drawn. The model retains every raw point for OCR, persistence, and
+  /// final rendering.
+  ///
+  /// Sub-pixel samples with nearly identical pressure do not materially
+  /// change the preview but make `perfect_freehand` progressively more
+  /// expensive. Pressure changes and both endpoints are always retained.
+  static List<StrokePoint> pointsForActiveDisplay(
+    List<StrokePoint> points, {
+    required double viewScale,
+    int maxPoints = 1024,
+  }) {
+    assert(maxPoints >= 4);
+    if (points.length <= 2 || viewScale <= 0) return points;
+    final minimumWorldDistance = 0.45 / viewScale;
+    const minimumPressureDelta = 0.025;
+    final filtered = <StrokePoint>[points.first];
+    var last = points.first;
+    for (var i = 1; i < points.length - 1; i++) {
+      final point = points[i];
+      final dx = point.x - last.x;
+      final dy = point.y - last.y;
+      if (dx * dx + dy * dy >= minimumWorldDistance * minimumWorldDistance ||
+          (point.pressure - last.pressure).abs() >= minimumPressureDelta) {
+        filtered.add(point);
+        last = point;
+      }
+    }
+    if (!identical(filtered.last, points.last)) filtered.add(points.last);
+    if (filtered.length <= maxPoints) return filtered;
+
+    // Keep work bounded for unusually long/high-frequency strokes. Uniform
+    // sampling happens only after sub-pixel filtering and still retains the
+    // exact first and latest point.
+    var minPressureIndex = 0;
+    var maxPressureIndex = 0;
+    for (var i = 1; i < filtered.length; i++) {
+      if (filtered[i].pressure < filtered[minPressureIndex].pressure) {
+        minPressureIndex = i;
+      }
+      if (filtered[i].pressure > filtered[maxPressureIndex].pressure) {
+        maxPressureIndex = i;
+      }
+    }
+    final indices = <int>{
+      0,
+      filtered.length - 1,
+      minPressureIndex,
+      maxPressureIndex,
+    };
+    final span = filtered.length - 1;
+    final remaining = maxPoints - indices.length;
+    for (var i = 1; i <= remaining; i++) {
+      indices.add((i * span / (remaining + 1)).round());
+    }
+    final ordered = indices.toList()..sort();
+    return [for (final index in ordered) filtered[index]];
+  }
+
   static List<PointVector> _vectors(List<StrokePoint> points) => [
-        for (final p in points) PointVector(p.x, p.y, p.pressure),
-      ];
+    for (final p in points) PointVector(p.x, p.y, p.pressure),
+  ];
 
   /// Color con el que se pinta cada herramienta. El resaltador se dibuja
   /// translúcido para que el texto/líneas de la plantilla se vean debajo.

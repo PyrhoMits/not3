@@ -68,8 +68,12 @@ void paintWorld(
     _drawSheet(canvas, sheetSize, page, isDark: isDark);
   }
   // Para custom finito sin imagen, también dibujar la hoja antes del clip.
-  if (!omitTemplate && template.type == TemplateType.custom && !template.infiniteFill) {
-    final img = template.imagePath == null ? null : imageCache[template.imagePath];
+  if (!omitTemplate &&
+      template.type == TemplateType.custom &&
+      !template.infiniteFill) {
+    final img = template.imagePath == null
+        ? null
+        : imageCache[template.imagePath];
     _drawSheet(canvas, sheetSize, page, image: img, isDark: isDark);
   }
 
@@ -116,16 +120,29 @@ void paintWorld(
         if (template.isFinite) {
           canvas.drawRect(sheetRect, Paint()..color = kPaperColorLight);
         }
-        _drawGrid(canvas, visibleWorldRect, template, isDark: isDark, viewScale: viewScale);
+        _drawGrid(
+          canvas,
+          visibleWorldRect,
+          template,
+          isDark: isDark,
+          viewScale: viewScale,
+        );
         break;
       case TemplateType.custom:
         // Ya dibujado antes del clip si es finito.
         if (template.infiniteFill) {
-          final img = template.imagePath == null ? null : imageCache[template.imagePath];
+          final img = template.imagePath == null
+              ? null
+              : imageCache[template.imagePath];
           if (img == null) {
             _drawGrid(canvas, visibleWorldRect, template, viewScale: viewScale);
           } else {
-            _drawTiledImage(canvas, visibleWorldRect, img, viewScale: viewScale);
+            _drawTiledImage(
+              canvas,
+              visibleWorldRect,
+              img,
+              viewScale: viewScale,
+            );
           }
         }
         // Para custom finito con imagen, el _drawSheet ya rellenó arriba.
@@ -134,25 +151,49 @@ void paintWorld(
         if (template.isFinite) {
           canvas.drawRect(sheetRect, Paint()..color = kPaperColorLight);
         }
-        _drawMusicStaff(canvas, visibleWorldRect, template, isDark: isDark, viewScale: viewScale);
+        _drawMusicStaff(
+          canvas,
+          visibleWorldRect,
+          template,
+          isDark: isDark,
+          viewScale: viewScale,
+        );
         break;
       case TemplateType.planner:
         if (template.isFinite) {
           canvas.drawRect(sheetRect, Paint()..color = kPaperColorLight);
         }
-        _drawPlanner(canvas, visibleWorldRect, template, isDark: isDark, viewScale: viewScale);
+        _drawPlanner(
+          canvas,
+          visibleWorldRect,
+          template,
+          isDark: isDark,
+          viewScale: viewScale,
+        );
         break;
       case TemplateType.habit:
         if (template.isFinite) {
           canvas.drawRect(sheetRect, Paint()..color = kPaperColorLight);
         }
-        _drawHabitTracker(canvas, visibleWorldRect, template, isDark: isDark, viewScale: viewScale);
+        _drawHabitTracker(
+          canvas,
+          visibleWorldRect,
+          template,
+          isDark: isDark,
+          viewScale: viewScale,
+        );
         break;
       case TemplateType.dots:
         if (template.isFinite) {
           canvas.drawRect(sheetRect, Paint()..color = kPaperColorLight);
         }
-        _drawDotGrid(canvas, visibleWorldRect, template, isDark: isDark, viewScale: viewScale);
+        _drawDotGrid(
+          canvas,
+          visibleWorldRect,
+          template,
+          isDark: isDark,
+          viewScale: viewScale,
+        );
         break;
     }
   }
@@ -175,7 +216,11 @@ void paintWorld(
       canvas.drawImageRect(
         img,
         Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
-        Rect.fromCenter(center: Offset.zero, width: item.width, height: item.height),
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: item.width,
+          height: item.height,
+        ),
         _imagePaint,
       );
       canvas.restore();
@@ -222,7 +267,9 @@ class _LayerPainter {
   /// Prepara el canvas para pintar un elemento de [layerIndex]. Devuelve
   /// false si la capa está oculta (el elemento no debe pintarse).
   bool enter(int layerIndex) {
-    final layer = layerIndex < page.layers.length ? page.layers[layerIndex] : null;
+    final layer = layerIndex < page.layers.length
+        ? page.layers[layerIndex]
+        : null;
     if (layer != null && !layer.visible) return false;
     final opacity = layer?.opacity ?? 1.0;
     if (_open != null && _open != layerIndex) close();
@@ -248,7 +295,13 @@ class _LayerPainter {
 // Plantillas
 // ---------------------------------------------------------------------------
 
-void _drawSheet(Canvas canvas, Size sheetSize, Page page, {ui.Image? image, bool isDark = false}) {
+void _drawSheet(
+  Canvas canvas,
+  Size sheetSize,
+  Page page, {
+  ui.Image? image,
+  bool isDark = false,
+}) {
   final sheetRect = Rect.fromCenter(
     center: Offset.zero,
     width: sheetSize.width,
@@ -259,9 +312,19 @@ void _drawSheet(Canvas canvas, Size sheetSize, Page page, {ui.Image? image, bool
 
   // Sombra más pronunciada para que el papel se distinga claramente del
   // escritorio, tanto en tema claro como oscuro.
-  canvas.drawShadow(path, Colors.black.withValues(alpha: isDark ? 0.5 : 0.25), 18, false);
+  canvas.drawShadow(
+    path,
+    Colors.black.withValues(alpha: isDark ? 0.5 : 0.25),
+    18,
+    false,
+  );
   // Segunda sombra (más suave) para dar profundidad.
-  canvas.drawShadow(path, Colors.black.withValues(alpha: isDark ? 0.3 : 0.12), 8, false);
+  canvas.drawShadow(
+    path,
+    Colors.black.withValues(alpha: isDark ? 0.3 : 0.12),
+    8,
+    false,
+  );
 
   // El papel siempre es blanco independientemente del tema.
   canvas.drawPath(path, Paint()..color = kPaperColorLight);
@@ -350,8 +413,13 @@ void _drawRuled(
   );
 }
 
-void _drawGrid(Canvas canvas, Rect visible, PageTemplate template,
-    {bool isDark = false, double viewScale = 1}) {
+void _drawGrid(
+  Canvas canvas,
+  Rect visible,
+  PageTemplate template, {
+  bool isDark = false,
+  double viewScale = 1,
+}) {
   final paint = Paint()
     ..color = _adaptiveLineColor(template, isDark: isDark)
     ..strokeWidth = _hairline(viewScale);
@@ -366,7 +434,12 @@ void _drawGrid(Canvas canvas, Rect visible, PageTemplate template,
   }
 }
 
-void _drawTiledImage(Canvas canvas, Rect visible, ui.Image img, {double viewScale = 1}) {
+void _drawTiledImage(
+  Canvas canvas,
+  Rect visible,
+  ui.Image img, {
+  double viewScale = 1,
+}) {
   if (img.width == 0 || img.height == 0) return;
   final w = img.width.toDouble();
   final h = img.height.toDouble();
@@ -457,14 +530,22 @@ void paintStroke(Canvas canvas, Stroke stroke) {
 
 /// Pinta el trazo en progreso (puntos aún cambiando: sin caché). Usa el
 /// mismo color/alpha y los mismos ajustes que tendrá al confirmarse.
-void paintActiveStroke(Canvas canvas, Stroke stroke) {
+void paintActiveStroke(
+  Canvas canvas,
+  Stroke stroke, {
+  required double viewScale,
+}) {
   if (stroke.points.length < 2) return;
   if (stroke.tool == ToolType.spray) {
     _drawSprayParticles(canvas, stroke);
     return;
   }
-  final outline = StrokeEngine.outlineForPoints(
+  final displayPoints = StrokeEngine.pointsForActiveDisplay(
     stroke.points,
+    viewScale: viewScale,
+  );
+  final outline = StrokeEngine.outlineForPoints(
+    displayPoints,
     stroke.tool,
     stroke.size,
     thinning: stroke.thinning,
@@ -518,8 +599,13 @@ void _paintTextItem(Canvas canvas, TextItem item) {
 }
 
 /// Pentagrama musical (5 líneas por grupo, infinito).
-void _drawMusicStaff(Canvas canvas, Rect visible, PageTemplate template,
-    {bool isDark = false, double viewScale = 1}) {
+void _drawMusicStaff(
+  Canvas canvas,
+  Rect visible,
+  PageTemplate template, {
+  bool isDark = false,
+  double viewScale = 1,
+}) {
   final paint = Paint()
     ..color = _adaptiveLineColor(template, isDark: isDark)
     ..strokeWidth = _hairline(viewScale);
@@ -537,8 +623,13 @@ void _drawMusicStaff(Canvas canvas, Rect visible, PageTemplate template,
 }
 
 /// Agenda semanal (columnas por día, infinita).
-void _drawPlanner(Canvas canvas, Rect visible, PageTemplate template,
-    {bool isDark = false, double viewScale = 1}) {
+void _drawPlanner(
+  Canvas canvas,
+  Rect visible,
+  PageTemplate template, {
+  bool isDark = false,
+  double viewScale = 1,
+}) {
   final paint = Paint()
     ..color = _adaptiveLineColor(template, isDark: isDark)
     ..strokeWidth = _hairline(viewScale);
@@ -557,11 +648,19 @@ void _drawPlanner(Canvas canvas, Rect visible, PageTemplate template,
 }
 
 /// Tracker de hábitos (cuadrícula con checkboxes, infinita).
-void _drawHabitTracker(Canvas canvas, Rect visible, PageTemplate template,
-    {bool isDark = false, double viewScale = 1}) {
+void _drawHabitTracker(
+  Canvas canvas,
+  Rect visible,
+  PageTemplate template, {
+  bool isDark = false,
+  double viewScale = 1,
+}) {
   // Casillas con contorno (antes salían como cuadrados rellenos).
   final paint = Paint()
-    ..color = _adaptiveLineColor(template, isDark: isDark).withValues(alpha: 0.7)
+    ..color = _adaptiveLineColor(
+      template,
+      isDark: isDark,
+    ).withValues(alpha: 0.7)
     ..style = PaintingStyle.stroke
     ..strokeWidth = _hairline(viewScale);
   final spacing = _lodSpacing(template.spacing, viewScale, 10);
@@ -571,7 +670,11 @@ void _drawHabitTracker(Canvas canvas, Rect visible, PageTemplate template,
   for (var x = startX; x <= visible.right; x += spacing) {
     for (var y = startY; y <= visible.bottom; y += spacing) {
       canvas.drawRect(
-        Rect.fromCenter(center: Offset(x, y), width: spacing * 0.6, height: spacing * 0.6),
+        Rect.fromCenter(
+          center: Offset(x, y),
+          width: spacing * 0.6,
+          height: spacing * 0.6,
+        ),
         paint,
       );
     }
@@ -579,8 +682,13 @@ void _drawHabitTracker(Canvas canvas, Rect visible, PageTemplate template,
 }
 
 /// Cuadrícula de puntos (dot grid, infinita).
-void _drawDotGrid(Canvas canvas, Rect visible, PageTemplate template,
-    {bool isDark = false, double viewScale = 1}) {
+void _drawDotGrid(
+  Canvas canvas,
+  Rect visible,
+  PageTemplate template, {
+  bool isDark = false,
+  double viewScale = 1,
+}) {
   final paint = Paint()
     ..color = _adaptiveLineColor(template, isDark: isDark)
     ..style = PaintingStyle.fill;
@@ -612,7 +720,11 @@ Rect contentBounds(Page page, {double padding = kExportContentPadding}) {
     hasContent = true;
   }
   for (final t in page.textItems) {
-    final r = Rect.fromCenter(center: Offset(t.x, t.y), width: t.width, height: t.height);
+    final r = Rect.fromCenter(
+      center: Offset(t.x, t.y),
+      width: t.width,
+      height: t.height,
+    );
     bounds = hasContent ? bounds.expandToInclude(r) : r;
     hasContent = true;
   }

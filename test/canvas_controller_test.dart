@@ -73,6 +73,84 @@ void main() {
     });
   });
 
+  group('granular performance notifications', () {
+    test('active points only invalidate the active overlay until commit', () {
+      var active = 0;
+      var render = 0;
+      var persisted = 0;
+      var toolContext = 0;
+      var bottomBar = 0;
+      c.activeOverlayNotifier.addListener(() => active++);
+      c.renderContentNotifier.addListener(() => render++);
+      c.persistedContentNotifier.addListener(() => persisted++);
+      c.toolContextNotifier.addListener(() => toolContext++);
+      c.bottomBarContextNotifier.addListener(() => bottomBar++);
+
+      c.beginStroke(Offset.zero, 0.5, tool: ToolType.pen);
+      for (var i = 1; i <= 100; i++) {
+        c.addStrokePoint(Offset(i.toDouble(), 0), 0.5);
+      }
+
+      expect(active, 101);
+      expect(render, 0);
+      expect(persisted, 0);
+      expect(toolContext, 0);
+      expect(bottomBar, 0);
+
+      c.endStroke();
+      expect(render, 1);
+      expect(persisted, 1);
+    });
+
+    test('live erasing repaints before persisting once on commit', () {
+      draw(0, 100, 0);
+      var render = 0;
+      var persisted = 0;
+      c.renderContentNotifier.addListener(() => render++);
+      c.persistedContentNotifier.addListener(() => persisted++);
+
+      c.beginStroke(const Offset(50, 0), 0.5, tool: ToolType.eraser);
+
+      expect(render, greaterThan(0));
+      expect(persisted, 0);
+
+      c.endStroke();
+      expect(persisted, 1);
+    });
+
+    test('selection-only changes do not persist document content', () {
+      draw(0, 100, 0);
+      var active = 0;
+      var render = 0;
+      var persisted = 0;
+      c.activeOverlayNotifier.addListener(() => active++);
+      c.renderContentNotifier.addListener(() => render++);
+      c.persistedContentNotifier.addListener(() => persisted++);
+
+      expect(c.selectStrokeAt(const Offset(50, 0)), isTrue);
+
+      expect(active, 1);
+      expect(render, 0);
+      expect(persisted, 0);
+    });
+
+    test('lasso movement repaints live and persists once on commit', () {
+      final stroke = draw(0, 100, 0);
+      expect(c.selectStrokeAt(const Offset(50, 0)), isTrue);
+      var render = 0;
+      var persisted = 0;
+      c.renderContentNotifier.addListener(() => render++);
+      c.persistedContentNotifier.addListener(() => persisted++);
+
+      c.moveSelectedStrokes(const Offset(20, 30), before: [stroke]);
+      expect(render, 1);
+      expect(persisted, 0);
+
+      c.commitMoveStrokes([stroke]);
+      expect(persisted, 1);
+    });
+  });
+
   test('deshacer con dos dedos está apagado por defecto', () {
     expect(c.twoFingerUndo, isFalse);
   });
@@ -603,10 +681,10 @@ void main() {
       },
     );
 
-    test('una hoja más pequeña se mueve pero no sale de la pantalla', () {
+    test('una hoja más pequeña queda centrada horizontalmente', () {
       // Escala 0.5: la hoja ocupa 300×400 px.
       final inside = CanvasController.clampSheetTranslate(
-        const Offset(400, 500),
+        const Offset(100, 500),
         0.5,
         sheet,
         viewport,
@@ -618,7 +696,7 @@ void main() {
         sheet,
         viewport,
       );
-      expect(out.dx - 150, 48);
+      expect(out.dx, viewport.width / 2);
       expect(out.dy + 200, 1000 - 48);
     });
 

@@ -352,7 +352,7 @@ class _ZoomBoardPainter extends CustomPainter {
       isDark: isDark,
     );
     final active = controller.activeStroke;
-    if (active != null) paintActiveStroke(canvas, active);
+    if (active != null) paintActiveStroke(canvas, active, viewScale: scale);
     canvas.restore();
 
     final guide = Paint()

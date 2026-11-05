@@ -53,6 +53,34 @@ void main() {
     ]);
   });
 
+  test('imports a supplied path without opening the picker', () async {
+    var pickerOpened = false;
+    String? renderedPath;
+    final coordinator = PdfImportCoordinator(
+      supported: true,
+      picker: () async {
+        pickerOpened = true;
+        return null;
+      },
+      renderer: (path) {
+        renderedPath = path;
+        return Stream.value(const PdfPageImage('/out/page.png', 100, 200));
+      },
+    );
+
+    final result = await coordinator.importFile(
+      const PdfPickedFile(
+        path: '/cache/random-name.pdf',
+        displayName: 'Original lecture.PDF',
+      ),
+    );
+
+    expect(pickerOpened, isFalse);
+    expect(renderedPath, '/cache/random-name.pdf');
+    expect(result.filename, 'Original lecture.PDF');
+    expect(result.suggestedTitle, 'Original lecture');
+  });
+
   test('zero-page render returns a defined failure', () async {
     final coordinator = PdfImportCoordinator(
       supported: true,

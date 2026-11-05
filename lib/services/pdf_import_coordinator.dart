@@ -96,6 +96,19 @@ class PdfImportCoordinator {
     final picked = await (picker ?? _pickPdf)();
     if (picked == null) return null;
 
+    return importFile(picked, onProgress: onProgress);
+  }
+
+  /// Renders a PDF already supplied by another entry point, such as Android's
+  /// Open with/share intents, without opening the file picker again.
+  Future<PdfImportResult> importFile(
+    PdfPickedFile picked, {
+    ValueChanged<int>? onProgress,
+  }) async {
+    if (!isSupported) {
+      throw const PdfImportException(PdfImportFailureKind.unsupported);
+    }
+
     final pages = <PdfImportedPage>[];
     try {
       await for (final page in (renderer ?? PdfImportService.importPages)(
@@ -133,6 +146,10 @@ class PdfImportCoordinator {
       }
     }
   }
+
+  /// Removes rendered pages when a caller cannot attach a completed import
+  /// to a note. Cleanup is best-effort and never masks the original error.
+  Future<void> discard(PdfImportResult result) => _cleanup(result.pages);
 
   static Future<PdfPickedFile?> _pickPdf() async {
     final file = await FilePicker.pickFile(

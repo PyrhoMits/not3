@@ -12,6 +12,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../logic/canvas_controller.dart';
+import '../logic/editor_performance_recorder.dart';
 import '../models/note.dart';
 import '../models/id.dart';
 import '../models/image_item.dart';
@@ -116,9 +117,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _setPagesOpen(bool open) {
     setState(() => _pagesOpen = open);
+    EditorPerformanceRecorder.instance.mark(
+      'pages_panel',
+      data: {'open': open},
+    );
     SharedPreferences.getInstance()
         .then((p) => p.setBool(_prefPagesPanel, open))
         .catchError((_) => false);
+  }
+
+  void _setLayersOpen(bool open) {
+    setState(() => _layersSidebarOpen = open);
+    EditorPerformanceRecorder.instance.mark(
+      'layers_panel',
+      data: {'open': open},
+    );
   }
 
   Future<void> _loadToolsCollapsedPref() async {
@@ -148,6 +161,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    EditorPerformanceRecorder.instance.start();
     WidgetsBinding.instance.addObserver(this);
     _templateLibrary.init();
     _stats.load();
@@ -1279,6 +1293,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    EditorPerformanceRecorder.instance.stop();
     WidgetsBinding.instance.removeObserver(this);
     // Guardar estadísticas de sesión.
     if (_sessionStart != null) {
@@ -1329,9 +1344,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     pagesOpen: _pagesOpen,
                     onTogglePages: () => _setPagesOpen(!_pagesOpen),
                     layersOpen: _layersSidebarOpen,
-                    onToggleLayers: () => setState(
-                      () => _layersSidebarOpen = !_layersSidebarOpen,
-                    ),
+                    onToggleLayers: () => _setLayersOpen(!_layersSidebarOpen),
                     toolsCollapsed: _toolsCollapsed,
                     onToggleTools: () => _setToolsCollapsed(!_toolsCollapsed),
                     trailing: [
@@ -1352,8 +1365,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       if (_layersSidebarOpen && !presentMode)
                         LayersSidebar(
                           controller: controller,
-                          onClose: () =>
-                              setState(() => _layersSidebarOpen = false),
+                          onClose: () => _setLayersOpen(false),
                         ),
                       Expanded(
                         child: Stack(

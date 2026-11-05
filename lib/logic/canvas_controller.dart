@@ -66,12 +66,24 @@ abstract class _CanvasCore extends ChangeNotifier {
   bool get continuousScroll;
 
   /// Cambio real del contenido: repinta y agenda guardado.
-  void _touch();
+  void _touch({bool invalidateThumbnail = true});
 
   /// Cambio en vivo (arrastre): solo repinta; se guarda al confirmar.
   void _touchLive();
   void _notifyToolContext();
   void _notifyBottomBarContext();
+  void _notifyActiveOverlay();
+  void _notifyLayerMetadata();
+  void _notifyViewport();
+}
+
+/// A committed change to one page, used by thumbnail consumers.
+@immutable
+class CanvasPageChange {
+  const CanvasPageChange({required this.pageId, required this.revision});
+
+  final String pageId;
+  final int revision;
 }
 
 /// Avisos del lienzo que la UI traduce y muestra.
@@ -128,12 +140,14 @@ class CanvasController extends _CanvasCore
   void setSnapGuides(List<double> vertical, List<double> horizontal) {
     _snapVerticalGuides = vertical;
     _snapHorizontalGuides = horizontal;
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
   void clearSnapGuides() {
     _snapVerticalGuides = [];
     _snapHorizontalGuides = [];
+    _notifyActiveOverlay();
   }
 
   // ---- Regla virtual ----
@@ -175,6 +189,40 @@ class CanvasController extends _CanvasCore
   int _toolContextVersion = 0;
   int _bottomBarContextVersion = 0;
 
+  final ValueNotifier<int> _activeOverlayNotifier = ValueNotifier<int>(0);
+  ValueListenable<int> get activeOverlayNotifier => _activeOverlayNotifier;
+
+  final ValueNotifier<int> _renderContentNotifier = ValueNotifier<int>(0);
+  ValueListenable<int> get renderContentNotifier => _renderContentNotifier;
+
+  final ValueNotifier<CanvasPageChange?> _persistedContentNotifier =
+      ValueNotifier<CanvasPageChange?>(null);
+  ValueListenable<CanvasPageChange?> get persistedContentNotifier =>
+      _persistedContentNotifier;
+
+  final ValueNotifier<int> _pageMetadataNotifier = ValueNotifier<int>(0);
+  ValueListenable<int> get pageMetadataNotifier => _pageMetadataNotifier;
+
+  final ValueNotifier<int> _layerMetadataNotifier = ValueNotifier<int>(0);
+  ValueListenable<int> get layerMetadataNotifier => _layerMetadataNotifier;
+
+  final ValueNotifier<int> _textEditNotifier = ValueNotifier<int>(0);
+  ValueListenable<int> get textEditNotifier => _textEditNotifier;
+
+  final ValueNotifier<int> _viewportNotifier = ValueNotifier<int>(0);
+  ValueListenable<int> get viewportNotifier => _viewportNotifier;
+
+  int _activeOverlayVersion = 0;
+  int _renderContentVersion = 0;
+  int _pageMetadataVersion = 0;
+  int _layerMetadataVersion = 0;
+  int _textEditVersion = 0;
+  int _viewportVersion = 0;
+  final Map<String, int> _persistedPageVersions = {};
+
+  int persistedPageVersion(String pageId) =>
+      _persistedPageVersions[pageId] ?? 0;
+
   /// Notifica solo a los listeners del tool rail.
   @override
   void _notifyToolContext() {
@@ -187,6 +235,43 @@ class CanvasController extends _CanvasCore
     _bottomBarContextNotifier.value = ++_bottomBarContextVersion;
   }
 
+  @override
+  void _notifyActiveOverlay() {
+    _activeOverlayNotifier.value = ++_activeOverlayVersion;
+  }
+
+  void _notifyRenderContent() {
+    _renderContentNotifier.value = ++_renderContentVersion;
+  }
+
+  void _notifyPersistedContent([String? changedPageId]) {
+    final pageId = changedPageId ?? page.id;
+    final revision = (_persistedPageVersions[pageId] ?? 0) + 1;
+    _persistedPageVersions[pageId] = revision;
+    _persistedContentNotifier.value = CanvasPageChange(
+      pageId: pageId,
+      revision: revision,
+    );
+  }
+
+  void _notifyPageMetadata() {
+    _pageMetadataNotifier.value = ++_pageMetadataVersion;
+  }
+
+  @override
+  void _notifyLayerMetadata() {
+    _layerMetadataNotifier.value = ++_layerMetadataVersion;
+  }
+
+  void _notifyTextEdit() {
+    _textEditNotifier.value = ++_textEditVersion;
+  }
+
+  @override
+  void _notifyViewport() {
+    _viewportNotifier.value = ++_viewportVersion;
+  }
+
   int? _lastToolKey;
   int? _lastBottomBarKey;
 
@@ -196,6 +281,12 @@ class CanvasController extends _CanvasCore
   /// que reconstruirse en cada punto del trazo.
   @override
   void notifyListeners() {
+    // Tool and toolbar state cannot change while an ink/eraser/laser point or
+    // lasso point is being appended. Skip two hashes on this hottest path.
+    if (_isDrawing || _lassoPath.isNotEmpty) {
+      super.notifyListeners();
+      return;
+    }
     final toolKey = Object.hash(
       _tool,
       _rulerEnabled,
@@ -294,14 +385,30 @@ class CanvasController extends _CanvasCore
     Size viewport, {
     double margin = 48,
   }) {
-    double axis(double t, double lo, double hi, double viewLen) {
+    double axis(
+      double t,
+      double lo,
+      double hi,
+      double viewLen, {
+      bool centerWhenFits = false,
+    }) {
+      final extent = (hi - lo) * scale;
+      if (centerWhenFits && extent <= viewLen - margin * 2) {
+        return viewLen / 2 - (lo + hi) * scale / 2;
+      }
       final a = margin - lo * scale; // borde inicial en el margen
       final b = viewLen - margin - hi * scale; // borde final en el margen
       return t.clamp(min(a, b), max(a, b));
     }
 
     return Offset(
-      axis(translate.dx, world.left, world.right, viewport.width),
+      axis(
+        translate.dx,
+        world.left,
+        world.right,
+        viewport.width,
+        centerWhenFits: true,
+      ),
       axis(translate.dy, world.top, world.bottom, viewport.height),
     );
   }
@@ -392,6 +499,8 @@ class CanvasController extends _CanvasCore
     _pageIndex += delta;
     _resetPageState();
     _translate += Offset(0, n.dy * _scale);
+    _notifyPageMetadata();
+    _notifyViewport();
     _notifyBottomBarContext();
   }
 
@@ -493,6 +602,7 @@ class CanvasController extends _CanvasCore
     _selectedImageId = null;
     _notifyToolContext();
     _notifyBottomBarContext();
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -651,6 +761,7 @@ class CanvasController extends _CanvasCore
       ..addAll(shape.normalizedPoints);
     _heldShapeType = shape.type.name;
     if (_hapticEnabled) HapticFeedback.lightImpact();
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -676,11 +787,13 @@ class CanvasController extends _CanvasCore
   void toggleLaser() {
     _laserMode = !_laserMode;
     if (!_laserMode) _laserTrail.clear();
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
   void _addLaserPoint(Offset p) {
     _laserTrail.add((point: p, t: DateTime.now().millisecondsSinceEpoch));
+    _notifyActiveOverlay();
     _laserTicker ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
       final cutoff =
           DateTime.now().millisecondsSinceEpoch - laserFade.inMilliseconds;
@@ -689,7 +802,10 @@ class CanvasController extends _CanvasCore
         _laserTicker?.cancel();
         _laserTicker = null;
       }
-      if (!_disposed) notifyListeners();
+      if (!_disposed) {
+        _notifyActiveOverlay();
+        notifyListeners();
+      }
     });
   }
 
@@ -701,6 +817,7 @@ class CanvasController extends _CanvasCore
     _rulerEnabled = !_rulerEnabled;
     if (_rulerEnabled) _placeRulerAtViewCenter();
     _notifyToolContext();
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -716,6 +833,7 @@ class CanvasController extends _CanvasCore
       _rulerEnabled = false;
     }
     _notifyToolContext();
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -735,6 +853,7 @@ class CanvasController extends _CanvasCore
   void setRulerTransform(Offset center, double angle) {
     _rulerCenter = center;
     _rulerAngle = RulerGeometry.snapAngle(angle);
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -757,17 +876,20 @@ class CanvasController extends _CanvasCore
       );
     }
     _notifyToolContext();
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
   /// Mueve el área que se muestra en el panel de escritura ampliada.
   void updateMagnifierPosition(Offset worldPoint) {
     _magnifierPosition = worldPoint;
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
   void setMagnifierZoom(double zoom) {
     _magnifierZoom = zoom.clamp(kMagnifierMinZoom, kMagnifierMaxZoom);
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -906,6 +1028,7 @@ class CanvasController extends _CanvasCore
       );
       _activeEraserPath = [];
     }
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -951,6 +1074,7 @@ class CanvasController extends _CanvasCore
         for (var i = 1; i <= n; i++) Offset.lerp(last, worldPoint, i / n)!,
       ]);
     }
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -965,6 +1089,7 @@ class CanvasController extends _CanvasCore
     _resetHold();
     _resetStrokeTiming();
     if (_laserMode && _activeStroke == null && _activeEraserPath.isEmpty) {
+      _notifyActiveOverlay();
       notifyListeners(); // la estela se desvanece sola
       return;
     }
@@ -1008,6 +1133,7 @@ class CanvasController extends _CanvasCore
     } else if (eraserPath.isNotEmpty) {
       _commitEraser();
     }
+    _notifyActiveOverlay();
     _touch();
     // Borrador de la barra: tras el trazo se vuelve a la herramienta anterior.
     if (_eraserAutoRevert &&
@@ -1106,6 +1232,7 @@ class CanvasController extends _CanvasCore
         ..addAll(eraserBefore);
       _touchLive();
     }
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -1188,12 +1315,16 @@ class CanvasController extends _CanvasCore
     _selectedStrokes = [];
     _clearItemSelection();
     _selectedImageId = null;
+    _editingTextId = null;
+    _editingTextBefore = null;
+    _notifyActiveOverlay();
+    _notifyTextEdit();
   }
 
   void setTitle(String title) {
     if (title.trim().isEmpty || title == _note.title) return;
     _note.title = title.trim();
-    _touch();
+    _touch(invalidateThumbnail: false);
   }
 
   // ------------------------------------------------------------------
@@ -1209,6 +1340,7 @@ class CanvasController extends _CanvasCore
     _pageIndex = pageCount - 1;
     _resetPageState();
     _viewInitialized = false; // re-ajusta la vista en el siguiente layout
+    _notifyPageMetadata();
     _touch();
   }
 
@@ -1217,6 +1349,8 @@ class CanvasController extends _CanvasCore
     _pageIndex = index;
     _resetPageState();
     _viewInitialized = false;
+    _notifyPageMetadata();
+    _notifyViewport();
     notifyListeners();
   }
 
@@ -1230,6 +1364,9 @@ class CanvasController extends _CanvasCore
     _editingTextId = null;
     _editingTextBefore = null;
     _activeLayerIndex = 0;
+    _notifyActiveOverlay();
+    _notifyTextEdit();
+    _notifyLayerMetadata();
   }
 
   /// Aviso con acción de deshacer (la UI lo muestra como snackbar).
@@ -1249,7 +1386,8 @@ class CanvasController extends _CanvasCore
   /// Marca / desmarca la página actual.
   void toggleBookmark() {
     page.bookmarked = !page.bookmarked;
-    _touch();
+    _notifyPageMetadata();
+    _touch(invalidateThumbnail: false);
   }
 
   void deleteCurrentPage() {
@@ -1259,6 +1397,7 @@ class CanvasController extends _CanvasCore
     _pageIndex = min(_pageIndex, pageCount - 1);
     _resetPageState();
     _viewInitialized = false;
+    _notifyPageMetadata();
     _touch();
     onUndoableNotice?.call(
       ControllerNotice.pageDeleted,
@@ -1272,6 +1411,7 @@ class CanvasController extends _CanvasCore
     _pageIndex = index.clamp(0, _note.pages.length - 1);
     _resetPageState();
     _viewInitialized = false;
+    _notifyPageMetadata();
     _touch();
   }
 
@@ -1291,6 +1431,8 @@ class CanvasController extends _CanvasCore
     _selectedImageId = null;
     _selectedStrokes = [];
     _editingTextId = null;
+    _notifyActiveOverlay();
+    _notifyTextEdit();
     _touch();
   }
 
@@ -1312,6 +1454,7 @@ class CanvasController extends _CanvasCore
     _pageIndex++;
     _resetPageState();
     _viewInitialized = false;
+    _notifyPageMetadata();
     _touch();
   }
 
@@ -1345,6 +1488,7 @@ class CanvasController extends _CanvasCore
     }
     _resetPageState();
     _viewInitialized = false;
+    _notifyPageMetadata();
     _touch();
   }
 
@@ -1363,7 +1507,8 @@ class CanvasController extends _CanvasCore
     } else if (oldIndex > _pageIndex && newIndex <= _pageIndex) {
       _pageIndex++;
     }
-    _touch();
+    _notifyPageMetadata();
+    _touch(invalidateThumbnail: false);
   }
 
   // ------------------------------------------------------------------
@@ -1372,6 +1517,7 @@ class CanvasController extends _CanvasCore
 
   void setTemplate(PageTemplate template) {
     page.template = template;
+    _notifyPageMetadata();
     _touch();
   }
 
@@ -1431,6 +1577,7 @@ class CanvasController extends _CanvasCore
   void selectImage(String? id) {
     if (_selectedImageId == id) return;
     _selectedImageId = id;
+    _notifyActiveOverlay();
     notifyListeners();
   }
 
@@ -1473,6 +1620,7 @@ class CanvasController extends _CanvasCore
     page.textItems.add(item);
     _editingTextId = item.id;
     _editingTextBefore = null;
+    _notifyTextEdit();
     _touch();
   }
 
@@ -1482,6 +1630,7 @@ class CanvasController extends _CanvasCore
     commitEditingText();
     _editingTextId = item.id;
     _editingTextBefore = item;
+    _notifyTextEdit();
     notifyListeners();
   }
 
@@ -1489,6 +1638,7 @@ class CanvasController extends _CanvasCore
     final index = page.textItems.indexWhere((t) => t.id == item.id);
     if (index >= 0) {
       page.textItems[index] = item;
+      _notifyTextEdit();
       // Repinta; el guardado se agenda con el debounce normal (no por tecla).
       _touch();
     }
@@ -1502,6 +1652,7 @@ class CanvasController extends _CanvasCore
     final before = _editingTextBefore;
     _editingTextId = null;
     _editingTextBefore = null;
+    _notifyTextEdit();
     final index = page.textItems.indexWhere((t) => t.id == id);
     if (index < 0) return;
     final current = page.textItems[index];
@@ -1529,6 +1680,7 @@ class CanvasController extends _CanvasCore
     if (wasEditing) {
       _editingTextId = null;
       _editingTextBefore = null;
+      _notifyTextEdit();
     }
     if (before != null) {
       _undoStack.push(CanvasAction(textItemsRemoved: [before]));
@@ -1627,10 +1779,12 @@ class CanvasController extends _CanvasCore
   /// Marca el documento como modificado y agenda guardado automático
   /// (debounced) para no perder trazos ante cierres inesperados.
   @override
-  void _touch() {
+  void _touch({bool invalidateThumbnail = true}) {
     _note.updatedAt = DateTime.now();
     _dirty = true;
     _contentVersion++;
+    _notifyRenderContent();
+    if (invalidateThumbnail) _notifyPersistedContent();
     notifyListeners();
     _scheduleSave();
   }
@@ -1640,6 +1794,7 @@ class CanvasController extends _CanvasCore
   @override
   void _touchLive() {
     _contentVersion++;
+    _notifyRenderContent();
     notifyListeners();
   }
 
@@ -1723,6 +1878,13 @@ class CanvasController extends _CanvasCore
     if (_dirty) unawaited(saveNow());
     _toolContextNotifier.dispose();
     _bottomBarContextNotifier.dispose();
+    _activeOverlayNotifier.dispose();
+    _renderContentNotifier.dispose();
+    _persistedContentNotifier.dispose();
+    _pageMetadataNotifier.dispose();
+    _layerMetadataNotifier.dispose();
+    _textEditNotifier.dispose();
+    _viewportNotifier.dispose();
     super.dispose();
   }
 }
