@@ -199,8 +199,24 @@ class StorageService {
     return File(canonicalFile);
   }
 
-  /// Atomically replaces an app-owned HTML source after trusted offline
-  /// processing such as MathJax-to-SVG baking.
+  /// Returns the disposable MathJax render cache beside the immutable source.
+  Future<File> htmlMathCacheFile(Page page) async {
+    final source = await htmlSourceFile(page);
+    if (!await source.exists()) {
+      throw StateError('HTML source file is missing.');
+    }
+    return File('${source.parent.path}/math-cache.html');
+  }
+
+  /// Atomically replaces the disposable MathJax render cache.
+  Future<void> replaceHtmlMathCache(Page page, String sanitizedHtml) async {
+    final file = await htmlMathCacheFile(page);
+    await writeAtomic(file, utf8.encode(sanitizedHtml));
+  }
+
+  /// Replaces the source document. Runtime rendering must use
+  /// [replaceHtmlMathCache] so the original import remains recoverable.
+  @Deprecated('Use replaceHtmlMathCache for derived HTML output.')
   Future<void> replaceHtmlSource(Page page, String sanitizedHtml) async {
     final file = await htmlSourceFile(page);
     if (!await file.exists()) {

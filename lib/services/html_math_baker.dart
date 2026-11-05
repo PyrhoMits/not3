@@ -18,7 +18,7 @@ class HtmlMathBaker {
   static const _sourceMeta = 'not3-math-source';
   static const _macrosMeta = 'not3-math-macros';
   static const _bakedMeta = 'not3-math-baked';
-  static const _version = 'mathjax-3.2.2-svg';
+  static const _version = 'mathjax-3.2.2-svg-safe-v2';
   static const _runtimeNonce = 'not3-math-runtime-v1';
   static const _activeContentSelector =
       'script, iframe, frame, frameset, object, embed, foreignobject, '
@@ -81,6 +81,15 @@ class HtmlMathBaker {
       return true;
     }
     return _texDelimiter.hasMatch(document.body?.text ?? '');
+  }
+
+  /// Whether [html] is a render cache produced by this exact implementation.
+  static bool isCurrentBake(String html) {
+    final document = html_parser.parse(html);
+    return document
+            .querySelector('meta[name="$_bakedMeta"]')
+            ?.attributes['content'] ==
+        _version;
   }
 
   /// Adds the bundled renderer to an in-memory copy. This string is never

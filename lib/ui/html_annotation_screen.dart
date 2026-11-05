@@ -10,10 +10,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../logic/canvas_controller.dart';
 import '../logic/html_stroke_index.dart';
 import '../logic/html_viewport_transform.dart';
+import '../logic/pen_presets.dart';
 import '../logic/stylus_input.dart';
 import '../l10n/l10n.dart';
 import '../models/note.dart';
@@ -24,6 +26,9 @@ import '../services/html_math_baker.dart';
 import '../services/storage_service.dart';
 import 'canvas/drawing_canvas.dart' show ActiveLayerPainter;
 import 'canvas/world_painter.dart' show paintStroke;
+import 'editor/anchored_popover.dart';
+import 'editor/tool_popovers.dart';
+import 'editor/tool_visuals.dart';
 import 'theme/inklus_colors.dart';
 
 /// Android-only editor for one self-contained continuous HTML note.
@@ -46,6 +51,7 @@ class HtmlAnnotationScreen extends StatefulWidget {
 class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
     with WidgetsBindingObserver {
   late final CanvasController _canvas;
+  final PenPresetsController _presets = PenPresetsController();
   final DriveSyncService _syncService = DriveSyncService.instance;
   final HuaweiStylusShortcutService _stylusShortcuts =
       HuaweiStylusShortcutService.instance;
@@ -83,6 +89,13 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
       initial: widget.note,
       notebookId: widget.notebookId,
     );
+    unawaited(
+      _presets.load().then((_) {
+        if (!mounted) return;
+        _presets.activate(_presets.activeSlot, _canvas);
+        _canvas.bottomBarContextNotifier.addListener(_syncPresets);
+      }),
+    );
     _stylusShortcutSubscription = _stylusShortcuts.events.listen((shortcut) {
       if (shortcut == HuaweiStylusShortcut.togglePenEraser) {
         _canvas.toggleHuaweiPenEraser();
@@ -113,11 +126,24 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
       final file = await widget.storage.htmlSourceFile(_canvas.page);
       var html = await file.readAsString();
       if (HtmlMathBaker.needsBake(html)) {
-        final mathJax = await rootBundle.loadString(HtmlMathBaker.assetPath);
-        html = HtmlMathBaker.runtimeHtml(html, mathJax);
+        final cache = await widget.storage.htmlMathCacheFile(_canvas.page);
+        final cachedHtml = await cache.exists()
+            ? await cache.readAsString()
+            : '';
+        if (HtmlMathBaker.isCurrentBake(cachedHtml)) {
+          html = cachedHtml;
+        } else {
+          final mathJax = await rootBundle.loadString(HtmlMathBaker.assetPath);
+          html = HtmlMathBaker.runtimeHtml(html, mathJax);
+        }
       }
       if (!mounted) return;
       final web = WebViewController();
+      if (web.platform is AndroidWebViewController) {
+        await (web.platform as AndroidWebViewController).setUseWideViewPort(
+          true,
+        );
+      }
       await web.setJavaScriptMode(JavaScriptMode.unrestricted);
       await web.setBackgroundColor(Colors.white);
       await web.enableZoom(true);
@@ -283,7 +309,7 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
   Future<void> _persistBakedMath(String html) async {
     try {
       final sanitized = await compute(HtmlMathBaker.sanitizeBaked, html);
-      await widget.storage.replaceHtmlSource(_canvas.page, sanitized);
+      await widget.storage.replaceHtmlMathCache(_canvas.page, sanitized);
     } catch (error) {
       debugPrint('HtmlAnnotationScreen: math bake persistence failed: $error');
     }
@@ -421,6 +447,8 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
     _selectionBefore = const [];
   }
 
+  void _syncPresets() => _presets.syncFrom(_canvas);
+
   HtmlStrokeIndex get _currentStrokeIndex {
     final version = _canvas.renderContentNotifier.value;
     if (_strokeIndex == null || _strokeIndexVersion != version) {
@@ -491,6 +519,8 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
     unawaited(_stylusShortcutSubscription?.cancel());
     unawaited(_stylusShortcuts.stop());
     _remoteSyncTimer?.cancel();
+    _canvas.bottomBarContextNotifier.removeListener(_syncPresets);
+    _presets.dispose();
     _canvas.dispose();
     super.dispose();
   }
@@ -523,7 +553,11 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
           ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(52),
-            child: _HtmlToolBar(canvas: _canvas, readMode: _readMode),
+            child: _HtmlToolBar(
+              canvas: _canvas,
+              presets: _presets,
+              readMode: _readMode,
+            ),
           ),
         ),
         body: _buildBody(),
@@ -665,143 +699,359 @@ class _HtmlCommittedInkPainter extends CustomPainter {
 }
 
 class _HtmlToolBar extends StatelessWidget {
-  const _HtmlToolBar({required this.canvas, required this.readMode});
+  const _HtmlToolBar({
+    required this.canvas,
+    required this.presets,
+    required this.readMode,
+  });
+
+  static const _wideContentFactor = 0.95;
+  static const _controlExtent = 48.0;
 
   final CanvasController canvas;
+  final PenPresetsController presets;
   final bool readMode;
 
   @override
   Widget build(BuildContext context) => Material(
     color: context.inklus.toolbar,
     child: SizedBox(
+      width: double.infinity,
       height: 52,
-      child: ListenableBuilder(
-        listenable: Listenable.merge([
-          canvas.toolContextNotifier,
-          canvas.renderContentNotifier,
-        ]),
-        builder: (context, _) => SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: context.l10n.tbUndo,
-                onPressed: canvas.canUndo ? canvas.undo : null,
-                icon: const Icon(Icons.undo),
-              ),
-              IconButton(
-                tooltip: context.l10n.tbRedo,
-                onPressed: canvas.canRedo ? canvas.redo : null,
-                icon: const Icon(Icons.redo),
-              ),
-              const VerticalDivider(indent: 10, endIndent: 10),
-              _tool(Icons.edit, context.l10n.toolPen, ToolType.pen),
-              _tool(
-                Icons.border_color,
-                context.l10n.toolMarker,
-                ToolType.highlighter,
-              ),
-              _tool(
-                Icons.auto_fix_normal,
-                context.l10n.toolEraser,
-                ToolType.eraser,
-              ),
-              _tool(
-                Icons.gesture,
-                context.l10n.toolLasso,
-                ToolType.lasso,
-                alsoSelected: canvas.tool == ToolType.select,
-              ),
-              if (canvas.tool == ToolType.pen ||
-                  canvas.tool == ToolType.highlighter) ...[
-                const VerticalDivider(indent: 10, endIndent: 10),
-                for (final color in const [
-                  Color(0xFF1A1A1A),
-                  Color(0xFF1E56C8),
-                  Color(0xFFC62828),
-                  Color(0xFFF5A623),
-                  Color(0xFF2E7D32),
-                ])
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: readMode ? null : () => canvas.setColor(color),
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: canvas.color == color
-                                ? context.colors.primary
-                                : Colors.white,
-                            width: canvas.color == color ? 3 : 1,
-                          ),
-                        ),
-                      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final horizontal = constraints.maxWidth >= 600
+              ? constraints.maxWidth * (1 - _wideContentFactor) / 2
+              : 0.0;
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: horizontal),
+            child: ListenableBuilder(
+              listenable: Listenable.merge([
+                canvas,
+                canvas.toolContextNotifier,
+                canvas.bottomBarContextNotifier,
+                canvas.renderContentNotifier,
+                presets,
+              ]),
+              builder: (context, _) => LayoutBuilder(
+                builder: (context, rowConstraints) => Row(
+                  children: [
+                    Expanded(child: _toolArea(context)),
+                    _inlineControls(
+                      context,
+                      maxWidth: rowConstraints.maxWidth * 0.4,
                     ),
-                  ),
-                IconButton(
-                  tooltip: context.l10n.popThickness,
-                  onPressed: readMode ? null : () => _showThickness(context),
-                  icon: const Icon(Icons.line_weight),
+                  ],
                 ),
-              ],
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  );
+
+  Widget _toolArea(BuildContext context) => Row(
+    children: [
+      IconButton(
+        tooltip: context.l10n.tbUndo,
+        onPressed: canvas.canUndo ? canvas.undo : null,
+        icon: const Icon(Icons.undo),
+      ),
+      IconButton(
+        tooltip: context.l10n.tbRedo,
+        onPressed: canvas.canRedo ? canvas.redo : null,
+        icon: const Icon(Icons.redo),
+      ),
+      const _HtmlToolbarDivider(),
+      Expanded(
+        child: SingleChildScrollView(
+          key: const Key('html-tool-scroll'),
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _penTool(context),
+              _highlighterTool(context),
+              _optionTool(
+                context,
+                ToolType.eraser,
+                (context) => EraserPopover(canvas: canvas),
+              ),
+              _optionTool(
+                context,
+                ToolType.lasso,
+                (context) => LassoPopover(canvas: canvas),
+              ),
+              _plainTool(context, ToolType.select),
             ],
           ),
         ),
       ),
-    ),
+    ],
   );
 
-  Widget _tool(
-    IconData icon,
-    String label,
-    ToolType tool, {
-    bool alsoSelected = false,
-  }) => IconButton(
-    tooltip: label,
-    onPressed: readMode ? null : () => canvas.setTool(tool),
-    style: IconButton.styleFrom(
-      backgroundColor: canvas.tool == tool || alsoSelected
-          ? canvas.color.withValues(alpha: 0.16)
-          : null,
-    ),
-    icon: Icon(
-      icon,
-      color: canvas.tool == tool || alsoSelected ? canvas.color : null,
-    ),
-  );
-
-  Future<void> _showThickness(BuildContext context) async {
-    var value = canvas.toolSize.clamp(canvas.sizeRange.$1, canvas.sizeRange.$2);
-    await showDialog<void>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(context.l10n.popThickness),
-          content: Slider(
-            min: canvas.sizeRange.$1,
-            max: canvas.sizeRange.$2,
-            value: value,
-            onChanged: (next) {
-              setState(() => value = next);
-              canvas.setToolSize(next);
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(context.l10n.textEditDone),
+  Widget _inlineControls(BuildContext context, {required double maxWidth}) {
+    final showsColors = canvas.isInkTool || canvas.tool == ToolType.highlighter;
+    final showsSize = showsColors || canvas.tool == ToolType.eraser;
+    if (!showsColors && !showsSize) return const SizedBox.shrink();
+    final sizes = _quickSizes;
+    final preferredWidth =
+        _HtmlToolbarDivider.horizontalExtent +
+        (showsColors ? presets.toolbarColors.length * _controlExtent : 0) +
+        (showsColors && showsSize ? _HtmlToolbarDivider.horizontalExtent : 0) +
+        (showsSize ? sizes.length * _controlExtent : 0);
+    return SizedBox(
+      width: preferredWidth.clamp(0.0, maxWidth),
+      child: Row(
+        children: [
+          const _HtmlToolbarDivider(),
+          Expanded(
+            child: SingleChildScrollView(
+              key: const Key('html-inline-control-scroll'),
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (showsColors)
+                    for (
+                      var index = 0;
+                      index < presets.toolbarColors.length;
+                      index++
+                    )
+                      _color(context, index),
+                  if (showsColors && showsSize) const _HtmlToolbarDivider(),
+                  if (showsSize)
+                    for (final size in sizes)
+                      _size(context, size, sizes: sizes),
+                ],
+              ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<double> get _quickSizes {
+    final (min, max) = canvas.sizeRange;
+    final span = max - min;
+    return [min + span * 0.12, min + span * 0.3, min + span * 0.6];
+  }
+
+  Widget _color(BuildContext context, int index) {
+    final color = presets.toolbarColors[index];
+    return Semantics(
+      button: true,
+      selected: index == presets.activeToolbarColorSlot,
+      child: InkResponse(
+        customBorder: const CircleBorder(),
+        onTap: readMode
+            ? null
+            : () => presets.activateToolbarColor(index, canvas),
+        child: SizedBox.square(
+          dimension: _controlExtent,
+          child: Center(
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: index == presets.activeToolbarColorSlot
+                      ? context.colors.primary
+                      : context.colors.outlineVariant,
+                  width: index == presets.activeToolbarColorSlot ? 3 : 1,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
+
+  Widget _size(
+    BuildContext context,
+    double size, {
+    required List<double> sizes,
+  }) {
+    var selectedSize = sizes.first;
+    for (final candidate in sizes.skip(1)) {
+      if ((canvas.toolSize - candidate).abs() <
+          (canvas.toolSize - selectedSize).abs()) {
+        selectedSize = candidate;
+      }
+    }
+    final (min, max) = canvas.sizeRange;
+    final fraction = max <= min ? 0.5 : (size - min) / (max - min);
+    final diameter = 6 + 12 * fraction.clamp(0.0, 1.0);
+    final selected = size == selectedSize;
+    final color = canvas.tool == ToolType.eraser
+        ? context.colors.outline
+        : canvas.color;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${context.l10n.popSize}: ${size.toStringAsFixed(1)}',
+      child: InkResponse(
+        onTap: readMode
+            ? null
+            : () {
+                canvas.setToolSize(size);
+                presets.syncFrom(canvas);
+              },
+        child: SizedBox.square(
+          dimension: _controlExtent,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected
+                    ? context.colors.primaryContainer
+                    : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              child: Container(
+                width: diameter,
+                height: diameter,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _penTool(BuildContext context) {
+    final selected = canvas.isInkTool;
+    final slot = presets.activeSlot == PenPresetsController.highlighterSlot
+        ? 0
+        : presets.activeSlot;
+    final tool = selected ? canvas.tool : presets.presetAt(slot).tool;
+    return Builder(
+      builder: (anchor) => _toolButton(
+        context,
+        tool: tool,
+        label: ToolVisuals.label(context, tool),
+        selected: selected,
+        glyphColor: selected ? canvas.color : presets.presetAt(slot).color,
+        onTap: () {
+          if (selected) {
+            showAnchoredPopover<void>(
+              context: context,
+              anchorContext: anchor,
+              builder: (_) => PenPopover(canvas: canvas, presets: presets),
+            );
+          } else {
+            presets.activate(slot, canvas);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _highlighterTool(BuildContext context) {
+    final selected = canvas.tool == ToolType.highlighter;
+    return Builder(
+      builder: (anchor) => _toolButton(
+        context,
+        tool: ToolType.highlighter,
+        label: ToolVisuals.label(context, ToolType.highlighter),
+        selected: selected,
+        glyphColor: selected ? canvas.color : presets.highlighter.color,
+        onTap: () {
+          if (selected) {
+            showAnchoredPopover<void>(
+              context: context,
+              anchorContext: anchor,
+              builder: (_) => PenPopover(canvas: canvas, presets: presets),
+            );
+          } else {
+            presets.activate(PenPresetsController.highlighterSlot, canvas);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _optionTool(
+    BuildContext context,
+    ToolType tool,
+    WidgetBuilder popover,
+  ) {
+    final selected = canvas.tool == tool;
+    return Builder(
+      builder: (anchor) => _toolButton(
+        context,
+        tool: tool,
+        label: ToolVisuals.label(context, tool),
+        selected: selected,
+        onTap: () {
+          if (selected) {
+            showAnchoredPopover<void>(
+              context: context,
+              anchorContext: anchor,
+              builder: popover,
+            );
+          } else {
+            canvas.setTool(tool);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _plainTool(BuildContext context, ToolType tool) => _toolButton(
+    context,
+    tool: tool,
+    label: ToolVisuals.label(context, tool),
+    selected: canvas.tool == tool,
+    onTap: () => canvas.setTool(tool),
+  );
+
+  Widget _toolButton(
+    BuildContext context, {
+    required ToolType tool,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    Color? glyphColor,
+  }) {
+    final resolvedColor =
+        glyphColor ??
+        (selected
+            ? context.colors.onPrimaryContainer
+            : context.colors.onSurfaceVariant);
+    return IconButton(
+      tooltip: label,
+      isSelected: selected,
+      style: IconButton.styleFrom(
+        backgroundColor: selected ? context.colors.primaryContainer : null,
+      ),
+      onPressed: readMode ? null : onTap,
+      icon: ToolVisuals.buildIcon(tool, color: resolvedColor),
+    );
+  }
+}
+
+class _HtmlToolbarDivider extends StatelessWidget {
+  const _HtmlToolbarDivider();
+
+  static const horizontalExtent = 9.0;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 1,
+    height: 28,
+    margin: const EdgeInsets.symmetric(horizontal: 4),
+    color: context.colors.outlineVariant,
+  );
 }
 
 class _HtmlSelectionActions extends StatelessWidget {

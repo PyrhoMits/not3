@@ -158,7 +158,7 @@ class HtmlImportService {
       'math',
       'base',
     };
-    var removedActiveContent = false;
+    var removedActiveContent = _replaceInteractiveRegions(document);
     for (final meta in document.querySelectorAll('meta[http-equiv]').toList()) {
       meta.remove();
       removedActiveContent = true;
@@ -262,9 +262,71 @@ class HtmlImportService {
 html, body { margin: 0; padding: 0; width: 1191px; min-height: 100%; overflow-x: hidden; }
 body { box-sizing: border-box; overflow-wrap: anywhere; }
 *, *::before, *::after { box-sizing: border-box; animation: none !important; transition: none !important; }
+.not3-interactive-placeholder {
+  margin: 1.25rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid #c7cbd1;
+  border-radius: 0.75rem;
+  background: #f5f6f8;
+  color: #424750;
+  font: 500 0.95rem/1.45 system-ui, sans-serif;
+}
+.not3-interactive-placeholder strong { display: block; margin-bottom: 0.25rem; }
 ''',
     );
     return ('<!doctype html>\n${html.outerHtml}', removedActiveContent);
+  }
+
+  /// Replaces controls that cannot work without imported JavaScript with an
+  /// honest static explanation instead of leaving a broken-looking shell.
+  static bool _replaceInteractiveRegions(dom.Document document) {
+    final regions = <dom.Element>{};
+    for (final element
+        in document
+            .querySelectorAll('canvas, form, input, textarea, select')
+            .toList()) {
+      dom.Element? current = element;
+      dom.Element? region;
+      while (current != null && current.localName != 'body') {
+        if (current.classes.contains('demo') ||
+            current.classes.contains('interactive')) {
+          region = current;
+          break;
+        }
+        current = current.parent;
+      }
+      if (region == null && element.localName == 'canvas') {
+        final figure = element.parent?.localName == 'figure'
+            ? element.parent
+            : null;
+        final group = figure?.parent;
+        region = group != null && group.querySelectorAll('canvas').length > 1
+            ? group
+            : figure ?? element.parent;
+      }
+      if (region != null) regions.add(region);
+    }
+
+    var replaced = false;
+    for (final region in regions) {
+      final parent = region.parent;
+      if (parent == null || region.parent == null) continue;
+      final placeholder = dom.Element.tag('aside')
+        ..classes.add('not3-interactive-placeholder')
+        ..attributes['role'] = 'note'
+        ..append(
+          dom.Element.tag('strong')..text = 'Interactive section unavailable',
+        )
+        ..append(
+          dom.Element.tag('span')
+            ..text =
+                'Imported scripts and live controls are disabled in safe offline mode.',
+        );
+      parent.insertBefore(placeholder, region);
+      region.remove();
+      replaced = true;
+    }
+    return replaced;
   }
 
   static bool _isAllowedLink(String value) {
