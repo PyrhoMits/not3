@@ -6,6 +6,10 @@ Each release is written in English. The release workflow copies the matching sec
 
 ## Unreleased
 
+### Added
+
+- Prepared a fail-closed Huawei MatePad 11 / M-Pencil (2nd generation) Pen–Eraser double-tap bridge with queued tool switching, persistent preference, exact tablet-and-stylus fingerprint checks, and debug event capture for confirming the real device signature.
+
 ### Fixed
 
 - Recognized rectangles, triangles, and ellipses now keep a seamless closed edge after release; a rectangle no longer gains a clipped fifth corner at its starting point.

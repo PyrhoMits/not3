@@ -15,6 +15,9 @@ The automated tests (`flutter test`, screenshots and `integration_test`) cover d
 - [ ] Rest your palm while writing: it leaves no marks.
 - [ ] Once the stylus is detected, one finger scrolls the page and two fingers zoom without jumps.
 - [ ] S-Pen side button / stylus eraser: erases while held.
+- [ ] Huawei MatePad 11 with M-Pencil (2nd generation): enable Settings → Accessibility features → Stylus → Double-tap, then confirm each lower-body double-tap switches Pen ↔ Eraser and leaves an active stroke intact until lift.
+- [ ] Disable **Huawei M-Pencil double-tap: Pen / Eraser** in Not3, confirm the gesture is ignored, re-enable it, restart, and confirm the preference persists.
+- [ ] Before enabling a new MatePad fingerprint, capture its debug event boundary with `adb logcat -s Not3Stylus`; record manufacturer/model, input-device descriptor, vendor/product IDs, source, action, action button, button state, and tool type. A generic stylus or a different Huawei tablet/pen must remain rejected.
 - [ ] Holding the stylus still at the end of a shape straightens it (line, rectangle, circle).
 - [ ] Ruler: drags with one finger, rotates with two, the stroke sticks to the edge.
 

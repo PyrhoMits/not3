@@ -244,6 +244,18 @@ abstract class AppLocalizations {
   /// **'Recover deleted notebooks and notes'**
   String get settingsTrashSubtitle;
 
+  /// No description provided for @settingsHuaweiStylusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Huawei M-Pencil double-tap: Pen / Eraser'**
+  String get settingsHuaweiStylusTitle;
+
+  /// No description provided for @settingsHuaweiStylusSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Also enable Settings → Accessibility features → Stylus → Double-tap on your MatePad 11.'**
+  String get settingsHuaweiStylusSubtitle;
+
   /// No description provided for @settingsAppTagline.
   ///
   /// In en, this message translates to:
@@ -3511,7 +3523,7 @@ abstract class AppLocalizations {
   /// No description provided for @onb1Body.
   ///
   /// In en, this message translates to:
-  /// **'Rest your hand without worry: Not3 recognizes the pen and ignores your palm. The pen\'s eraser end or side button erases.'**
+  /// **'Rest your hand without worry: Not3 recognizes the pen and ignores your palm. A held eraser end or side button erases only while held; supported Huawei M-Pencil double-taps switch Pen and Eraser.'**
   String get onb1Body;
 
   /// No description provided for @onb2Body.

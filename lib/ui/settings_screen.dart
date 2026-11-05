@@ -10,6 +10,7 @@ import '../services/drive_sync_service.dart';
 import '../services/app_errors.dart';
 import '../services/error_log.dart';
 import '../services/import_service.dart';
+import '../services/huawei_stylus_shortcut_service.dart';
 import '../services/storage_service.dart';
 import '../l10n/l10n.dart';
 import '../theme_controller.dart';
@@ -38,11 +39,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _sync = DriveSyncService.instance;
   final _storage = StorageService.instance;
   bool _busy = false;
+  final _stylusShortcuts = HuaweiStylusShortcutService.instance;
 
   @override
   void initState() {
     super.initState();
     _sync.restoreSession();
+    _stylusShortcuts.addListener(_stylusSupportChanged);
+    _stylusShortcuts.refreshSupport();
+  }
+
+  void _stylusSupportChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _stylusShortcuts.removeListener(_stylusSupportChanged);
+    super.dispose();
   }
 
   // ---------------------------------------------------------------------------
@@ -59,7 +73,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SliverList.list(
           children: [
             SectionLabel(context.l10n.settingsSectionDrive),
-            ListenableBuilder(listenable: _sync, builder: (context, _) => _driveCard()),
+            ListenableBuilder(
+              listenable: _sync,
+              builder: (context, _) => _driveCard(),
+            ),
             ListenableBuilder(
               listenable: _sync,
               builder: (context, _) => _sync.isSignedIn
@@ -93,6 +110,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SectionLabel(context.l10n.settingsSectionTools),
             SectionCard(
               children: [
+                if (_stylusShortcuts.support.targetDetected)
+                  SettingsTile(
+                    icon: Icons.edit_outlined,
+                    title: context.l10n.settingsHuaweiStylusTitle,
+                    subtitle: context.l10n.settingsHuaweiStylusSubtitle,
+                    trailing: Switch(
+                      value: _stylusShortcuts.enabled,
+                      onChanged: _stylusShortcuts.setEnabled,
+                    ),
+                  ),
                 SettingsTile(
                   icon: Icons.insights_outlined,
                   title: context.l10n.settingsStatsTitle,
@@ -159,8 +186,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: [
         SettingsTile(
           icon: signedIn ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
-          accent: signedIn ? context.inklus.success : context.colors.onSurfaceVariant,
-          title: signedIn ? context.l10n.driveConnected : context.l10n.driveCloudCopy,
+          accent: signedIn
+              ? context.inklus.success
+              : context.colors.onSurfaceVariant,
+          title: signedIn
+              ? context.l10n.driveConnected
+              : context.l10n.driveCloudCopy,
           subtitle: signedIn
               ? (_sync.email ?? context.l10n.driveGoogleAccount)
               : context.l10n.driveOptionalPitch,
@@ -170,12 +201,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2.5),
                 )
               : signedIn
-                  ? _accountMenu()
-                  : FilledButton.icon(
-                      onPressed: _signIn,
-                      icon: const Icon(Icons.login),
-                      label: Text(context.l10n.driveConnect),
-                    ),
+              ? _accountMenu()
+              : FilledButton.icon(
+                  onPressed: _signIn,
+                  icon: const Icon(Icons.login),
+                  label: Text(context.l10n.driveConnect),
+                ),
         ),
         if (signedIn) ...[
           SettingsTile(
@@ -202,60 +233,77 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _accountMenu() => MenuAnchor(
-        menuChildren: [
-          MenuItemButton(
-            leadingIcon: const Icon(Icons.switch_account_outlined),
-            onPressed: _switchAccount,
-            child: Text(context.l10n.driveSwitchAccount),
-          ),
-          MenuItemButton(
-            leadingIcon: const Icon(Icons.logout),
-            onPressed: _signOut,
-            child: Text(context.l10n.driveSignOut),
-          ),
-        ],
-        builder: (context, menu, _) => IconButton(
-          tooltip: context.l10n.driveAccount,
-          icon: const Icon(Icons.more_vert),
-          onPressed: () => menu.isOpen ? menu.close() : menu.open(),
-        ),
-      );
+    menuChildren: [
+      MenuItemButton(
+        leadingIcon: const Icon(Icons.switch_account_outlined),
+        onPressed: _switchAccount,
+        child: Text(context.l10n.driveSwitchAccount),
+      ),
+      MenuItemButton(
+        leadingIcon: const Icon(Icons.logout),
+        onPressed: _signOut,
+        child: Text(context.l10n.driveSignOut),
+      ),
+    ],
+    builder: (context, menu, _) => IconButton(
+      tooltip: context.l10n.driveAccount,
+      icon: const Icon(Icons.more_vert),
+      onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+    ),
+  );
 
   Widget _themeTile() => ValueListenableBuilder<ThemeMode>(
-        valueListenable: ThemeModeController.mode,
-        builder: (context, mode, _) => Padding(
-          padding: const EdgeInsets.all(Spacing.lg),
-          child: Row(
-            children: [
-              IconBadge(icon: context.isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined),
-              const SizedBox(width: Spacing.lg),
-              Expanded(child: Text(context.l10n.settingsTheme, style: context.text.titleMedium)),
-              SegmentedButton<ThemeMode>(
-                showSelectedIcon: false,
-                segments: [
-                  ButtonSegment(
-                      value: ThemeMode.light, icon: const Icon(Icons.light_mode_outlined), label: Text(context.l10n.settingsThemeLight)),
-                  ButtonSegment(
-                      value: ThemeMode.dark, icon: const Icon(Icons.dark_mode_outlined), label: Text(context.l10n.settingsThemeDark)),
-                  ButtonSegment(
-                      value: ThemeMode.system,
-                      icon: const Icon(Icons.brightness_auto_outlined),
-                      label: Text(context.l10n.settingsThemeSystem)),
-                ],
-                selected: {mode},
-                onSelectionChanged: (v) => ThemeModeController.set(v.first),
+    valueListenable: ThemeModeController.mode,
+    builder: (context, mode, _) => Padding(
+      padding: const EdgeInsets.all(Spacing.lg),
+      child: Row(
+        children: [
+          IconBadge(
+            icon: context.isDark
+                ? Icons.dark_mode_outlined
+                : Icons.light_mode_outlined,
+          ),
+          const SizedBox(width: Spacing.lg),
+          Expanded(
+            child: Text(
+              context.l10n.settingsTheme,
+              style: context.text.titleMedium,
+            ),
+          ),
+          SegmentedButton<ThemeMode>(
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment(
+                value: ThemeMode.light,
+                icon: const Icon(Icons.light_mode_outlined),
+                label: Text(context.l10n.settingsThemeLight),
+              ),
+              ButtonSegment(
+                value: ThemeMode.dark,
+                icon: const Icon(Icons.dark_mode_outlined),
+                label: Text(context.l10n.settingsThemeDark),
+              ),
+              ButtonSegment(
+                value: ThemeMode.system,
+                icon: const Icon(Icons.brightness_auto_outlined),
+                label: Text(context.l10n.settingsThemeSystem),
               ),
             ],
+            selected: {mode},
+            onSelectionChanged: (v) => ThemeModeController.set(v.first),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 
   // ---------------------------------------------------------------------------
   // Acciones
   // ---------------------------------------------------------------------------
 
-  void _push(Widget screen) =>
-      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+  void _push(Widget screen) => Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => screen));
 
   /// Ejecuta [task] marcando la tarjeta como ocupada y avisa del error.
   Future<void> _run(Future<void> Function() task) async {
@@ -263,7 +311,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await task();
     } on GoogleConfigException catch (e) {
-      if (mounted) _showConfigErrorDialog(context.l10n.driveConfigBody(e.message));
+      if (mounted) {
+        _showConfigErrorDialog(context.l10n.driveConfigBody(e.message));
+      }
     } catch (e) {
       if (mounted) _snack(userError(context.l10n, e));
     } finally {
@@ -272,12 +322,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _signIn() => _run(() async {
-        _afterSignIn(await _sync.signIn());
-      });
+    _afterSignIn(await _sync.signIn());
+  });
 
   Future<void> _switchAccount() => _run(() async {
-        _afterSignIn(await _sync.switchAccount());
-      });
+    _afterSignIn(await _sync.switchAccount());
+  });
 
   /// Avisa del resultado. Si no se conectó, ofrece el detalle técnico: Android
   /// informa "cancelado" aunque el fallo sea de configuración (SHA-1).
@@ -292,24 +342,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context,
       l10n.driveSignInIncomplete,
       action: SnackBarAction(
-          label: l10n.driveDetails,
-          onPressed: () => showDialog<void>(
-            context: context,
-            builder: (context) => AlertDialog(
-              icon: Icon(Icons.error_outline, color: context.inklus.warning, size: 40),
-              title: Text(l10n.driveSignInHelpTitle),
-              content: SingleChildScrollView(
-                child: SelectableText(
-                    l10n.driveSignInHelpBody(_sync.lastSignInIssue ?? '—')),
-              ),
-              actions: [
-                FilledButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(l10n.commonGotIt)),
-              ],
+        label: l10n.driveDetails,
+        onPressed: () => showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            icon: Icon(
+              Icons.error_outline,
+              color: context.inklus.warning,
+              size: 40,
             ),
+            title: Text(l10n.driveSignInHelpTitle),
+            content: SingleChildScrollView(
+              child: SelectableText(
+                l10n.driveSignInHelpBody(_sync.lastSignInIssue ?? '—'),
+              ),
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l10n.commonGotIt),
+              ),
+            ],
           ),
         ),
+      ),
     );
   }
 
@@ -317,11 +373,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        icon: Icon(Icons.error_outline, color: context.inklus.warning, size: 40),
+        icon: Icon(
+          Icons.error_outline,
+          color: context.inklus.warning,
+          size: 40,
+        ),
         title: Text(context.l10n.driveNotConfigured),
         content: SingleChildScrollView(child: SelectableText(message)),
         actions: [
-          FilledButton(onPressed: () => Navigator.pop(context), child: Text(context.l10n.commonGotIt)),
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(context.l10n.commonGotIt),
+          ),
         ],
       ),
     );
@@ -332,12 +395,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(context.l10n.driveSignOutQuestion),
-        content: Text(
-          context.l10n.driveSignOutBody,
-        ),
+        content: Text(context.l10n.driveSignOutBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.l10n.commonCancel)),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.l10n.driveSignOut)),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(context.l10n.driveSignOut),
+          ),
         ],
       ),
     );
@@ -347,23 +414,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _backupNow() => _run(() async {
-        final l10n = context.l10n;
-        var count = 0;
-        for (final meta in await _storage.loadIndex()) {
-          if (!meta.isSyncEnabled) continue;
-          final nb = await _storage.loadNotebook(meta.id);
-          for (final note in nb?.notes ?? const <Note>[]) {
-            await _sync.backupNote(
-              note,
-              notebookId: meta.id,
-              notebookTitle: meta.title,
-              promptForConsent: true,
-            );
-            count++;
-          }
-        }
-        _snack(l10n.driveUploaded(count));
-      });
+    final l10n = context.l10n;
+    var count = 0;
+    for (final meta in await _storage.loadIndex()) {
+      if (!meta.isSyncEnabled) continue;
+      final nb = await _storage.loadNotebook(meta.id);
+      for (final note in nb?.notes ?? const <Note>[]) {
+        await _sync.backupNote(
+          note,
+          notebookId: meta.id,
+          notebookTitle: meta.title,
+          promptForConsent: true,
+        );
+        count++;
+      }
+    }
+    _snack(l10n.driveUploaded(count));
+  });
 
   Future<void> _restoreFromDrive() async {
     final ok = await showDialog<bool>(
@@ -371,19 +438,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.cloud_download_outlined),
         title: Text(context.l10n.driveRestore),
-        content: Text(
-          context.l10n.driveRestoreBody,
-        ),
+        content: Text(context.l10n.driveRestoreBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.l10n.commonCancel)),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.l10n.commonRestore)),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(context.l10n.commonRestore),
+          ),
         ],
       ),
     );
     if (ok != true || !mounted) return;
     final l10n = context.l10n;
     await _run(() async {
-      final result = await _sync.restoreLibrary(_storage, fallbackTitle: l10n.driveRecovered);
+      final result = await _sync.restoreLibrary(
+        _storage,
+        fallbackTitle: l10n.driveRecovered,
+      );
       _snack(result.message(l10n));
     });
   }
@@ -393,25 +467,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (bytes == null || !mounted) return;
     final l10n = context.l10n;
     await _run(() async {
-      final result = await runWithLoading(context, () => ImportService.importBytes(bytes));
+      final result = await runWithLoading(
+        context,
+        () => ImportService.importBytes(bytes),
+      );
       _snack(result.message(l10n));
     });
   }
 
   Future<void> _exportAll() => _run(() async {
-        final l10n = context.l10n;
-        final bytes = await _storage.exportFullBackup();
-        final stamp = DateTime.now().toIso8601String().substring(0, 10);
-        final saved = await FilePicker.saveFile(
-          dialogTitle: l10n.backupSaveTitle,
-          fileName: 'inklus_respaldo_$stamp.zip',
-          bytes: bytes,
-        );
-        if (saved != null) _snack(l10n.backupSaved);
-      });
+    final l10n = context.l10n;
+    final bytes = await _storage.exportFullBackup();
+    final stamp = DateTime.now().toIso8601String().substring(0, 10);
+    final saved = await FilePicker.saveFile(
+      dialogTitle: l10n.backupSaveTitle,
+      fileName: 'inklus_respaldo_$stamp.zip',
+      bytes: bytes,
+    );
+    if (saved != null) _snack(l10n.backupSaved);
+  });
 
   Future<void> _open(String url) async {
-    final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    final ok = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
     if (!ok && mounted) _snack(context.l10n.settingsOpenFailed(url));
   }
 
@@ -453,10 +533,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = context.l10n;
     switch (action) {
       case 'share':
-        await SharePlus.instance.share(ShareParams(
-          text: await ErrorLog.read(),
-          subject: l10n.settingsErrorLogSubject(kAppVersion),
-        ));
+        await SharePlus.instance.share(
+          ShareParams(
+            text: await ErrorLog.read(),
+            subject: l10n.settingsErrorLogSubject(kAppVersion),
+          ),
+        );
       case 'clear':
         await ErrorLog.clear();
         _snack(l10n.settingsErrorLogCleared);
@@ -504,7 +586,11 @@ class _SyncNotebooksCardState extends State<_SyncNotebooksCard> {
     final nb = await widget.storage.loadNotebook(meta.id);
     for (final note in nb?.notes ?? const <Note>[]) {
       try {
-        await widget.sync.backupNote(note, notebookId: meta.id, notebookTitle: meta.title);
+        await widget.sync.backupNote(
+          note,
+          notebookId: meta.id,
+          notebookTitle: meta.title,
+        );
       } catch (e) {
         debugPrint('Sync del cuaderno ${meta.id}: $e');
         break;
@@ -521,8 +607,15 @@ class _SyncNotebooksCardState extends State<_SyncNotebooksCard> {
       children: [
         SectionLabel(l10n.driveNotebooksTitle),
         Padding(
-          padding: const EdgeInsets.only(bottom: Spacing.sm, left: Spacing.xs, right: Spacing.xs),
-          child: Text(l10n.driveNotebooksSubtitle, style: context.text.bodySmall),
+          padding: const EdgeInsets.only(
+            bottom: Spacing.sm,
+            left: Spacing.xs,
+            right: Spacing.xs,
+          ),
+          child: Text(
+            l10n.driveNotebooksSubtitle,
+            style: context.text.bodySmall,
+          ),
         ),
         SectionCard(
           children: [
@@ -539,10 +632,21 @@ class _SyncNotebooksCardState extends State<_SyncNotebooksCard> {
                   secondary: ListenableBuilder(
                     listenable: widget.sync,
                     builder: (context, _) => _syncStatusIcon(
-                        context, meta.isSyncEnabled, widget.sync.statusFor(meta.id)),
+                      context,
+                      meta.isSyncEnabled,
+                      widget.sync.statusFor(meta.id),
+                    ),
                   ),
-                  title: Text(meta.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(meta.isSyncEnabled ? l10n.driveSyncEnabled : l10n.driveSyncDisabled),
+                  title: Text(
+                    meta.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    meta.isSyncEnabled
+                        ? l10n.driveSyncEnabled
+                        : l10n.driveSyncDisabled,
+                  ),
                   value: meta.isSyncEnabled,
                   onChanged: (v) => _toggle(meta, v),
                 ),
@@ -552,14 +656,31 @@ class _SyncNotebooksCardState extends State<_SyncNotebooksCard> {
     );
   }
 
-  Widget _syncStatusIcon(BuildContext context, bool enabled, SyncStatus status) {
-    if (!enabled) return Icon(Icons.cloud_off_outlined, color: context.colors.outline);
+  Widget _syncStatusIcon(
+    BuildContext context,
+    bool enabled,
+    SyncStatus status,
+  ) {
+    if (!enabled) {
+      return Icon(Icons.cloud_off_outlined, color: context.colors.outline);
+    }
     return switch (status) {
-      SyncStatus.synced => Icon(Icons.cloud_done, color: context.inklus.success),
+      SyncStatus.synced => Icon(
+        Icons.cloud_done,
+        color: context.inklus.success,
+      ),
       SyncStatus.syncing => const SizedBox.square(
-          dimension: 22, child: CircularProgressIndicator(strokeWidth: 2)),
-      SyncStatus.error => Icon(Icons.sync_problem, color: context.inklus.danger),
-      _ => Icon(Icons.cloud_upload_outlined, color: context.colors.onSurfaceVariant),
+        dimension: 22,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      SyncStatus.error => Icon(
+        Icons.sync_problem,
+        color: context.inklus.danger,
+      ),
+      _ => Icon(
+        Icons.cloud_upload_outlined,
+        color: context.colors.onSurfaceVariant,
+      ),
     };
   }
 }
