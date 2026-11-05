@@ -15,6 +15,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import '../logic/canvas_controller.dart';
 import '../logic/html_stroke_index.dart';
 import '../logic/html_viewport_transform.dart';
+import '../logic/palm_rejection.dart';
 import '../logic/pen_presets.dart';
 import '../logic/stylus_input.dart';
 import '../l10n/l10n.dart';
@@ -70,12 +71,15 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
   double _visibleCssWidth = 1191;
   int? _drawingPointer;
   int? _scrollPointer;
+  final PalmRejection _palm = PalmRejection();
+  final Set<int> _rejectedPointers = {};
   bool _movingSelection = false;
   Offset? _selectionStart;
   List<Stroke> _selectionBefore = const [];
   Offset? _scrollAnchor;
   double _scrollStartX = 0;
   double _scrollStartY = 0;
+  DateTime? _scrollStartTime;
   HtmlStrokeIndex? _strokeIndex;
   int _strokeIndexVersion = -1;
   Future<void> _mathBakeWrite = Future<void>.value();
@@ -114,7 +118,10 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
     unawaited(
       _stylusShortcuts.setAppActive(state == AppLifecycleState.resumed),
     );
-    if (state != AppLifecycleState.resumed) unawaited(_canvas.flush());
+    if (state != AppLifecycleState.resumed) {
+      _palm.reset();
+      unawaited(_canvas.flush());
+    }
   }
 
   Future<void> _load() async {
@@ -340,10 +347,17 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
 
   Offset _worldPoint(Offset local) => _transform.viewportToWorld(local);
 
+  void _onPointerHover(PointerHoverEvent event) {
+    if (PalmRejection.isStylusKind(event.kind)) {
+      _palm.stylusHoverEvent();
+    }
+  }
+
   void _onPointerDown(PointerDownEvent event) {
     if (!_ready) return;
-    if (event.kind == PointerDeviceKind.stylus ||
-        event.kind == PointerDeviceKind.invertedStylus) {
+    if (PalmRejection.isStylusKind(event.kind)) {
+      _palm.stylusDownEvent(event.pointer);
+      _rejectPalmInProgress();
       _drawingPointer = event.pointer;
       _canvas.onStylusDetected();
       final world = _worldPoint(event.localPosition);
@@ -369,11 +383,41 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
       return;
     }
     if (event.kind == PointerDeviceKind.touch && _scrollPointer == null) {
+      if (_palm.rejectTouch(radiusMajor: event.radiusMajor)) {
+        _rejectedPointers.add(event.pointer);
+        return;
+      }
       _scrollPointer = event.pointer;
       _scrollAnchor = event.localPosition;
       _scrollStartX = _scrollX;
       _scrollStartY = _scrollY;
+      _scrollStartTime = DateTime.now();
     }
+  }
+
+  /// If a touch starts just before the stylus lands, treat it as the palm and
+  /// restore the scroll position captured before that contact moved the page.
+  void _rejectPalmInProgress() {
+    final pointer = _scrollPointer;
+    if (pointer == null) return;
+    _rejectedPointers.add(pointer);
+    final started = _scrollStartTime;
+    if (started != null &&
+        DateTime.now().difference(started) <
+            const Duration(milliseconds: 600)) {
+      _scrollX = _scrollStartX;
+      _scrollY = _scrollStartY;
+      _updateCanvasView();
+      final web = _web;
+      if (web != null) {
+        unawaited(
+          web.runJavaScript('window.scrollTo($_scrollStartX, $_scrollStartY)'),
+        );
+      }
+    }
+    _scrollPointer = null;
+    _scrollAnchor = null;
+    _scrollStartTime = null;
   }
 
   void _onPointerMove(PointerMoveEvent event) {
@@ -410,6 +454,10 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
   }
 
   void _onPointerUp(PointerEvent event) {
+    if (PalmRejection.isStylusKind(event.kind)) {
+      _palm.stylusUpEvent(event.pointer);
+    }
+    _rejectedPointers.remove(event.pointer);
     if (event.pointer == _drawingPointer) {
       _drawingPointer = null;
       if (_movingSelection) {
@@ -422,10 +470,15 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
     if (event.pointer == _scrollPointer) {
       _scrollPointer = null;
       _scrollAnchor = null;
+      _scrollStartTime = null;
     }
   }
 
   void _onPointerCancel(PointerCancelEvent event) {
+    if (PalmRejection.isStylusKind(event.kind)) {
+      _palm.stylusUpEvent(event.pointer);
+    }
+    _rejectedPointers.remove(event.pointer);
     if (event.pointer == _drawingPointer) {
       _drawingPointer = null;
       if (_movingSelection) {
@@ -438,6 +491,7 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
     if (event.pointer == _scrollPointer) {
       _scrollPointer = null;
       _scrollAnchor = null;
+      _scrollStartTime = null;
     }
   }
 
@@ -608,6 +662,7 @@ class _HtmlAnnotationScreenState extends State<HtmlAnnotationScreen>
               Listener(
                 behavior: HitTestBehavior.opaque,
                 onPointerDown: _onPointerDown,
+                onPointerHover: _onPointerHover,
                 onPointerMove: _onPointerMove,
                 onPointerUp: _onPointerUp,
                 onPointerCancel: _onPointerCancel,
