@@ -25,7 +25,12 @@ class StrokeEraser {
     final pathBounds = bounds(eraserPath);
     final result = <Stroke>[];
     for (final stroke in strokes) {
-      final fragments = eraseStroke(stroke, eraserPath, radius, pathBounds: pathBounds);
+      final fragments = eraseStroke(
+        stroke,
+        eraserPath,
+        radius,
+        pathBounds: pathBounds,
+      );
       if (fragments == null) {
         result.add(stroke);
       } else {
@@ -87,6 +92,7 @@ class StrokeEraser {
               for (var k = runStart; k < runEnd; k++) stroke.points[kept[k]],
             ],
             clearShapeType: true, // un fragmento ya no es la figura completa
+            clearShapeAnchors: true,
           ),
         );
       }

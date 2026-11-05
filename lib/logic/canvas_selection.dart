@@ -451,6 +451,9 @@ mixin _CanvasSelection on _CanvasCore {
       final newStroke = original.copyWith(
         points: newPoints,
         size: original.size * scaleFactor,
+        shapeAnchors: original.shapeAnchors
+            ?.map((anchor) => map(anchor.dx, anchor.dy))
+            .toList(growable: false),
       );
       // Reemplaza el trazo en la página (misma posición = mismo z-order).
       final idx = _transformStrokePositions![original.id];

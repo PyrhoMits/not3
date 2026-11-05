@@ -84,6 +84,13 @@ class Stroke {
   /// Tipo de forma detectada (line, arrow, rectangle, circle) o null.
   final String? shapeType;
 
+  /// Ordered semantic points for an editable recognized shape.
+  ///
+  /// Lines and arrows store their endpoints, polygons store their vertices,
+  /// and ellipses store right, bottom, left, and top axis handles. Legacy
+  /// recognized strokes may omit this and derive it when first edited.
+  final List<Offset>? shapeAnchors;
+
   /// Ajustes de `perfect_freehand` con los que se dibujó el trazo.
   /// null = valores por defecto de la herramienta (trazos antiguos).
   final double? thinning;
@@ -99,10 +106,13 @@ class Stroke {
     this.fillColorValue,
     this.layerIndex = 0,
     this.shapeType,
+    List<Offset>? shapeAnchors,
     this.thinning,
     this.smoothing,
     this.streamline,
-  });
+  }) : shapeAnchors = shapeAnchors == null
+           ? null
+           : List<Offset>.unmodifiable(shapeAnchors);
 
   Color get color => Color(colorValue);
 
@@ -140,6 +150,8 @@ class Stroke {
     int? layerIndex,
     String? shapeType,
     bool clearShapeType = false,
+    List<Offset>? shapeAnchors,
+    bool clearShapeAnchors = false,
   }) => Stroke(
     id: id ?? this.id,
     points: points ?? this.points,
@@ -151,6 +163,9 @@ class Stroke {
         : (fillColorValue ?? this.fillColorValue),
     layerIndex: layerIndex ?? this.layerIndex,
     shapeType: clearShapeType ? null : (shapeType ?? this.shapeType),
+    shapeAnchors: clearShapeAnchors
+        ? null
+        : (shapeAnchors ?? this.shapeAnchors),
     thinning: thinning,
     smoothing: smoothing,
     streamline: streamline,
@@ -162,6 +177,9 @@ class Stroke {
       for (final p in points)
         StrokePoint(p.x + delta.dx, p.y + delta.dy, p.pressure, p.t),
     ],
+    shapeAnchors: shapeAnchors
+        ?.map((anchor) => anchor + delta)
+        .toList(growable: false),
   );
 
   factory Stroke.fromJson(Map<String, dynamic> json) => Stroke(
@@ -175,6 +193,14 @@ class Stroke {
     fillColorValue: (json['fillColor'] as num?)?.toInt(),
     layerIndex: (json['layer'] as num?)?.toInt() ?? 0,
     shapeType: json['shape'] as String?,
+    shapeAnchors: (json['shapeAnchors'] as List?)
+        ?.map(
+          (anchor) => Offset(
+            ((anchor as Map<String, dynamic>)['x'] as num).toDouble(),
+            (anchor['y'] as num).toDouble(),
+          ),
+        )
+        .toList(growable: false),
     thinning: (json['th'] as num?)?.toDouble(),
     smoothing: (json['sm'] as num?)?.toDouble(),
     streamline: (json['sl'] as num?)?.toDouble(),
@@ -189,6 +215,10 @@ class Stroke {
     if (fillColorValue != null) 'fillColor': fillColorValue,
     if (layerIndex != 0) 'layer': layerIndex,
     if (shapeType != null) 'shape': shapeType,
+    if (shapeAnchors != null)
+      'shapeAnchors': [
+        for (final anchor in shapeAnchors!) {'x': anchor.dx, 'y': anchor.dy},
+      ],
     if (thinning != null) 'th': thinning,
     if (smoothing != null) 'sm': smoothing,
     if (streamline != null) 'sl': streamline,
