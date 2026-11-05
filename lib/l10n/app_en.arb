@@ -1206,5 +1206,6 @@
   "menuTwoFingerUndo": "Undo with a two-finger tap",
   "popEraserAutoRevert": "Return to the previous tool after erasing",
   "saveFailed": "Couldn't save the note. Free up some space: it will retry automatically.",
+  "externalOpenUnsupported": "Not3 can open PDF, .inklus, or ZIP files.",
   "tplHalfLetter": "Half Letter"
 }

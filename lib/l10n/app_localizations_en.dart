@@ -2209,5 +2209,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t save the note. Free up some space: it will retry automatically.';
 
   @override
+  String get externalOpenUnsupported =>
+      'Not3 can open PDF, .inklus, or ZIP files.';
+
+  @override
   String get tplHalfLetter => 'Half Letter';
 }

@@ -3,13 +3,14 @@ import '../constants.dart';
 import '../models/note.dart';
 import '../models/page.dart' as models;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../services/drive_sync_service.dart';
 import '../services/import_service.dart';
+import '../services/incoming_file_service.dart';
 import '../services/pdf_import_coordinator.dart';
 import '../services/storage_service.dart';
 import '../utils/date_utils.dart' as date_util;
@@ -48,12 +49,14 @@ class NotebookLibraryScreen extends StatefulWidget {
   final VoidCallback? onToggleTheme;
   final StorageService? storage;
   final PdfImportCoordinator pdfImporter;
+  final IncomingFileReceiver? incomingFileReceiver;
 
   const NotebookLibraryScreen({
     super.key,
     this.onToggleTheme,
     this.storage,
     this.pdfImporter = const PdfImportCoordinator(),
+    this.incomingFileReceiver,
   });
 
   @override
@@ -81,6 +84,7 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
   /// Vista en cuadrícula (portadas) o lista (compacta). Se recuerda.
   bool _listView = false;
   bool _importingPdf = false;
+  IncomingFileReceiver? _incomingFileReceiver;
   static const _prefListView = 'library_list_view';
 
   Future<void> _loadViewPref() async {
@@ -138,26 +142,49 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
     _loadViewPref();
     // Restaura la sesión de Google (silenciosa).
     DriveSyncService.instance.restoreSession();
-    // Archivos .inklus abiertos desde fuera (Drive, Archivos…), Android.
-    if (Platform.isAndroid) {
-      _openChannel.setMethodCallHandler((call) async {
-        if (call.method == 'file') {
-          await _importIncoming(call.arguments as String);
-        }
-      });
-      _openChannel.invokeMethod<String>('take').then((p) {
-        if (p != null) _importIncoming(p);
-      });
+    if (Platform.isAndroid || widget.incomingFileReceiver != null) {
+      _incomingFileReceiver =
+          widget.incomingFileReceiver ?? MethodChannelIncomingFileReceiver();
+      unawaited(
+        _incomingFileReceiver!.start(_importIncoming).catchError((_) {}),
+      );
     }
   }
 
-  static const _openChannel = MethodChannel('inklus/open');
+  @override
+  void dispose() {
+    final receiver = _incomingFileReceiver;
+    if (receiver != null) unawaited(receiver.stop());
+    super.dispose();
+  }
 
-  Future<void> _importIncoming(String path) async {
-    if (!mounted) return;
+  Future<void> _importIncoming(IncomingFile incoming) async {
+    try {
+      if (!mounted) return;
+      switch (incoming.kind) {
+        case IncomingFileKind.pdf:
+          await _importIncomingPdf(incoming);
+        case IncomingFileKind.archive:
+          await _importIncomingArchive(incoming);
+        case IncomingFileKind.unsupported:
+          _snack(context.l10n.externalOpenUnsupported);
+      }
+    } finally {
+      if (incoming.temporary) {
+        try {
+          final file = File(incoming.path);
+          if (await file.exists()) await file.delete();
+        } catch (_) {
+          // Cache cleanup is best-effort and must not replace the import error.
+        }
+      }
+    }
+  }
+
+  Future<void> _importIncomingArchive(IncomingFile incoming) async {
     final l10n = context.l10n;
     try {
-      final bytes = await File(path).readAsBytes();
+      final bytes = await File(incoming.path).readAsBytes();
       if (!mounted) return;
       final result = await runWithLoading(
         context,
@@ -165,9 +192,12 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
       );
       await _reload();
       _snack(result.message(l10n));
-    } catch (e) {
+    } catch (error) {
+      if (!mounted) return;
       _snack(
-        e is FormatException ? userError(l10n, e) : l10n.libImportError('$e'),
+        error is FormatException
+            ? userError(l10n, error)
+            : l10n.libImportError('$error'),
       );
     }
   }
@@ -280,14 +310,36 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
   }
 
   Future<void> _importPdf() async {
+    await _runPdfImport();
+  }
+
+  Future<void> _importIncomingPdf(IncomingFile incoming) async {
+    await _runPdfImport(
+      file: PdfPickedFile(
+        path: incoming.path,
+        displayName: incoming.displayName,
+      ),
+    );
+  }
+
+  Future<void> _runPdfImport({PdfPickedFile? file}) async {
     if (_importingPdf) return;
     setState(() => _importingPdf = true);
+    PdfImportResult? result;
+    var attached = false;
     try {
-      final result = await runPdfImportWithProgress(
-        context,
-        widget.pdfImporter,
-      );
-      if (result == null || !mounted) return;
+      result = file == null
+          ? await runPdfImportWithProgress(context, widget.pdfImporter)
+          : await runPdfFileImportWithProgress(
+              context,
+              widget.pdfImporter,
+              file,
+            );
+      if (result == null) return;
+      if (!mounted) {
+        await widget.pdfImporter.discard(result);
+        return;
+      }
       final notebook = await _storage.createNotebook(
         title: result.suggestedTitle,
         pages: [
@@ -300,10 +352,16 @@ class _NotebookLibraryScreenState extends State<NotebookLibraryScreen> {
             ),
         ],
       );
+      attached = true;
       if (!mounted) return;
       await _reload();
-      await _openNotebookById(notebook.id);
+      if (file == null) {
+        await _openNotebookById(notebook.id);
+      } else {
+        unawaited(_openNotebookById(notebook.id));
+      }
     } catch (error) {
+      if (result != null && !attached) await widget.pdfImporter.discard(result);
       if (mounted) _snack(pdfImportErrorMessage(context, error));
     } finally {
       if (mounted) setState(() => _importingPdf = false);
